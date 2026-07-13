@@ -1,6 +1,6 @@
 # Meeting Note รอบที่ 1 - Resource Management
 
-**วันที่:** 24-06-2026
+**วันที่:** 2026-06-24
 
 ## 1. แนวทางเกม (Genre แนวทางที่พิจารณา)
 
@@ -35,3 +35,6 @@
 
 ## 4. อื่นๆ
 - Project: clogged
+
+---
+**Related:** [Meeting Backlogs Hub](../03-meeting-backlogs.md) · [GDD Concept](../../gdd/00-concept.md)

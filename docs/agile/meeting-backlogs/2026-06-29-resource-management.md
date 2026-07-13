@@ -1,6 +1,6 @@
 # Meeting Note รอบที่ 2 - Resource Management
 
-**วันที่:** 29-06-2026
+**วันที่:** 2026-06-29
 
 ## 1. แนวทางเกม
 - ยืนยันแนวทางหลักเป็น Resource Management ผสมกับแนว Action Survival
@@ -18,3 +18,8 @@
 
 ### 4.2 รอบกลางคืน (ป้องกัน)
 - ป้องกันการโจมตีจาก enemy หรือจากธรรมชาติ
+
+---
+> การตัดสินใจในรอบนี้ (Resource Management + Action Survival, Day/Night cycle) คือสิ่งที่ prototype ปัจจุบันสร้างจริง — ดู [Design Pivot](../../gdd/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน)
+
+**Related:** [Meeting Backlogs Hub](../03-meeting-backlogs.md) · [GDD Concept](../../gdd/00-concept.md)

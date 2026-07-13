@@ -1,6 +1,6 @@
 # Meeting Note รอบที่ 3 - Resource Management
 
-**วันที่:** 01-07-2026
+**วันที่:** 2026-07-01
 
 ## 1. สถานะการประชุม
 - อยู่ระหว่างระดมไอเดีย (brainstorm) ยังไม่สรุปเป็นข้อยุติ
@@ -18,3 +18,8 @@
 
 ## 3. Next Steps
 - หาข้อสรุปเรื่อง gameplay, theme และรูปแบบการสู้ boss ในการประชุมครั้งถัดไป
+
+---
+> คำถามเรื่อง Theme และ Boss ในรอบนี้ยังค้างอยู่ ดู [ส่วนที่ยังต้องตัดสินใจ](../../gdd/01-mechanics.md#ส่วนที่ยังต้องตัดสินใจ-ต่อยอดจาก-idea-design-เดิม)
+
+**Related:** [Meeting Backlogs Hub](../03-meeting-backlogs.md) · [GDD Mechanics](../../gdd/01-mechanics.md)

@@ -1,4 +1,6 @@
-# รายชื่อสมาชิกทีม
+# รายชื่อสมาชิกทีม — clogged
+
+**Last Updated:** 2026-07-13
 
 | ชื่อ-นามสกุล           | ชื่อเล่น | รหัสนักศึกษา | ติดต่อ                     | Discord        | วิชาที่ลง                                    |
 | --------------------------------- | ---------------- | ------------------------ | -------------------------------- | -------------- | ----------------------------------------------------- |
@@ -6,3 +8,7 @@
 | ปริทัศน์ เผ่าตัน   | อั้น         | 642110286                | paritud_phaotan@cmu.ac.th        | sihlittlesheep | 958492 — Work Integrated Learning for Digital Game 2 |
 | อุภัยภัทร ลาภมาก   | ไอซ์         | 632110331                | auphaiphat_l@elearning.cmu.ac.th | Kagerou        | 958492 — Work Integrated Learning for Digital Game 2 |
 | วงศกร ทองคำพันธ์   | ปาร์ค       | 622110308                | —                               | PARK           | 958492 — Work Integrated Learning for Digital Game 2 |
+
+## Related Documents
+- [Sprint Planning](02-sprint-planning.md)
+- [Product Backlog](01-product-backlog.md)
