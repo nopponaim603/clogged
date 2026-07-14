@@ -1,0 +1,10 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "mcp-unity": {
+      "type": "local",
+      "enabled": true,
+      "command": ["node", "ai-gateway/mcp-unity/Server~/build/index.js"]
+    }
+  }
+}

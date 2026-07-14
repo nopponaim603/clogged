@@ -116,3 +116,6 @@ ai-gateway/9router/data/
 
 # OmniRoute Data
 ai-gateway/omniroute/data/
+
+# mcp-unity (cloned third-party Unity MCP bridge)
+ai-gateway/mcp-unity/
