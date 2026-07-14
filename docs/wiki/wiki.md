@@ -19,6 +19,9 @@
 ### 📐 Guidelines
 - [System Test Guideline](guidelines/system-test-guideline.md)
 
+### 🛠️ Agent Tools & Skills
+- [Agent Skills Guide](agent-skills-guide.md)
+
 ### 🗄️ Archive
 - [Idea & Design Draft (ร่างเดิมก่อน pivot)](archive/idea-design-draft.md)
 
