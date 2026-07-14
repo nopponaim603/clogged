@@ -13,9 +13,9 @@
 ---
 
 ## โครงสร้างไฟล์ในโฟลเดอร์นี้
-* [docker-compose.yml](file:///c:/Users/noppon/sources/01_DG/clogged/docker/docker-compose.yml) - ไฟล์กำหนดโครงสร้าง Container ของ 9Router
-* [setup.cmd](file:///c:/Users/noppon/sources/01_DG/clogged/docker/setup.cmd) - สคริปต์แบบคลิกเดียวสำหรับตรวจสอบ Docker, เปิดใช้งาน 9Router และเข้าสู่ Dashboard อัตโนมัติ (แนะนำสำหรับ Windows CMD)
-* [setup.ps1](file:///c:/Users/noppon/sources/01_DG/clogged/docker/setup.ps1) - สคริปต์ทำงานแบบเดียวกันสำหรับผู้ใช้งาน PowerShell
+* [docker-compose.yml](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/9router/docker-compose.yml) - ไฟล์กำหนดโครงสร้าง Container ของ 9Router
+* [setup.cmd](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/9router/setup.cmd) - สคริปต์แบบคลิกเดียวสำหรับตรวจสอบ Docker, เปิดใช้งาน 9Router และเข้าสู่ Dashboard อัตโนมัติ (แนะนำสำหรับ Windows CMD)
+* [setup.ps1](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/9router/setup.ps1) - สคริปต์ทำงานแบบเดียวกันสำหรับผู้ใช้งาน PowerShell
 
 ---
 
@@ -25,9 +25,9 @@
 * ต้องติดตั้งและเปิดใช้งาน **Docker Desktop** บนเครื่องคอมพิวเตอร์ของคุณ
 
 ### วิธีใช้งานสคริปต์แบบขั้นตอนเดียว (ง่ายที่สุด)
-1. ดับเบิ้ลคลิกที่ไฟล์ [setup.cmd](file:///c:/Users/noppon/sources/01_DG/clogged/docker/setup.cmd) หรือรันคำสั่งด้านล่างนี้ใน Terminal:
+1. ดับเบิ้ลคลิกที่ไฟล์ [setup.cmd](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/9router/setup.cmd) หรือรันคำสั่งด้านล่างนี้ใน Terminal:
    ```powershell
-   .\docker\setup.cmd
+   .\ai-gateway\9router\setup.cmd
    ```
 2. สคริปต์จะเริ่มทำงาน รัน Container และเปิดบราวเซอร์เข้าสู่ Dashboard ของ 9Router ที่ [http://localhost:20128](http://localhost:20128) ให้โดยอัตโนมัติ
 
@@ -35,7 +35,7 @@
 
 ## คำสั่งควบคุมแบบแมนนวล (Manual Commands)
 
-คุณสามารถควบคุม Container ผ่าน Docker CLI ได้ด้วยการเข้าไปที่โฟลเดอร์นี้ (`cd docker`) และใช้คำสั่งทั่วไป:
+คุณสามารถควบคุม Container ผ่าน Docker CLI ได้ด้วยการเข้าไปที่โฟลเดอร์นี้ (`cd ai-gateway/9router`) และใช้คำสั่งทั่วไป:
 
 ### เปิดใช้งาน
 ```bash
@@ -55,5 +55,5 @@ docker compose ps
 ---
 
 ## การเก็บข้อมูลและการรักษาความปลอดภัย (Data Directory)
-* ข้อมูลการตั้งค่าและ API Keys ของ 9Router จะถูกจัดเก็บไว้ในโฟลเดอร์ `docker/data` บนเครื่องเครื่องของคุณ
-* โฟลเดอร์ `docker/data/` นี้ถูกระบุไว้ในไฟล์ [.gitignore](file:///c:/Users/noppon/sources/01_DG/clogged/.gitignore) แล้ว เพื่อป้องกันไม่ให้ข้อมูลสำคัญเหล่านี้หลุดลอยขึ้นไปบน Git Repository หรือ GitHub ของคุณ
+* ข้อมูลการตั้งค่าและ API Keys ของ 9Router จะถูกจัดเก็บไว้ในโฟลเดอร์ `ai-gateway/9router/data` บนเครื่องเครื่องของคุณ
+* โฟลเดอร์ `ai-gateway/9router/data/` นี้ถูกระบุไว้ในไฟล์ [.gitignore](file:///c:/Users/noppon/source/01-DG/clogged/.gitignore) แล้ว เพื่อป้องกันไม่ให้ข้อมูลสำคัญเหล่านี้หลุดลอยขึ้นไปบน Git Repository หรือ GitHub ของคุณ

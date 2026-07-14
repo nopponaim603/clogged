@@ -14,7 +14,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 cd $scriptDir
 
 Write-Host ""
-Write-Host "[1/3] Launching 9Router via Docker Compose..." -ForegroundColor Cyan
+Write-Host "[1/3] Launching OmniRoute via Docker Compose..." -ForegroundColor Cyan
 docker compose up -d
 
 if ($LastExitCode -ne 0) {
@@ -29,18 +29,18 @@ Write-Host "[2/3] Waiting for service to initialize..." -ForegroundColor Cyan
 Start-Sleep -Seconds 3
 
 Write-Host ""
-Write-Host "[3/3] Opening 9Router Dashboard in browser..." -ForegroundColor Cyan
-Start-Process "http://localhost:20128"
+Write-Host "[3/3] Opening OmniRoute Dashboard in browser..." -ForegroundColor Cyan
+Start-Process "http://localhost:20128/dashboard"
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host "[SUCCESS] 9Router is now running in the background!" -ForegroundColor Green
+Write-Host "[SUCCESS] OmniRoute is now running in the background!" -ForegroundColor Green
 Write-Host ""
-Write-Host "- Dashboard: http://localhost:20128"
+Write-Host "- Dashboard: http://localhost:20128/dashboard"
 Write-Host "- API Endpoint: http://localhost:20128/v1 (OpenAI compatible)"
 Write-Host ""
-Write-Host "To stop 9Router in the future, run:"
-Write-Host "  docker compose down (inside the ai-gateway/9router/ directory)"
+Write-Host "To stop OmniRoute in the future, run:"
+Write-Host "  docker compose down (inside the ai-gateway/omniroute/ directory)"
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host ""
 Read-Host "Press Enter to exit..."
