@@ -87,4 +87,7 @@ Thumbs.db
 .vscode/
 
 # 9Router Data
-docker/data/
+ai-gateway/9router/data/
+
+# OmniRoute Data
+ai-gateway/omniroute/data/
