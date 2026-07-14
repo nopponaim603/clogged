@@ -85,3 +85,6 @@ Thumbs.db
 
 # VS Code
 .vscode/
+
+# 9Router Data
+docker/data/
