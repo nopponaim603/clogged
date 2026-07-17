@@ -1,6 +1,7 @@
 // src/systems/CrewManager.ts
 import { Crew } from '../entities/Crew';
 import { CREW_NAMES, PERKS } from '../data/Constants';
+import { CREW_TEMPLATES } from '../data/CrewData';
 
 export class CrewManager {
     public crews: Crew[];
@@ -15,24 +16,27 @@ export class CrewManager {
         this.nextId = 1;
     }
 
+    // ✅ ใช้ CREW_TEMPLATES แทนการสุ่ม
     generateRandomCrew(hireCost: number): Crew {
-        const name = CREW_NAMES[Math.floor(Math.random() * CREW_NAMES.length)];
-        const perk = PERKS[Math.floor(Math.random() * PERKS.length)];
-        const speed = 0.8 + Math.random() * 0.6;
-        const proficiency = 0.7 + Math.random() * 0.8;
-
+        const template = CREW_TEMPLATES[Math.floor(Math.random() * CREW_TEMPLATES.length)];
+        
         return new Crew({
             id: this.nextId++,
-            name: name,
-            hp: 80 + Math.floor(Math.random() * 60),
-            speed: Math.round(speed * 10) / 10,
-            gatheringProficiency: Math.round((proficiency + Math.random() * 0.3) * 10) / 10,
-            searchingProficiency: Math.round((proficiency + Math.random() * 0.3) * 10) / 10,
-            huntingProficiency: Math.round((proficiency + Math.random() * 0.3) * 10) / 10,
-            perks: [perk],
-            hireCost: hireCost,
+            name: template.name,
+            maxHp: template.maxHp,
+            baseSpeed: template.baseSpeed,
+            baseGathering: template.baseGathering,
+            baseSearching: template.baseSearching,
+            baseHunting: template.baseHunting,
+            perks: template.perks,
+            hireCost: hireCost || template.cost,
             position: { x: 0, y: 0 }
         });
+    }
+
+    // ✅ ดึง Crew Templates ทั้งหมด
+    getCrewTemplates(): typeof CREW_TEMPLATES {
+        return CREW_TEMPLATES;
     }
 
     hireCrew(crew: Crew, points: number): { success: boolean; remainingPoints: number; message?: string } {

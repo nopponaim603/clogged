@@ -2,11 +2,11 @@
 export interface CrewTemplate {
     id: number;
     name: string;
-    hp: number;
-    speed: number;
-    gathering: number;
-    searching: number;
-    hunting: number;
+    maxHp: number;
+    baseSpeed: number;      // 0-100
+    baseGathering: number;  // 0-100
+    baseSearching: number;  // 0-100
+    baseHunting: number;    // 0-100
     perks: string[];
     cost: number;
     description: string;
@@ -16,23 +16,23 @@ export const CREW_TEMPLATES: CrewTemplate[] = [
     {
         id: 1,
         name: 'Sarah',
-        hp: 100,
-        speed: 1.2,
-        gathering: 1.5,
-        searching: 0.8,
-        hunting: 0.9,
+        maxHp: 100,
+        baseSpeed: 52,
+        baseGathering: 64,
+        baseSearching: 42,
+        baseHunting: 88,
         perks: ['fast_hands'],
         cost: 25,
-        description: 'Fast gatherer, good with resources'
+        description: 'Fast gatherer with decent hunting skills'
     },
     {
         id: 2,
         name: 'John',
-        hp: 120,
-        speed: 0.9,
-        gathering: 0.7,
-        searching: 1.8,
-        hunting: 1.2,
+        maxHp: 120,
+        baseSpeed: 35,
+        baseGathering: 30,
+        baseSearching: 92,
+        baseHunting: 55,
         perks: ['night_vision'],
         cost: 30,
         description: 'Expert searcher, finds relics easily'
@@ -40,11 +40,11 @@ export const CREW_TEMPLATES: CrewTemplate[] = [
     {
         id: 3,
         name: 'Emma',
-        hp: 90,
-        speed: 1.5,
-        gathering: 1.2,
-        searching: 1.0,
-        hunting: 1.5,
+        maxHp: 90,
+        baseSpeed: 75,
+        baseGathering: 48,
+        baseSearching: 40,
+        baseHunting: 95,
         perks: ['gunslinger'],
         cost: 35,
         description: 'Skilled hunter, deadly with guns'
@@ -52,11 +52,11 @@ export const CREW_TEMPLATES: CrewTemplate[] = [
     {
         id: 4,
         name: 'Mike',
-        hp: 110,
-        speed: 1.0,
-        gathering: 2.0,
-        searching: 0.6,
-        hunting: 0.8,
+        maxHp: 110,
+        baseSpeed: 45,
+        baseGathering: 98,
+        baseSearching: 25,
+        baseHunting: 35,
         perks: ['blacksmith'],
         cost: 28,
         description: 'Master blacksmith, gathers metal efficiently'
@@ -64,13 +64,49 @@ export const CREW_TEMPLATES: CrewTemplate[] = [
     {
         id: 5,
         name: 'Lisa',
-        hp: 85,
-        speed: 1.8,
-        gathering: 0.9,
-        searching: 1.6,
-        hunting: 0.7,
-        perks: ['quick_reflex'],
+        maxHp: 85,
+        baseSpeed: 95,
+        baseGathering: 38,
+        baseSearching: 82,
+        baseHunting: 30,
+        perks: ['quick_reflex', 'scout'],
         cost: 32,
         description: 'Fast and agile, great for scouting'
-    }
+    },
+    {
+        id: 6,
+        name: 'Tom',
+        maxHp: 140,
+        baseSpeed: 28,
+        baseGathering: 35,
+        baseSearching: 25,
+        baseHunting: 98,
+        perks: ['tough', 'strong'],
+        cost: 34,
+        description: 'Tanky hunter with high damage'
+    },
+    {
+        id: 7,
+        name: 'Anna',
+        maxHp: 95,
+        baseSpeed: 68,
+        baseGathering: 72,
+        baseSearching: 55,
+        baseHunting: 60,
+        perks: ['lucky', 'medic'],
+        cost: 38,
+        description: 'Balanced all-rounder with healing'
+    },
+    {
+        id: 8,
+        name: 'Leo',
+        maxHp: 105,
+        baseSpeed: 88,
+        baseGathering: 45,
+        baseSearching: 78,
+        baseHunting: 45,
+        perks: ['sprinter', 'night_vision'],
+        cost: 36,
+        description: 'Fast searcher with good speed'
+    },
 ];

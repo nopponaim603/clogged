@@ -49,28 +49,24 @@ export class ResourceNode {
         this.isDepleted = false;
     }
 
-    // ✅ คำนวณเวลาปฏิบัติการ โดยไม่ใช้ TIME_UNIT_PER_SECOND
     getActionTime(crewProficiency: number): number {
         let baseTime = 0;
         let difficultyFactor = 1;
         
         if (this.isRelic) {
-            // ✅ ค้นหารีลิกส์: 3000-6000 units
             baseTime = GAME_CONFIG.BASE_SEARCH_TIME; // 4500
-            difficultyFactor = 1.2 + Math.random() * 0.3; // สุ่มเพิ่มความยาก
+            difficultyFactor = 1.2 + Math.random() * 0.3;
         } else if (this.isMonster) {
-            // ✅ ล่ามอนสเตอร์: 4000-8000 units
             baseTime = GAME_CONFIG.BASE_HUNT_TIME; // 5000
-            difficultyFactor = 1 + (this.difficulty || 1) * 0.4; // +40% ต่อระดับ
+            difficultyFactor = 1 + (this.difficulty || 1) * 0.4;
         } else {
-            // ✅ เก็บทรัพยากร: 2000-6000 units
             baseTime = GAME_CONFIG.BASE_GATHER_TIME; // 3000
-            // amount ยิ่งมาก ยิ่งใช้เวลา
-            const amountFactor = 1 + (this.amount / 100) * 0.6; // จาก 0.5 เป็น 0.6
+            const amountFactor = 1 + (this.amount / 100) * 0.6;
             difficultyFactor = amountFactor;
         }
         
-        const proficiencyFactor = Math.max(0.3, crewProficiency);
+        // ✅ crewProficiency เป็นค่า 0-100 แล้ว
+        const proficiencyFactor = Math.max(0.1, crewProficiency / 100);
         const actionTime = (baseTime * difficultyFactor) / proficiencyFactor;
         
         return actionTime;

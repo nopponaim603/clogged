@@ -21,6 +21,7 @@ export class CrewPanel {
     private prevBtn!: Phaser.GameObjects.Text;
     private nextBtn!: Phaser.GameObjects.Text;
     private allCrews: Crew[] = [];
+    private isInitialized: boolean = false; // ✅ เพิ่มตัวแปรนี้
 
     constructor(
         scene: Scene, 
@@ -93,10 +94,13 @@ export class CrewPanel {
             this.nextBtn.setStyle({ color: '#4ecdc4' });
         });
 
+        this.isInitialized = true;
         this.update();
     }
 
     update(): void {
+        if (!this.isInitialized) return; // ✅ ป้องกันการเรียกก่อนสร้าง
+        
         this.crewTexts.forEach(text => text.destroy());
         this.crewTexts = [];
 
@@ -107,19 +111,31 @@ export class CrewPanel {
             this.currentPage = Math.max(0, this.totalPages - 1);
         }
 
-        this.prevBtn.setVisible(this.totalPages > 1);
-        this.nextBtn.setVisible(this.totalPages > 1);
-        this.pageText.setText(`${this.currentPage + 1}/${this.totalPages}`);
+        // ✅ อัพเดท Pagination
+        this.updatePaginationVisibility();
 
         const start = this.currentPage * this.crewsPerPage;
         const end = Math.min(start + this.crewsPerPage, this.allCrews.length);
         const pageCrews = this.allCrews.slice(start, end);
 
+        // ✅ ถ้าไม่มี Crew ให้แสดงข้อความ
+        if (this.allCrews.length === 0) {
+            const text = this.scene.add.text(this.panelX + 10, this.panelY + 50,
+                'No crew available',
+                {
+                    fontSize: '16px',
+                    color: '#b2bec3',
+                    fontFamily: 'monospace'
+                }
+            );
+            this.crewTexts.push(text);
+            return;
+        }
+
         const startX = this.panelX + 10;
         const y = this.panelY + 30;
         const spacing = 380;
 
-        // ✅ ดึงข้อมูล chain จาก GameScene
         const gameScene = this.scene.scene.get('GameScene') as any;
         let chainCounts = new Map<number, number>();
         if (gameScene && gameScene.missionQueue) {
@@ -141,6 +157,7 @@ export class CrewPanel {
             
             const x = startX + index * spacing;
             
+            // ✅ ชื่อและสถานะ
             const text = this.scene.add.text(x, y,
                 `${crew.name} (❤️${Math.floor(crew.hp)}/${crew.maxHp}) ${status}${chainText}`,
                 {
@@ -150,6 +167,7 @@ export class CrewPanel {
                 }
             );
 
+            // ✅ Perk
             this.scene.add.text(x, y + 25,
                 `⚡ ${perkText || 'No perk'}`,
                 {
@@ -159,8 +177,19 @@ export class CrewPanel {
                 }
             );
 
+            // ✅ Stats พร้อม Rank (ใช้ getEffective)
+            const effSpeed = crew.getEffectiveSpeed();
+            const effGather = crew.getEffectiveGathering();
+            const effSearch = crew.getEffectiveSearching();
+            const effHunt = crew.getEffectiveHunting();
+            
+            const speedRank = crew.getRankDisplay(effSpeed);
+            const gatherRank = crew.getRankDisplay(effGather);
+            const searchRank = crew.getRankDisplay(effSearch);
+            const huntRank = crew.getRankDisplay(effHunt);
+            
             this.scene.add.text(x, y + 45,
-                `🏃 ${crew.speed.toFixed(1)}x | ⛏️ ${crew.gatheringProficiency.toFixed(1)} | 🔍 ${crew.searchingProficiency.toFixed(1)} | ⚔️ ${crew.huntingProficiency.toFixed(1)}`,
+                `🏃 ${effSpeed.toFixed(0)} [${speedRank.rank}] | ⛏️ ${effGather.toFixed(0)} [${gatherRank.rank}] | 🔍 ${effSearch.toFixed(0)} [${searchRank.rank}] | ⚔️ ${effHunt.toFixed(0)} [${huntRank.rank}]`,
                 {
                     fontSize: '11px',
                     color: '#636e72',
@@ -168,6 +197,7 @@ export class CrewPanel {
                 }
             );
 
+            // ✅ Make clickable
             if (!crew.isBusy && crew.isAlive) {
                 text.setInteractive();
                 text.on('pointerdown', () => {
@@ -187,6 +217,7 @@ export class CrewPanel {
         this.updatePaginationVisibility();
     }
 
+    // ✅ Method สำหรับอัพเดท Pagination Visibility
     private updatePaginationVisibility(): void {
         const show = this.totalPages > 1;
         this.prevBtn.setVisible(show);
@@ -194,6 +225,7 @@ export class CrewPanel {
         this.pageText.setVisible(show);
     }
 
+    // ✅ Method สำหรับเปลี่ยนหน้า
     private prevPage(): void {
         if (this.currentPage > 0) {
             this.currentPage--;
@@ -201,6 +233,7 @@ export class CrewPanel {
         }
     }
 
+    // ✅ Method สำหรับเปลี่ยนหน้า
     private nextPage(): void {
         if (this.currentPage < this.totalPages - 1) {
             this.currentPage++;

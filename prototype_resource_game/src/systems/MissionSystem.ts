@@ -516,4 +516,33 @@ export class MissionSystem {
     private getDistance(pos1: { x: number; y: number }, pos2: { x: number; y: number }): number {
         return Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2));
     }
+
+    // ✅ การคำนวณเวลาเดินทาง (ใช้ speed)
+    private getTravelTime(crew: Crew, distance: number): number {
+        const speed = crew.getEffectiveSpeed();
+        // speed 0-100 → ใช้ 100 เป็น speed สูงสุด
+        const speedFactor = Math.max(0.1, speed / 100);
+        const baseTime = 500; // base time
+        return baseTime / speedFactor;
+    }
+
+    // ✅ การคำนวณเวลาปฏิบัติการ (ใช้ stat เฉพาะ)
+    private getActionTime(crew: Crew, target: ResourceNode): number {
+        let stat = 0;
+        let baseTime = 3000;
+        
+        if (target.isRelic) {
+            stat = crew.getEffectiveSearching();
+            baseTime = 4000;
+        } else if (target.isMonster) {
+            stat = crew.getEffectiveHunting();
+            baseTime = 5000;
+        } else {
+            stat = crew.getEffectiveGathering();
+            baseTime = 3000;
+        }
+        
+        const statFactor = Math.max(0.1, stat / 100);
+        return baseTime / statFactor;
+    }
 }

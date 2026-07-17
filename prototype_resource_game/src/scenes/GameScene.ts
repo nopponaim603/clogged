@@ -2,6 +2,7 @@
 import { Scene } from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { Crew } from '../entities/Crew';
+import { CREW_TEMPLATES } from '../data/CrewData';
 import { ResourceNode } from '../entities/ResourceNode';
 import { CrewManager } from '../systems/CrewManager';
 import { ResourceManager } from '../systems/ResourceManager';
@@ -265,28 +266,29 @@ export class GameScene extends Scene {
     }
 
     private createInitialCrews(basePos: { x: number; y: number }): void {
-        const crewTemplates = [
-            { name: 'Sarah', hp: 100, speed: 1.2, gathering: 1.5, searching: 0.8, hunting: 0.9, perks: ['fast_hands'], cost: 25 },
-            { name: 'John', hp: 120, speed: 0.9, gathering: 0.7, searching: 1.8, hunting: 1.2, perks: ['night_vision'], cost: 30 },
-            { name: 'Emma', hp: 90, speed: 1.5, gathering: 1.2, searching: 1.0, hunting: 1.5, perks: ['gunslinger'], cost: 35 },
-        ];
-
+        // ✅ ดึง Templates จาก CrewManager
+        const allTemplates = this.crewManager.getCrewTemplates();
+        
+        // ✅ สุ่มเลือก 4 คนจากทั้งหมด
+        const shuffled = [...allTemplates].sort(() => Math.random() - 0.5);
+        const selectedTemplates = shuffled.slice(0, 4);
+        
         let points = GAME_CONFIG.CREW_POINTS;
         const hired: Crew[] = [];
 
-        crewTemplates.forEach((template, index) => {
+        selectedTemplates.forEach((template, index) => {
             const crew = new Crew({
                 id: index + 1,
                 name: template.name,
-                hp: template.hp,
-                speed: template.speed,
-                gatheringProficiency: template.gathering,
-                searchingProficiency: template.searching,
-                huntingProficiency: template.hunting,
+                maxHp: template.maxHp,
+                baseSpeed: template.baseSpeed,
+                baseGathering: template.baseGathering,
+                baseSearching: template.baseSearching,
+                baseHunting: template.baseHunting,
                 perks: template.perks,
                 hireCost: template.cost,
                 position: { 
-                    x: basePos.x - 60 + index * 40, 
+                    x: basePos.x - 80 + index * 50,
                     y: basePos.y + 40 
                 }
             });
@@ -298,6 +300,7 @@ export class GameScene extends Scene {
             }
         });
 
+        // ✅ สร้าง sprites
         hired.forEach((crew, index) => {
             const text = this.add.text(
                 crew.position.x,
@@ -739,15 +742,45 @@ export class GameScene extends Scene {
         this.simulateStep();
     }
 
-    // ✅ simulateStep
     private simulateStep(): void {
         const elapsedTime = this.timeSystem.elapsedTime;
         
+        // ✅ อัพเดทเวลาที่แสดง
         this.timeText.setText(
             `⏱️ Elapsed: ${Math.floor(elapsedTime)} / ${this.timeSystem.dayTimeLimit} units`
         );
 
-        if (this.missionQueue.length === 0) return;
+        // ✅ ถ้าเวลาหมดแล้ว ให้จบ execution
+        if (elapsedTime >= this.timeSystem.dayTimeLimit) {
+            // ✅ ตรวจสอบว่ายังมีภารกิจค้างอยู่หรือไม่
+            const hasIncomplete = this.missionQueue.some(m => !m.completed);
+            if (hasIncomplete) {
+                // ✅ ภารกิจที่ยังไม่เสร็จให้ยกเลิก
+                for (const mission of this.missionQueue) {
+                    if (!mission.completed) {
+                        mission.completed = true;
+                        mission.phase = 'complete';
+                        // ✅ คืนค่า crew
+                        this.crewManager.completeMission(mission.crew.id);
+                        this.notificationSystem.showWarning(
+                            `⏰ ${mission.crew.name}'s mission was cut short (time ran out)!`,
+                            2000
+                        );
+                    }
+                }
+            }
+            
+            this.finishExecution();
+            return;
+        }
+
+        if (this.missionQueue.length === 0) {
+            // ✅ ถ้าไม่มีภารกิจในคิว และกำลัง execute อยู่ ให้จบ execution
+            if (this.isProcessingQueue) {
+                this.finishExecution();
+            }
+            return;
+        }
 
         const groups = this.groupMissionsByTarget();
         let allComplete = true;
@@ -769,7 +802,8 @@ export class GameScene extends Scene {
         this.updateQueueDisplay();
         this.updateCrewTimeDisplay();
 
-        if (allComplete || elapsedTime >= this.timeSystem.dayTimeLimit) {
+        // ✅ ถ้าทุกภารกิจเสร็จแล้ว ให้จบ execution
+        if (allComplete) {
             this.finishExecution();
         }
     }
@@ -1048,10 +1082,19 @@ export class GameScene extends Scene {
     }
 
     private finishExecution(): void {
+        // ✅ ถ้าไม่ได้กำลัง execute อยู่ ให้ return
+        if (!this.isProcessingQueue && this.missionQueue.length === 0) {
+            return;
+        }
+        
+        // ✅ หยุด timer ใน TimeSystem
         this.timeSystem.endExecution();
+        
+        // ✅ เคลียร์คิว
         this.missionQueue = [];
         this.isProcessingQueue = false;
         
+        // ✅ อัพเดท UI
         this.updateQueueDisplay();
         this.crewTimeTexts.forEach(text => text.destroy());
         this.crewTimeTexts.clear();
@@ -1064,13 +1107,19 @@ export class GameScene extends Scene {
         
         this.checkGameOver();
         
-        if (!this.gameOver && this.timeSystem.elapsedTime < this.timeSystem.dayTimeLimit) {
-            this.notificationSystem.showInfo(`⏱️ ${Math.floor(this.timeSystem.dayTimeLimit - this.timeSystem.elapsedTime)} units remaining. Plan more missions!`, 3000);
-            
-            // ✅ ถ้ายังมีเวลาอยู่ และยังมี crew ที่ว่าง ให้แสดงปุ่ม Execute อีกครั้ง
-            const availableCrews = this.crewManager.getAvailableCount();
-            if (availableCrews > 0) {
-                this.notificationSystem.showInfo(`📋 ${availableCrews} crew(s) available. Assign missions!`, 3000);
+        // ✅ ถ้าไม่ game over และยังมีเวลาอยู่
+        if (!this.gameOver) {
+            const remaining = this.timeSystem.dayTimeLimit - this.timeSystem.elapsedTime;
+            if (remaining > 0) {
+                this.notificationSystem.showInfo(`⏱️ ${Math.floor(remaining)} units remaining. Plan more missions!`, 3000);
+                
+                const availableCrews = this.crewManager.getAvailableCount();
+                if (availableCrews > 0) {
+                    this.notificationSystem.showInfo(`📋 ${availableCrews} crew(s) available. Assign missions!`, 3000);
+                }
+            } else {
+                // ✅ ถ้าเวลาหมด ให้เริ่มกลางคืน
+                this.timeSystem.endDay();
             }
         }
     }
