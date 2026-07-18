@@ -51,7 +51,7 @@ Node.js MCP Bridge  ─── WebSocket :8090 ───▶  Unity Editor
     "mcp-unity": {
       "type": "local",
       "enabled": true,
-      "command": ["node", "mcp-unity/cloned/Server~/build/index.js"]
+      "command": ["node", "${workspaceFolder}/mcp-unity/cloned/Server~/build/index.js"]
     }
   }
 }
