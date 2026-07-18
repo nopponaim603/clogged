@@ -14,6 +14,7 @@
 ## 🧠 Knowledge Base (Wiki)
 
 ### 📚 Development
+- [Unity MCP Setup Guide](unity-mcp-setup.md) — คู่มือการตั้งค่า Unity MCP Server/Bridge เพื่อใช้งาน AI ร่วมกับ Unity Editor
 - (ว่าง — เพิ่ม setup guide สำหรับ `prototype_resource_game/` ที่นี่ เมื่อ onboarding สมาชิกใหม่)
 
 ### 📐 Guidelines

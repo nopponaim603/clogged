@@ -1,10 +1,13 @@
 {
-  "$schema": "https://app.kilo.ai/config.json",
-  "mcp": {
-    "mcp-unity": {
-      "type": "local",
-      "enabled": true,
-      "command": ["node", "Unity-Projects/Library/PackageCache/com.gamelovers.mcp-unity@c35f184d7656/Server~/build/index.js"]
-    }
-  }
+    "$schema":  "https://app.kilo.ai/config.json",
+    "mcp":  {
+                "mcp-unity":  {
+                                  "type":  "local",
+                                  "enabled":  true,
+                                  "command":  [
+                                                  "node",
+                                                  "mcp-unity/cloned/Server~/build/index.js"
+                                              ]
+                              }
+            }
 }
