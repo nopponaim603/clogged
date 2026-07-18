@@ -84,7 +84,7 @@ if (Test-Path $kiloPath) {
     Write-Host "  Updating $kiloPath..." -ForegroundColor Yellow
     $kiloContent = Get-Content $kiloPath -Raw | ConvertFrom-Json
     if ($kiloContent.mcp -and $kiloContent.mcp."mcp-unity") {
-        $kiloContent.mcp."mcp-unity".command = @("node", "mcp-unity/cloned/Server~/build/index.js")
+        $kiloContent.mcp."mcp-unity".command = @("node", '${workspaceFolder}/mcp-unity/cloned/Server~/build/index.js')
         $kiloContent | ConvertTo-Json -Depth 10 | Set-Content $kiloPath
         Write-Host "    Successfully updated kilo.json to use local mcp-unity server." -ForegroundColor Green
     }

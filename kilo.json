@@ -6,7 +6,7 @@
       "enabled": true,
       "command": [
         "node",
-        "mcp-unity/cloned/Server~/build/index.js"
+        "${workspaceFolder}/mcp-unity/cloned/Server~/build/index.js"
       ]
     }
   }
