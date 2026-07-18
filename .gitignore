@@ -119,3 +119,10 @@ ai-gateway/omniroute/data/
 
 # mcp-unity (cloned third-party Unity MCP bridge)
 ai-gateway/mcp-unity/
+
+# Node.js dependencies & logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
