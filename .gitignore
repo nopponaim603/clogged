@@ -119,6 +119,7 @@ ai-gateway/omniroute/data/
 
 # mcp-unity (cloned third-party Unity MCP bridge)
 ai-gateway/mcp-unity/
+mcp-unity/cloned/
 
 # Node.js dependencies & logs
 node_modules/

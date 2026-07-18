@@ -33,12 +33,17 @@ Node.js MCP Bridge  ─── WebSocket :8090 ───▶  Unity Editor
 2. กด **"Start Server"** (พอร์ตเริ่มต้น `8090`)
 3. จะเห็นสถานะ WebSocket กำลังรัน
 
-### 3. ตั้งค่า AI Client
+### 3. ติดตั้ง MCP Server และตั้งค่า AI Client (แนะนำ - วิธีรันผ่านโฟลเดอร์ mcp-unity)
 
-#### สำหรับ Kilo (ใช้ใน repo นี้)
+เราทำการแยกโค้ดและสร้างสคริปต์ติดตั้งสำหรับ MCP Server ไว้ที่โฟลเดอร์ `mcp-unity/` เพื่อให้ได้พาธที่แน่นอนและไม่ต้องเปลี่ยนตามเวอร์ชันของ PackageCache ใน Unity
 
-ไฟล์ `kilo.json` ที่ repo root:
+#### ขั้นตอนการติดตั้งเซิร์ฟเวอร์
+1. ดับเบิ้ลคลิกไฟล์ `mcp-unity/setup.cmd` (สำหรับ Windows) หรือรันสคริปต์ติดตั้งผ่าน PowerShell (`./setup.ps1`)
+2. สคริปต์จะทำการติดตั้งและตั้งค่าโปรแกรมให้โดยอัตโนมัติ
 
+#### รายละเอียดไฟล์ตั้งค่า (หลังรันสคริปต์ติดตั้ง)
+
+##### สำหรับ Kilo (`kilo.json` ที่ root)
 ```json
 {
   "$schema": "https://app.kilo.ai/config.json",
@@ -46,76 +51,68 @@ Node.js MCP Bridge  ─── WebSocket :8090 ───▶  Unity Editor
     "mcp-unity": {
       "type": "local",
       "enabled": true,
-      "command": ["node", "Unity-Projects/Library/PackageCache/com.gamelovers.mcp-unity@<hash>/Server~/build/index.js"]
+      "command": ["node", "mcp-unity/cloned/Server~/build/index.js"]
     }
   }
 }
 ```
 
-#### สำหรับ OpenCode
-
-ไฟล์ `Unity-Projects/opencode.json`:
-
+##### สำหรับ OpenCode (`Unity-Projects/opencode.json`)
 ```json
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https:/opencode.ai/config.json",
   "mcp": {
     "mcp-unity": {
       "type": "local",
       "enabled": true,
-      "command": ["node", "Library/PackageCache/com.gamelovers.mcp-unity@<hash>/Server~/build/index.js"]
+      "command": [
+        "node",
+        "../mcp-unity/cloned/Server~/build/index.js"
+      ],
+      "environment": {}
     }
   }
 }
 ```
 
-#### สำหรับ Claude Code
-
-ไฟล์ `Unity-Projects/.mcp.json`:
-
+##### สำหรับ Claude Code (`Unity-Projects/.mcp.json`)
 ```json
 {
   "mcpServers": {
     "mcp-unity": {
       "command": "node",
-      "args": ["Library/PackageCache/com.gamelovers.mcp-unity@<hash>/Server~/build/index.js"]
+      "args": ["../mcp-unity/cloned/Server~/build/index.js"]
     }
   }
 }
 ```
 
-#### สำหรับ Cursor
-
-ไฟล์ `Unity-Projects/.cursor/mcp.json`:
-
+##### สำหรับ Cursor (`Unity-Projects/.cursor/mcp.json`)
 ```json
 {
   "mcpServers": {
     "mcp-unity": {
       "command": "node",
-      "args": ["Library/PackageCache/com.gamelovers.mcp-unity@<hash>/Server~/build/index.js"]
+      "args": ["../mcp-unity/cloned/Server~/build/index.js"]
     }
   }
 }
 ```
 
-#### สำหรับ VS Code / GitHub Copilot
-
-ไฟล์ `Unity-Projects/.vscode/mcp.json`:
-
+##### สำหรับ VS Code / GitHub Copilot (`Unity-Projects/.vscode/mcp.json`)
 ```json
 {
   "mcpServers": {
     "mcp-unity": {
       "command": "node",
-      "args": ["Library/PackageCache/com.gamelovers.mcp-unity@<hash>/Server~/build/index.js"]
+      "args": ["../mcp-unity/cloned/Server~/build/index.js"]
     }
   }
 }
 ```
 
-> **หมายเหตุ:** `<hash>` คือ commit hash ที่ผูกกับ version ของ package (เช่น `c35f184d7656`)  
-> ถ้าอัปเดต package ค่า hash จะเปลี่ยน ต้องกลับมาแก้ path นี้
+> **ข้อดี:** การใช้พาธ `mcp-unity/cloned/Server~/build/index.js` จะช่วยแก้ไขปัญหาเวลา Unity อัปเดตแพ็คเกจแล้ว commit hash เปลี่ยน ทำให้เราไม่ต้องคอยมาแก้ไฟล์ config ใหม่
+
 
 ## การใช้งาน
 

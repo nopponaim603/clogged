@@ -3,11 +3,11 @@
   "mcp": {
     "mcp-unity": {
       "type": "local",
+      "enabled": true,
       "command": [
         "node",
-        "Unity-Projects/Library/PackageCache/com.gamelovers.mcp-unity@c35f184d7656/Server~/build/index.js"
-      ],
-      "enabled": true
+        "mcp-unity/cloned/Server~/build/index.js"
+      ]
     }
   }
 }
