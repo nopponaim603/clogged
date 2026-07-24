@@ -6,7 +6,11 @@ Guidance for AI coding agents working in this repo.
 
 **clogged** — a Resource Management + Action Survival game (Phaser 3 + TypeScript + Vite). Players manage a base and a limited crew: dispatch crew to gather resources, search relics, and hunt monsters by day; defend the base by night. Core theme: resource *flow* must not clog — over-stockpiled resources spoil at day's end, shortages starve the crew.
 
-The repo is currently **Phase 1 — Prototype / Vertical Slice** (2026-07-13 → 2026-08-09, see `docs/agile/sprint-backlogs/sprint-01.md`). The original idea (factory/conveyor pipeline) was pivoted away from — see `docs/gdd/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน` before assuming the archived draft at `docs/wiki/archive/idea-design-draft.md` is current.
+การพัฒนาเกมแบ่งเป็น **2 ระยะ**:
+1. **Web Prototype** — วิเคราะห์กลไกเกมและทดสอบ gameplay loop ด้วย Phaser/TS/Vite ให้ได้ prototype ที่ใช้งานได้
+2. **Unity Development** — พัฒนากันจริงจังด้วย Unity สำหรับเผยแพร่เกม
+
+ระยะปัจจุบันอยู่ที่ **Phase 1 — Prototype / Vertical Slice** (2026-07-13 → 2026-08-09, see `docs/agile/sprint-backlogs/sprint-01.md`). The original idea (factory/conveyor pipeline) was pivoted away from — see `docs/gdd/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน` before assuming the archived draft at `docs/wiki/archive/idea-design-draft.md` is current.
 
 Docs are largely in Thai. Start at [docs/index.md](docs/index.md) for the full doc index.
 
