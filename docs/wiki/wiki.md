@@ -15,6 +15,7 @@
 
 ### 📚 Development
 - [Unity MCP Setup Guide](unity-mcp-setup.md) — คู่มือการตั้งค่า Unity MCP Server/Bridge เพื่อใช้งาน AI ร่วมกับ Unity Editor
+- [Google Drive Resource Index](google-drive-index.md) — รวม link ทุกเอกสาร Google Drive ของโปรเจกต์ (Draft, GDD, Core Loop, Drive Folders)
 - (ว่าง — เพิ่ม setup guide สำหรับ `prototype_resource_game/` ที่นี่ เมื่อ onboarding สมาชิกใหม่)
 
 ### 📐 Guidelines
