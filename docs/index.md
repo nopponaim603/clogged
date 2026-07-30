@@ -2,15 +2,18 @@
 
 **Project:** clogged
 **Status:** Active | **Current Sprint:** [Sprint 01 — Prototype](./agile/sprint-backlogs/sprint-01.md)
-**Last Updated:** 2026-07-24 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+**Last Updated:** 2026-07-30 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
 
-> ⚠️ GDD ได้อัปเดตเป็น **v0.3 (Day Phase Clarified)** — เพิ่มโครงสร้าง 3 Phase (Ship → Day → Night), Node Map Roguelike, ระบบ Tower Defense 4 ทิศทาง — ดู [Design Evolution](./gdd/00-concept.md#2-design-evolution)
+> ⚠️ GDD ได้อัปเดต **v1.0 (Prototype Reverse-Engineered)** — เอกสาร GDD ฉบับใหม่Reverse Engineering จาก source code `prototype_resource_game/` — ดู [Design Evolution](./gdd/00-concept.md#6-design-evolution)
 
 ---
 
 ## 📘 Game Design (GDD)
-- [Concept & Architecture](./gdd/00-concept.md)
-- [Core Mechanics](./gdd/01-mechanics.md)
+- [Concept & Architecture](./gdd/00-concept.md) — Game loop, systems, architecture
+- [Core Mechanics](./gdd/01-mechanics.md) — Day/Night cycle, missions, crews, time system
+- [Narrative & World](./gdd/02-narrative.md) — Setting, factions, characters
+- [Art Direction](./gdd/03-art-direction.md) — Visual style, UI layout, colors
+- [Audio Direction](./gdd/04-audio-direction.md) — Music, SFX plan
 
 ---
 

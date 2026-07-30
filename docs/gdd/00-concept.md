@@ -1,41 +1,52 @@
-# clogged — Game Concept & Architecture
+# Survival Base — Game Concept & Architecture
 
-**Version:** 0.3 | **Last Updated:** 2026-07-24 | **Owner:** ทีม clogged (เอก, อั้น, ไอซ์, ปาร์ค)
+**Version:** 1.0 (Prototype) | **Last Updated:** 2026-07-30 | **Owner:** ทีม clogged
 
 ## 1. Introduction
 
 ### Elevator Pitch
-ผู้เล่นควบคุมยานอวกาศที่ถูก "Clogged" ด้วยภัยคุกคามจากภายนอก ต้องเลือกเส้นทางเดินทางผ่าน Node Map แบบ Roguelike แล้วส่ง Units ออกไปสำรวจและเก็บทรัพยากรในเวลากลางวัน ก่อนจะป้องกันยานจาก Wave ศัตรูและบอสในเวลากลางคืน จนกว่าจะปราบบอสใหญ่ทั้ง 3 ตัว
+ผู้เล่นต้องกำกับการดำรงรอดของฐานพึ่งพาตนเองในภูมิภาคร้อนรัง โดยส่งเหล่ามืออาชีพออกเก็บทรัพยากร ค้นหารีลิกส์โบราณ และล่าสัตว์ประหลาดในเวลากลางวัน ก่อนจะป้องกันฐานจากคลาสัตว์ประหลาดในเวลากลางคืน เป้าหมายคือการรอดชีวิต 30 วันในภูมิภาคที่ไม่มีความปราณี
 
-แนวคิดหลัก: การวางแผนระยะสั้น (Time Management + Assignment) + การป้องกันระยะยาว (Tower Defense) ภายใต้แรงกดดันของทรัพยากรที่จำกัดและความเสี่ยงที่จะสูญเสีย Units
+**คำถ้าหลัก:** จัดการทรัพยากรและเวลาอย่างไรให้รอด 30 วัน โดยไม่ให้ฐานถูกทำลาย ไม่ให้คนอดอาหาร และไม่ให้ทุกคนตาย
 
 ### Target Audience
-- ผู้เล่นที่ชอบ FTL: Faster Than Light, Against the Storm, They Are Billions, Loop Hero, หรือ Blue Archive แนววางแผน
-- อายุ 16+ ที่ชอบความท้าทายจากการจัดการเวลา/ความเสี่ยง และความพึงพอใจจากการป้องกันสำเร็จ
+- เกมเมอร์ที่ชอบ survival / resource management / time management (FTL, Barotrauma, They Are Billions, State of Decay)
+- วัย 16+ ที่ชอบการวางแผนและจัดการทรัพยากรจำกัด
 
 ### Genre & Platform
-- **Genre:** Turn-based Strategy / Resource Management + Tower Defense Hybrid (Roguelike structure)
-- **Perspective:** Top-down (Day Map + Night Defense) + Node Graph (Ship Phase)
-- **Platform:** PC (Steam) เป็นหลัก, รองรับ Controller; Mobile อาจเป็นเวอร์ชันย่อในอนาคต
-- **Session Length:** 1 รอบ (3 Boss) ≈ 45–90 นาที (Roguelike run)
+- **Genre:** Real-time Strategy + Resource Management + Base Defense (Action Survival)
+- **Perspective:** Top-down, continuous coordinate map
+- **Platform:** PC Browser (HTML5 / Phaser 3)
+- **Session Length:** 1 Run = 30 วัน ≈ 10–20 นาที (prototype)
 
 ### Unique Selling Points (USP)
-- ระบบ 3 Phase ที่ชัดเจนและเปลี่ยนจังหวะเกม (Strategy → Management → Defense)
-- Time System ที่ทำให้การส่ง Units ไปเก็บของมีความเสี่ยงจริง (ไม่กลับ = เสีย Unit)
-- การวางแผนป้องกัน 4 ทิศทางพร้อมกัน + Main Gun ที่ผู้เล่นควบคุมเอง
-- Units ที่มีทั้งความสามารถ (Passive Bonus) และความถนัด (Speed / Rate Multiplier) ทำให้มี build diversity
+- ระบบ **Mission Chain** — ส่ง Crew ไปหลายจุดต่อเนื่องกันในคิวเดียว ไม่ต้องส่งทีละคั้น
+- ระบบ **Collaboration** — หลาย Crew ทำงานที่จุดเดียวกันพร้อมกัน แล้วรวมความถนัด
+- **Day/Night Pressure** — กลางวันมีเวลาจำกัด กลางคืนถูกโจมตี ไม่สามารถ interrupt ระหว่าง execution ได้
+- **Perk + Equipment Synergy** — Crew แต่ละตัวมีความถนัดเฉพาะที่ทำงานร่วมกันกับ equipment ได้
 
 ---
 
-## 2. Design Evolution
+## 2. Game Loop
 
-| เวอร์ชัน | แนวทาง | ที่มา |
-|---------|--------|------|
-| Draft ดั้งเดิม | Factory / Conveyor pipeline — ต่อสายการผลิต/สมการเคมี | [Idea & Design Draft](../wiki/archive/idea-design-draft.md) |
-| v1.0 (Prototype) | Resource Management + Action Survival — ส่งลูกเรือออกภารกิจ day/night cycle | โค้ด prototype `prototype_resource_game/src/` |
-| **v0.3 (ปัจจุบัน)** | **Turn-based Strategy / Resource Management + Tower Defense Hybrid — 3 Phase (Ship → Day → Night) + Node Map Roguelike** | Google Doc — [Clogged_GDD_v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
-
-> การอัปเกรดเป็น v0.3 นี้เป็นวิวัฒนาการต่อจาก prototype ที่มีอยู่ โดยเพิ่มโครงสร้าง Node Map, 3-Phase loop, และระบบ Tower Defense ที่ชัดเจนขึ้น
+```mermaid
+flowchart TD
+    A[Day 1] --> B[Planning Phase]
+    B --> C[Select Crew + Build Mission Chain]
+    C --> D[Confirm Chain → Add to Queue]
+    D --> E[Execute All Missions]
+    E --> F[Units Travel → Act → Return]
+    F --> G[Night Phase — Monster Attack]
+    G --> H[Base HP Down, Resources Lost]
+    H --> I[New Day — New Map]
+    I --> B
+    I --> J{Day > 30?}
+    J -->|Yes| K[WIN — Survived 30 Days]
+    B --> L{All Crew Dead?}
+    L -->|Yes| M[LOST]
+    B --> N{No Food?}
+    N -->|Yes| M
+```
 
 ---
 
@@ -43,84 +54,118 @@
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Engine | Phaser 3 (v4.0 package) | 2D scene-based game engine |
+| Engine | Phaser 3 (v4.0) | Scene-based 2D game engine |
 | Language | TypeScript ~5.7 | |
-| Build tool | Vite ^6.3 | dev/prod config แยกไฟล์ใน `vite/` |
-| Renderer | Phaser Arcade | ยังไม่มี sprite art — ใช้ primitive shapes + emoji |
+| Build | Vite ^6.3 | dev / prod configs in `vite/` |
+| Renderer | Phaser Arcade Physics | Grid-free, continuous coordinates |
+| UI | Pure Phaser GameObjects | No external UI framework |
+| Platform | Browser (HTML5) | Runs via `npm run dev` (Vite dev server) |
 
 ---
 
-## 4. Game Collection / Features
+## 4. Game Architecture
 
-- **3-Phase Gameplay Loop:** Ship (Navigation) → Day (Management) → Night (Defense)
-- **Node Map Roguelike:** 3 Layers × 5 Blocks, Nodes หลากหลายประเภท (ธรรมดา, บอส, ร้านค้า, Encounter, พิเศษ)
-- **Day Phase — Time Management:** Units เดินทางบน Continuous Coordinate Map ด้วยระบบ Queue + Time Pool (Distance / Speed)
-- **Night Phase — Tower Defense:** ป้องกันยาน 4 ทิศทาง (N/S/E/W) ด้วย Main Gun + ป้อม + กับดัก + Units
-- **Unit System:** ความสามารถ (Traits), ความถนัด (Specialty Multiplier), Equipment + Relic
-- **Resource System:** 4 ประเภทหลัก (Energy, Material, Bio, Rare) + Boss Material
-- **Crafting & Upgrade:** อุปกรณ์ Units, ป้อมชั่วคราว, กับดัก, Facility
-- **Facility System:** Assign Units เพื่อรับ Passive Bonus (Bridge, Workshop, Medbay, Scout Bay)
-- **Progression:** ภายใน Run (เก็บ Resource → Craft/Upgrade → ปราบบอส) + ระหว่าง Run (Roguelike Meta)
-
----
-
-## 5. System Architecture
-
-### 3-Phase Flow
+### Scene Flow
 
 ```mermaid
 flowchart LR
-    subgraph ShipPhase[Phase ยาน]
-        A[เลือก Node] --> B[เดินทาง]
-    end
-    subgraph DayPhase[Phase กลางวัน]
-        C[Generate Map] --> D[วางแผน Queue Units]
-        D --> E[Execute Parallel]
-        E --> F[Units กลับ / เสีย]
-    end
-    subgraph NightPhase[Phase กลางคืน]
-        G[รู้ทิศทางศัตรู] --> H[วางป้อม/Units]
-        H --> I[ป้องกัน Wave]
-        I --> J[สรุปผล]
-    end
-    B --> C
-    F --> G
-    J --> A
+    Boot[BootScene — 1.5s loading] --> Menu[MenuScene — Title + Start]
+    Menu --> Game[GameScene — Main gameplay]
+    Game --> Over[GameOverScene — Win / Lose]
+    Over --> Game
 ```
 
-### โครงสร้างโดยรวม
+### Scene Responsibilities
+
+| Scene | Responsibility |
+|-------|---------------|
+| **BootScene** | แสดง loading animation, หน่วง 1.5s แล้วไป MenuScene |
+| **MenuScene** | Title screen, decorative arcs, feature list, Start button |
+| **GameScene** | ทุกอย่าง: map, crews, missions, time, night defense, UI |
+| **GameOverScene** | แสดงผลชนะ/แพ้, day count, restart button |
+
+### Core Systems (GameScene)
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Systems
-        NodeMapGenerator
-        TimeSystem
-        UnitManager
-        ResourceManager
-        CombatSystem
-        CraftingSystem
-        FacilitySystem
+        TimeSys[TimeSystem]
+        CrewMgr[CrewManager]
+        ResMgr[ResourceManager]
+        MissionSys[MissionSystem]
+        MapGen[MapGenerator]
     end
+
     subgraph Entities
-        Unit
-        Base[ยาน]
-        Enemy
-        ResourceNode
-        Turret
+        Crew[Crew Entity]
+        ResourceNode[ResourceNode Entity]
+        Monster[Monster Entity]
+        Base[Base Entity]
     end
-    subgraph Phases
-        ShipPhase
-        DayPhase
-        NightPhase
+
+    subgraph UI
+        ResourcePanel
+        CrewPanel
+        PlanningPanel
+        MissionDisplay
+        NotificationSystem
     end
-    Phases --> Systems
-    Systems --> Entities
+
+    TimeSys -->|Tick| CrewMgr
+    CrewMgr -->|Hire/Assign| Crew
+    MissionSys -->|Execute| ResourceNode
+    ResourceNode -->|Loot| ResMgr
+    TimeSys -->|Day/Night| MapGen
+    MapGen -->|Map Data| ResourceNode
+    Crew -->|Combat| Monster
 ```
+
+---
+
+## 5. System Overview
+
+### Time System
+- วนลูป 30 วัน (day 1 → day 30)
+- วันละ 1 รอบ: **Day Phase** (plan + execute) → **Night Phase** (defense)
+- Day time limit: 12000 time units
+- Simulation tick: +100 units every 1 second (real-time simulation)
+- Night duration: 5 seconds (short, transitions quickly)
+
+### Mission System
+- 3 ประเภท: **Gather**, **Relic Search**, **Monster Hunt**
+- ผู้เล่น build mission chain: Crew → Target 1 → Target 2 → ... → Base
+- Each mission phase: Travel → Action → Travel back
+- Collaborative mode: หลาย crew ไปจุดเดียวกัน → ใช้ total proficiency
+
+### Resource System
+- 7 resources: Wood, Stone, Iron, Food, Water, Circuit, Aluminum
+- Monster parts: Fangs, Hides, Claws
+- Base HP: 100, decreases from night attacks
+- Food consumed daily per crew (2 food/crew/day)
+
+### Win / Lose Conditions
+
+| Condition | Result |
+|-----------|--------|
+| Survive 30 days | **WIN** |
+| Base HP ≤ 0 | **LOST** — Base Destroyed |
+| Food ≤ 0 | **LOST** — Starvation |
+| All crews dead | **LOST** — No one left |
+
+---
+
+## 6. Design Evolution
+
+| Version | Concept | Source |
+|---------|---------|--------|
+| **v1.0 Prototype** | Resource Management + Action Survival — send crew for missions in day, defend base at night | Source code `prototype_resource_game/` |
+| v0.3 Concept | Turn-based Strategy + Tower Defense Hybrid — 3 Phase (Ship → Day → Night) + Node Map Roguelike | [Clogged_GDD_v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
+
+> Prototype นี้เป็นการ test concept ของ v1.0 ที่ได้ระบุไว้ใน Design Evolution — ตรวจสอบว่าการส่ง crew ออกไป mission + ป้องกัน night ให้ความรู้สึก "survival pressure" แบบไหน
 
 ---
 
 ## Related Documents
 - Mechanics: [Core Mechanics](01-mechanics.md)
-- Product Backlog: [Product Backlog](../agile/01-product-backlog.md)
-- Roadmap: [Sprint Planning](../agile/02-sprint-planning.md)
-- Team: [Team Roster](../agile/team.md)
+- System Design: [System Design](../software/01-system-design.md)
+- Product Backlog: [Backlog](../agile/01-product-backlog.md)

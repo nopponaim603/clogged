@@ -1,5 +1,15 @@
 # Documentation Changelog — clogged
 
+## 2026-07-30
+
+- **GDD v1.0 Reverse-Engineered from prototype source code** — Documented all mechanics as implemented in `prototype_resource_game/src/`:
+  - [00-concept.md](./gdd/00-concept.md) — Full game concept with scene flow, systems architecture, mission chaining
+  - [01-mechanics.md](./gdd/01-mechanics.md) — Day/Night cycle, crew stats, perks, resources, map gen, time system
+  - [02-narrative.md](./gdd/02-narrative.md) — World setting, monster ecology, character backgrounds
+  - [03-art-direction.md](./gdd/03-art-direction.md) — Color palette, UI layout, visual elements, future art direction
+  - [04-audio-direction.md](./gdd/04-audio-direction.md) — Audio plan (currently no audio in prototype)
+- Updated `index.md` to link to new GDD file structure
+
 ## 2026-07-24
 - **GDD อัปเกรดเป็น v0.3 (Day Phase Clarified)** — แปลงจาก Google Doc ต้นฉบับ:
   - ปรับ `gdd/00-concept.md` เป็นโครงสร้าง 3 Phase (Ship → Day → Night), Node Map Roguelike, Tower Defense Hybrid
