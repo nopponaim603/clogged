@@ -1,6 +1,18 @@
 # Documentation Changelog — clogged
 
+## 2026-08-03
+
+- **Game Loop Audit & User Story Breakdown** — Audit `prototype_resource_game` against [gdd/00-concept.md](./gdd/00-concept.md):
+  - Created [US-TIME-02.md](./agile/user-stories/US-TIME-02.md) — Day Cycle Bug Fix & Clean State Reset
+  - Created [US-MISSION-02.md](./agile/user-stories/US-MISSION-02.md) — Collaborative Mission System
+  - Created [US-BASE-02.md](./agile/user-stories/US-BASE-02.md) — Night Phase Base Defense & Escalation
+  - Created [US-FOOD-02.md](./agile/user-stories/US-FOOD-02.md) — Starvation & Crew Health Decay
+  - Created [US-MAP-01.md](./agile/user-stories/US-MAP-01.md) — Dynamic Map Generation & Difficulty Scaling
+  - Created [US-EQUIP-01.md](./agile/user-stories/US-EQUIP-01.md) — Equipment Crafting & Perk Synergy
+  - Updated [01-product-backlog.md](./agile/01-product-backlog.md) with updated status and links
+
 ## 2026-07-30
+
 
 - **GDD v1.0 Reverse-Engineered from prototype source code** — Documented all mechanics as implemented in `prototype_resource_game/src/`:
   - [00-concept.md](./gdd/00-concept.md) — Full game concept with scene flow, systems architecture, mission chaining
