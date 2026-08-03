@@ -3,12 +3,15 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags: []
+  tags:
+  - Base
+  - PlayerUnit
+  - Enemy
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Obstacle
   - Water
   - UI
   - 
@@ -40,6 +43,15 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Backgrond
+    uniqueID: 2325101999
+    locked: 0
+  - name: Base
+    uniqueID: 3276157781
+    locked: 0
+  - name: P&E
+    uniqueID: 1793843231
     locked: 0
   m_RenderingLayers:
   - Default
