@@ -2,15 +2,18 @@
 
 **Project:** clogged
 **Status:** Active | **Current Sprint:** [Sprint 01 — Prototype](./agile/sprint-backlogs/sprint-01.md)
-**Last Updated:** 2026-07-13 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+**Last Updated:** 2026-07-30 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
 
-> ⚠️ **สิ่งที่ควรรู้ก่อนอ่านต่อ:** ทีมปรับทิศทางเกมจากร่างไอเดียตั้งต้น (factory/conveyor pipeline) ไปเป็น Resource Management + Action Survival (crew dispatch, day/night cycle) — รายละเอียดดู [Design Pivot](./gdd/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน)
+> ⚠️ GDD ได้อัปเดต **v1.0 (Prototype Reverse-Engineered)** — เอกสาร GDD ฉบับใหม่Reverse Engineering จาก source code `prototype_resource_game/` — ดู [Design Evolution](./gdd/00-concept.md#6-design-evolution)
 
 ---
 
 ## 📘 Game Design (GDD)
-- [Concept & Architecture](./gdd/00-concept.md)
-- [Core Mechanics](./gdd/01-mechanics.md)
+- [Concept & Architecture](./gdd/00-concept.md) — Game loop, systems, architecture
+- [Core Mechanics](./gdd/01-mechanics.md) — Day/Night cycle, missions, crews, time system
+- [Narrative & World](./gdd/02-narrative.md) — Setting, factions, characters
+- [Art Direction](./gdd/03-art-direction.md) — Visual style, UI layout, colors
+- [Audio Direction](./gdd/04-audio-direction.md) — Music, SFX plan
 
 ---
 

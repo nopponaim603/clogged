@@ -6,7 +6,7 @@
       "enabled": true,
       "command": [
         "node",
-        "Library/PackageCache/com.gamelovers.mcp-unity@c35f184d7656/Server~/build/index.js"
+        "../mcp-unity/cloned/Server~/build/index.js"
       ],
       "environment": {}
     }

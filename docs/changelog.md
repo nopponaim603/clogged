@@ -1,5 +1,30 @@
 # Documentation Changelog — clogged
 
+## 2026-07-30
+
+- **GDD v1.0 Reverse-Engineered from prototype source code** — Documented all mechanics as implemented in `prototype_resource_game/src/`:
+  - [00-concept.md](./gdd/00-concept.md) — Full game concept with scene flow, systems architecture, mission chaining
+  - [01-mechanics.md](./gdd/01-mechanics.md) — Day/Night cycle, crew stats, perks, resources, map gen, time system
+  - [02-narrative.md](./gdd/02-narrative.md) — World setting, monster ecology, character backgrounds
+  - [03-art-direction.md](./gdd/03-art-direction.md) — Color palette, UI layout, visual elements, future art direction
+  - [04-audio-direction.md](./gdd/04-audio-direction.md) — Audio plan (currently no audio in prototype)
+- Updated `index.md` to link to new GDD file structure
+
+## 2026-07-24
+- **GDD อัปเกรดเป็น v0.3 (Day Phase Clarified)** — แปลงจาก Google Doc ต้นฉบับ:
+  - ปรับ `gdd/00-concept.md` เป็นโครงสร้าง 3 Phase (Ship → Day → Night), Node Map Roguelike, Tower Defense Hybrid
+  - ปรับ `gdd/01-mechanics.md` เป็นกลไกฉบับสมบูรณ์ของ v0.3 (Time System, Unit Specialty, ระบบป้องกัน 4 ทิศทาง, Facility, Crafting)
+  - เพิ่ม Design Evolution section ใน concept doc เชื่อมโยงระหว่าง Draft เดิม → Prototype → v0.3
+- อัปเดต `docs/index.md` header แจ้งเตือนการเปลี่ยนแปลง
+
+## 2026-07-18
+- **Refactored MCP Unity server**:
+  - Moved `mcp-unity` out of `ai-gateway/` to the workspace root `mcp-unity/` to make it modular and separate from API routing.
+  - Added automation setup scripts (`setup.ps1` and `setup.cmd`) to handle cloning, installing, and building of the external `CoderGamester/mcp-unity` server.
+  - Updated configuration files (`kilo.json` and `Unity-Projects/opencode.json`) to use a deterministic static path, resolving the issue with variable commit hashes in the Unity PackageCache.
+  - Configured git ignore rules to ignore only the cloned external repository folder (`mcp-unity/cloned/`) while tracking project-specific setup and documentation files.
+  - Updated wiki documentation (`docs/wiki/unity-mcp-setup.md`) and added it to the central knowledge hub (`docs/wiki/wiki.md`).
+
 ## 2026-07-13
 - **Restructured** entire doc suite to the `docs/gdd/`, `docs/software/`, `docs/agile/`, `docs/wiki/` layout.
 - **Created** `gdd/00-concept.md`, `gdd/01-mechanics.md` — derived from the original `Idea-design.md` draft, reconciled against the actual `prototype_resource_game/` codebase. Flagged an unresolved **design pivot**: the shipped prototype is a crew-dispatch/day-night survival game, not the factory-pipeline concept in the original draft.

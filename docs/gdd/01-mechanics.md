@@ -1,72 +1,422 @@
-# clogged — Core Mechanics
+# Survival Base — Core Mechanics
 
-**Version:** 1.0 | **Last Updated:** 2026-07-13
-> เอกสารนี้สร้างจากการอ่านโค้ด `prototype_resource_game/src/` จริง (ดู [Design Pivot](00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน)) — ตัวเลขทั้งหมดคือค่าปัจจุบันใน `src/config.ts` และปรับได้ระหว่าง balancing (เฟส 3)
+**Version:** 1.0 (Prototype) | **Last Updated:** 2026-07-30
 
 ## Core Loop
 
-1. **วางแผน (Planning phase, กลางวัน)** — เลือกลูกเรือที่ว่าง → คลิก resource node / relic / monster เพื่อสร้าง "chain" ภารกิจ (ส่งลูกเรือคนเดียวหรือหลายคนร่วมกันได้)
-2. **ดำเนินภารกิจ (Execution)** — ระบบจำลองเวลาเดินทางไป-กลับ + เวลาปฏิบัติภารกิจ ภายในเวลาที่จำกัดต่อวัน (`DAY_TIME_LIMIT = 12000` หน่วย) ถ้าเวลาไม่พอ ภารกิจให้ผลลัพธ์บางส่วนแทนที่จะล้มเหลวทั้งหมด
-3. **จบวัน** — ทรัพยากรที่เก็บได้ในวันนั้นแต่ยังไม่ถูกใช้ **เสียไปครึ่งหนึ่ง** (`loseDayResources`) → นี่คือกลไกหลักที่สื่อธีม "clogged" (สะสมเกินจำเป็น = เสียของ)
-4. **กลางคืน (Night phase)** — มอนสเตอร์บุกฐานเป็นระลอก (`MONSTER_SPAWN_INTERVAL`), ฐานรับดาเมจ
-5. **เริ่มวันใหม่** — กินอาหาร (`2 × จำนวนลูกเรือ`), ถ้าอาหารไม่พอเกิด shortage, จ้างลูกเรือใหม่ด้วย point, วนกลับไปข้อ 1
-6. ทำซ้ำจนครบ **30 วัน** (`MAX_DAYS`) เพื่อชนะ
+```
+1. Day Phase — Plan: Select crew, build mission chain (click crew → click targets)
+2. Day Phase — Execute: All missions run in parallel, crew travel → act → return
+3. Night Phase — Defense: Monsters attack base, base HP drops, resources lost
+4. New Day — Map regenerates, consume food, repeat
+```
 
-## Player Actions
+Each cycle = 1 day. The game runs for 30 days.
 
-| Action | Input | Result | Notes |
-|--------|-------|--------|-------|
-| เลือกลูกเรือ | คลิกไอคอนลูกเรือ | เข้าโหมดเลือกเป้าหมาย | ใช้ไม่ได้ตอน busy/กลางคืน/กำลังรัน execution |
-| สร้าง mission chain | คลิก node ซ้ำๆ | เพิ่ม node เข้า chain ของลูกเรือคนนั้น | คลิกซ้ำ node เดิม = ยกเลิก |
-| ยกเลิกการเลือก node ล่าสุด | Ctrl+Z | ลบ node สุดท้ายออกจาก chain | |
-| ล้างการเลือกทั้งหมด | R | เคลียร์ selection | |
-| ยกเลิกทั้งหมด | ESC | deselect | |
-| ยืนยัน/รันภารกิจ | ปุ่ม Execute (PlanningPanel) | เริ่ม simulate การเดินทาง+ปฏิบัติภารกิจของทุก chain พร้อมกัน | |
-| จ้างลูกเรือใหม่ | ใช้ point ผ่าน UI | เพิ่มลูกเรือเข้า roster | ราคาแปรผันตาม `hireCost` ของแต่ละคน |
+---
 
-## Game Systems
+## Phase 1: Day Phase — Mission Planning
 
-### Crew System
-ลูกเรือแต่ละคนมีค่า `hp`, `speed`, `gatheringProficiency`, `searchingProficiency`, `huntingProficiency`, `perks[]`, `equipment` (weapon/armor/accessory) ค่า effective (`getEffectiveGathering/Searching/Hunting/Speed`) คำนวณจาก base stat + perk bonus + equipment bonus
+### Player Actions
 
-**Perks:** fast_hands (gathering time -50%), night_vision (search efficiency +50%), gunslinger (hunting +100% เมื่อถือปืน), blacksmith (iron gathering x3), quick_reflex (speed +30%), tough (HP +50%)
+| Action | Input | Result |
+|--------|-------|--------|
+| Select Crew | Click crew text (bottom panel) | Crew highlighted, UI updates to show selection |
+| Add Target to Chain | Click resource node on map | Node added to chain, path line drawn from base → target chain |
+| Remove Last Target | Click node again (deselect) / Undo btn / Ctrl+Z | Last node removed from chain |
+| Reset Chain | Reset btn / R key | All selections cleared |
+| Confirm Chain | Confirm btn | Mission added to queue, crew marked as busy |
+| Execute All | Execute btn (after queue has missions) | All queued missions begin parallel execution |
+| Deselect All | ESC key | Crew + targets deselected |
 
-ลูกเรือที่ตายถาวร (`isAlive = false`) — เป็นความเสี่ยงจากภารกิจล่ามอนสเตอร์โดยเฉพาะ
+### Mission Chain Logic
 
-**Linked to Software Design:** [System Design — Entities/Crew](../software/01-system-design.md)
+A mission chain is a sequence of targets for a single crew:
 
-### Resource System
-7 ชนิดทรัพยากร: wood, stone, iron, food, water, circuit, aluminum + monster parts (fangs/hides/claws, จากการล่ามอนสเตอร์) + relics (จากการค้นหา ให้ food/wood/stone)
+```
+Base → [Target A] → [Target B] → [Target C] → Base
+```
 
-- **ขาด (Starvation):** ลูกเรือกินอาหารคนละ 2 หน่วย/วัน ถ้าไม่พอ เกิด shortage (ยังไม่มีผลลบชัดเจนใน prototype ปัจจุบัน — เป็นช่องว่างที่ต้องออกแบบเพิ่ม ดู [Idea-design ข้อ 5](00-concept.md))
-- **ตัน (Clogging):** ทรัพยากรที่เก็บได้ระหว่างวันแต่ไม่ได้ใช้ จะหายไปครึ่งหนึ่งตอนจบวัน (`loseDayResources`) — เป็น proxy ของธีม "ของสะสมเกินจะเสีย"
+For each target in the chain, the system calculates:
+- **Travel time** from previous location (base or previous target)
+- **Action time** for the gathering/searching/hunting
+- **Total time** = travel_out + action + travel_back
 
-### Mission System
-3 ประเภทภารกิจ: **Gathering** (เก็บทรัพยากร), **Relic Search** (สุ่มเจอ relic หรือทรัพยากรรอง), **Monster Hunt** (สู้เพื่อ monster parts, เสี่ยงลูกเรือบาดเจ็บ/ตาย) — แต่ละแบบมีเวอร์ชัน **Collaborative** (หลายลูกเรือร่วมภารกิจเดียว → โบนัสจากจำนวนคน แต่หารความสามารถเฉลี่ย)
+Total chain time = sum of all `(travel × 2 + action)` for each target.
 
-เวลาภารกิจ = travel time (ไป-กลับ, ขึ้นกับระยะทาง+speed) + action time (ขึ้นกับ proficiency+difficulty) ถ้ารวมแล้วเกิน `DAY_TIME_LIMIT` ระบบคำนวณผลลัพธ์แบบสัดส่วนเวลาที่เหลือแทนการ fail เต็มรูปแบบ
+**Constraints:**
+- Crew must be idle (not busy)
+- Must be planning phase (not executing, not night)
+- Chain can be any length (1+)
+- Over-time warnings shown but not blocked (crew still executes)
 
-**Linked to Software Design:** [System Design — MissionSystem](../software/01-system-design.md)
+---
 
-### Time / Day-Night System
-- Day time limit: 12,000 หน่วย (จำลอง 1 วินาทีจริง = 100 หน่วยเกม)
-- Night duration: 5,000 ms (fixed real-time)
-- Max days: 30
+## Phase 2: Mission Execution
 
-### Base Defense System
-ฐานมี HP (`BASE_HP = 100`) ถูกโจมตีจากมอนสเตอร์ที่ spawn รอบฐานตอนกลางคืน (จำนวน spawn ต่อคืนยังไม่ผูกกับ day number ใน prototype — เป็นจุดที่ต้อง balance เพิ่มเติมเฟส 3)
+### Mission Phases
 
-## Win / Lose Conditions
+Each mission goes through 3 visual phases:
 
-- **Win:** อยู่รอดครบ 30 วัน (`day > MAX_DAYS`)
-- **Lose:** ลูกเรือตายหมด (`aliveCrews.length === 0`) **หรือ** ฐานถูกทำลาย (`baseHP <= 0`)
+| Phase | Symbol | Description |
+|-------|--------|-------------|
+| **Travel Out** | 🚶 | Crew moves from current position to target |
+| **Action** | ⛏️/🔍/⚔️ | Crew performs gathering/searching/hunting |
+| **Travel Back** | 🚶 | Crew returns to base |
+| **Complete** | ✅ | Mission done, resources collected, crew free |
 
-## ส่วนที่ยังต้องตัดสินใจ (ต่อยอดจาก Idea-design เดิม)
+### Mission Types
 
-| หัวข้อ | สถานะ |
-|---|---|
-| Setting/Theme (โรงงาน? ท่อประปา? ฐานอวกาศ?) | ยังไม่ระบุชัด — code ปัจจุบันใช้ generic base/crew ไม่มี narrative framing |
-| ตัวละครผู้เล่นเป็นคนหรือยานอวกาศ | ค้างจาก [Meeting Note รอบที่ 2](../agile/meeting-backlogs/2026-06-29-resource-management.md) |
-| Platform & Control | Prototype เป็น web (Phaser+Vite) ควบคุมด้วยเมาส์ — ยังไม่ยืนยันเป็นทางการว่าเป็น target platform สุดท้าย |
-| Production/crafting (สมการเคมี ตามไอเดียเดิม) | ยังไม่มีใน prototype — ต้องตัดสินใจว่าจะเพิ่มหรือปล่อยผ่าน |
-| ผลลบของ food shortage | ยังไม่ implement (คำนวณ shortage ไว้แต่ไม่มี consequence) |
+| Type | Action Symbol | What Happens |
+|------|--------------|--------------|
+| **Gather** | ⛏️ | Collects resource based on type (wood/stone/iron/food/water/circuit/aluminum) |
+| **Relic Search** | 🔍 → ✨ | Success rate based on searching proficiency; yields food + wood; failure yields partial resources |
+| **Monster Hunt** | ⚔️ → 💥 | Success rate based on hunting proficiency; yields food + monster parts; failure deals damage to crew |
+
+### Yield Calculations
+
+**Gathering:**
+```
+amount = floor(target.amount × (0.5 + effectiveGathering × 0.3))
+```
+- 50% base yield, scaled by crew proficiency
+- Time proportional to amount and proficiency
+
+**Relic Search:**
+```
+successRate = 0.4 + effectiveSearching × 0.3
+```
+- Success: 10 food + 15 wood
+- Failure: 5 food + 5 stone (partial success)
+- Partial time (overtime): scaled success rate × 0.2–0.6, partial loot
+
+**Monster Hunt:**
+```
+successRate = 0.2 + effectiveHunting × 0.3 - difficulty × 0.05
+```
+- Success: 20 food + 1–3 monster parts (Fangs/Hides/Claws)
+- Failure: Crew takes 5–15 damage (or dies at low HP)
+- Difficulty ranges 1–3, higher = harder
+
+### Time Calculation
+
+```
+travelTime = (BASE_TRAVEL_TIME + distance × 1.8) / effectiveSpeed
+actionTime = baseActionTime × difficultyFactor / crewProficiency
+totalTime = travelTime × 2 + actionTime
+```
+
+Base times (from config):
+| Action | Base Time (ms) |
+|--------|---------------|
+| Travel | 500 |
+| Gather | 3000 |
+| Search | 4500 |
+| Hunt | 5000 |
+
+### Crew Proficiency Modifiers
+
+Each crew has base proficiencies (1.0 = normal). Effective values are modified by:
+
+**Perks (multiplicative):**
+| Perk | Effect |
+|------|--------|
+| Fast Hands | Gathering × 2.0 |
+| Night Vision | Searching × 1.5 |
+| Gunslinger | Hunting × 2.0 (only with gun equipment) |
+| Blacksmith | Iron gather × 3 |
+| Quick Reflex | Speed × 1.3 |
+| Tough | Max HP × 1.5 |
+
+**Equipment slots:**
+| Slot | Stat Bonuses |
+|------|-------------|
+| Weapon | Hunting bonus + Gathering bonus |
+| Armor | Defense bonus |
+| Accessory | Searching bonus |
+
+---
+
+## Phase 2.5: Collaborative Missions
+
+When multiple crews target the same ResourceNode, the system groups them and calculates:
+
+```
+totalProficiency = sum of all crew proficiencies
+avgTravelTime = average of all crew travel times
+actionTime = target.getActionTime(totalProficiency)  ← faster!
+```
+
+**Gathering bonus:**
+```
+amount = floor(target.amount × 0.5 × bonusMultiplier × avgProficiency)
+bonusMultiplier = 1 + (crewCount - 1) × 0.3
+```
+
+**Success rate boost for groups:**
+- Relic: +0.05 per additional crew
+- Monster: +0.15 per additional crew
+
+Damage is distributed across all participating crews (shared damage).
+
+---
+
+## Phase 3: Night Phase
+
+### Monster Attacks
+
+After each day ends, night begins. Monsters spawn and attack the base:
+
+**Monster count:** `2 + floor(day / 3)`
+- Day 1–2: 2 monsters
+- Day 3–5: 3 monsters
+- Day 6–8: 4 monsters
+- Day 9–11: 5 monsters
+- ... scales up every 3 days
+
+**Monster properties:**
+```
+HP = 20 + difficulty × 10
+Damage = 5 + difficulty × 3
+Speed = 50 + difficulty × 20 (pixel/s, visual only)
+```
+
+**Attack mechanics:**
+- Monsters spawn at random position around base (distance 80–200px)
+- Each monster travels toward base with a random wiggle
+- On arrival: deals 5–14 damage to base HP
+- Base HP shown in top HUD
+- Resources lost to monsters: half of each type gathered today
+
+**Visual feedback:**
+- Damage number floats up from base (`-X HP!`)
+- Camera shake on hit
+- Base color: green (healthy) → red (critical)
+
+### Monster Types
+
+| Name | Difficulty Range |
+|------|-----------------|
+| Goblin | 1–2 |
+| Wolf | 1–3 |
+| Giant Spider | 1–3 |
+| Shadow Demon | 1–3 |
+| Night Stalker | 1–3 |
+| Boss | 3 |
+
+---
+
+## Time System
+
+### Day/Night Cycle
+
+| Phase | Duration | Behavior |
+|-------|----------|----------|
+| Day | 12000 time units (~12 seconds real-time) | Planning + execution window |
+| Night | 5 seconds | Monsters attack, then new day starts |
+| Total per day | ~17 seconds | 30 days × 17s = ~8.5 minutes full game |
+
+### Time Units
+
+- Time advances at +100 units per second during execution
+- All action times are in the same time unit scale
+- Day time limit: 12000 units
+- Remaining time shown in HUD: `⏳ Left: X units`
+
+### Over-Time Handling
+
+If a mission's total time exceeds the day time limit:
+- The mission still executes (not cancelled)
+- Partial results: time-ratio determines how much is gathered
+  ```
+  partialAmount = floor(target.amount × 0.5 × ratio)
+  ratio = remainingTime / actionTime
+  ```
+- Warning shown: "⚠️ Chain needs X units but only Y left"
+- Crew may not complete full action → reduced loot or nothing
+
+---
+
+## Resource System
+
+### Resource Types
+
+| Resource | Icon | Color | Base Gather Time | Use |
+|----------|------|-------|-----------------|-----|
+| Wood | 🪵 | #8B6914 | 3000 | Construction |
+| Stone | 🪨 | #808080 | 3500 | Construction |
+| Iron | ⛏️ | #A0A0A0 | 4000 | Crafting/Equipment |
+| Food | 🍖 | #FF6B35 | 2500 | Crew sustenance |
+| Water | 💧 | #4A90D9 | 2000 | Crew sustenance |
+| Circuit | ⚡ | #FFD700 | 5000 | Advanced crafting |
+| Aluminum | 🔩 | #C0C0C0 | 4500 | Advanced crafting |
+
+### Monster Parts
+
+| Part | Source | Use |
+|------|--------|-----|
+| Fangs | Monster hunt success | Equipment/material |
+| Hides | Monster hunt success | Armor/material |
+| Claws | Monster hunt success | Weapon/material |
+
+### Resource Flow
+
+```
+Day Phase → Gather/Search/Hunt → Resources stored
+                    ↓
+New Day → Consume Food (2 per crew) → Remaining stored
+                    ↓
+Night → Base damaged, half of today's resources lost
+```
+
+**Daily food consumption:** `2 × aliveCrewCount`
+
+---
+
+## Crew System
+
+### Crew Statistics
+
+Each crew has these base stats (range: 0.7–1.8):
+
+| Stat | Range | Description |
+|------|-------|-------------|
+| HP | 80–120 | Health; 0 = dead (permadeath) |
+| Speed | 0.8–1.8 | Movement speed multiplier |
+| Gathering | 0.6–2.0 | Resource gathering proficiency |
+| Searching | 0.6–1.8 | Relic search proficiency |
+| Hunting | 0.7–1.5 | Monster hunting proficiency |
+| Hire Cost | 25–35 | Crew points cost to hire |
+
+### Starting Crew (3 hired at game start)
+
+| Name | HP | Speed | Gather | Search | Hunt | Perk | Cost |
+|------|----|-------|--------|--------|------|------|------|
+| Sarah | 100 | 1.2 | 1.5 | 0.8 | 0.9 | Fast Hands | 25 |
+| John | 120 | 0.9 | 0.7 | 1.8 | 1.2 | Night Vision | 30 |
+| Emma | 90 | 1.5 | 1.2 | 1.0 | 1.5 | Gunslinger | 35 |
+
+**Total starting crew points:** 100
+**Starting resources:** 100 food
+
+### Crew States
+
+| State | Description |
+|-------|-------------|
+| **Idle** | Available for mission assignment |
+| **Busy** | On a mission, cannot be selected |
+| **Dead** | HP ≤ 0, permanent removal from game |
+
+### Perks (6 total)
+
+| Perk Name | Emoji | Effect | Crew Type |
+|-----------|-------|--------|-----------|
+| Fast Hands | 🌪️ | Gathering time reduced 50% (proficiency ×2) | Gatherer type |
+| Night Vision | 🌙 | Searching efficiency +50% (proficiency ×1.5) | Scout/Searcher type |
+| Gunslinger | 🔫 | Hunting ×2 when equipped with gun | Hunter type |
+| Blacksmith | ⚒️ | Iron gathering ×3 | Specialist |
+| Quick Reflex | ⚡ | Movement speed +30% | Scout type |
+| Tough | 💪 | Max HP +50% | Tank type |
+
+---
+
+## Map Generation
+
+### Resource Node Distribution
+
+Each new day, a new map is generated:
+
+| Node Type | Count | Position Rules |
+|-----------|-------|---------------|
+| Resource nodes (wood/stone/iron/food/water) | 4–7 | Random, ≥150px from base |
+| Relic node | 1 | Random, ≥200px from base |
+| Monster node | 1 | Random, ≥180px from base |
+
+**Node properties:**
+- Amount: 30–150 (random)
+- Position: Random within playfield bounds (50–1230px X, 80–640px Y)
+- Base position: Random each day (100–1080px X, 80–440px Y)
+
+### Map Layout
+
+```
+┌─────────────────────────────────────────────┐
+│  Grid overlay (decorative, 60×50px cells)   │
+│                                             │
+│    ○ Resource     🏛️ Relic    👹 Monster   │
+│    (yellow)       (purple)     (red)        │
+│                                             │
+│              🏠 BASE                        │
+│    [crew positions around base]             │
+│                                             │
+│  Bottom: Crew panel (3 rows)                │
+│  Bottom: Planning panel                     │
+│  Right: Resource panel                      │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## UI Layout
+
+### HUD (Top Bar)
+
+| Element | Position | Content |
+|---------|----------|---------|
+| Day counter | Top-left | `Day X/30` |
+| Elapsed time | Top-left | `⏱️ Elapsed: X / 12000 units` |
+| Base HP | Top-left | `🏠 HP: XXX` |
+| Remaining time | Top-left | `⏳ Left: X units` |
+
+### Game Panels
+
+| Panel | Position | Size | Content |
+|-------|----------|------|---------|
+| Resource Panel | Right (1090, 60) | 180×230 | 7 resource types with counts |
+| Crew Panel | Bottom-left (30, 520) | 1240×130 | Crew list with pagination |
+| Planning Panel | Bottom (30, 680) | 1240×55 | Selection status + buttons |
+| Mission Display | Center overlay | Dynamic | Chain preview with times |
+| Notification System | Top-center | Dynamic | Status messages |
+
+### Panel Buttons
+
+**Planning Panel:**
+| Button | State | Action |
+|--------|-------|--------|
+| ADD TO QUEUE | Visible when crew selected + targets chained | Confirm chain → add to queue |
+| EXECUTE ALL | Visible when queue has missions | Start all queued missions |
+| RESET | Visible when chain has nodes | Clear entire selection |
+| UNDO | Visible when chain has nodes | Remove last node from chain |
+
+**Crew Panel:**
+- Pagination: 3 crews per page
+- Clickable crew text (when idle) → selects crew
+- Shows status: 🟢 Ready / 🔴 Busy
+- Shows chain count: 📋xN
+- Shows perk, stats at 11px size
+
+---
+
+## Player Strategy Tips
+
+### Optimal Crew Assignment
+- **Sarah** (Fast Hands + high gather) → Send to gather nodes
+- **John** (Night Vision + high search) → Send to relic nodes
+- **Emma** (Gunslinger + high hunt) → Send to monster nodes
+
+### Chain Strategy
+- Longer chains save travel time between nearby targets
+- But total time increases — watch the day time limit
+- Group multiple crews on high-value targets for collaborative bonus
+
+### Resource Priorities
+- **Food** is critical — consume 2/crew/day; run out = game over
+- **Wood/Stone** early for base durability
+- **Iron/Circuit/Aluminum** late-game for equipment/crafting (prototype incomplete)
+- **Monster parts** for equipment unlocks
+
+### Night Defense
+- Monster count scales: +1 every 3 days
+- Base HP is the only HP pool — lose it = game over
+- No active defense (prototype) — only resource management
+- Strategy: gather food/wood to sustain through hard nights

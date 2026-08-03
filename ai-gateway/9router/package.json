@@ -1,0 +1,16 @@
+{
+  "name": "9router",
+  "version": "1.0.0",
+  "description": "โฟลเดอร์นี้ประกอบด้วยการตั้งค่าและสคริปต์สำหรับรัน **9Router** ผ่าน Docker เพื่อใช้เป็น AI Gateway (Proxy) ในการพัฒนาโปรเจกต์นี้",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "9router": "^0.5.35"
+  }
+}
