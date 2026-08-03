@@ -4,6 +4,18 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Day/Scenes/Setup.unity
+    guid: af21d7ba0ad18144698fed2c61dd681a
+  - enabled: 1
+    path: Assets/Day/Scenes/ShipDay.unity
+    guid: b2e62913428fc5e4d8ddf27120b3a6c0
+  - enabled: 1
+    path: Assets/Day/Scenes/Night.unity
+    guid: 82f91af300a0869479f959d9f7e4d55b
+  - enabled: 1
+    path: Assets/Night/Scenes/NPCtest.unity
+    guid: 8afeee1e4c89f3f449b5c47cbc07ce59
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
