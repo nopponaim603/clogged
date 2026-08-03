@@ -13,6 +13,9 @@ export interface ResourceNodeData {
     difficulty?: number;
     monsterName?: string;
     gatherTime?: number;
+    // ✅ เพิ่ม
+    hp?: number;
+    rank?: number;
 }
 
 export class ResourceNode {
@@ -25,10 +28,16 @@ export class ResourceNode {
     public isMonster: boolean;
     public difficulty: number;
     public monsterName: string;
-    public gatherTime: number; // ✅ เก็บค่าตรงๆ ไม่แปลง
+    public gatherTime: number;
     public sprite: Phaser.GameObjects.Arc | null;
     public label: Phaser.GameObjects.Text | null;
     public isDepleted: boolean;
+    
+    // ✅ ระบบ HP ใหม่
+    public hp: number;
+    public maxHp: number;
+    public rank: number; // 0-3
+    public rankName: string;
 
     constructor(data: ResourceNodeData) {
         this.id = data.id;
@@ -40,36 +49,101 @@ export class ResourceNode {
         this.isMonster = data.isMonster || false;
         this.difficulty = data.difficulty || 1;
         this.monsterName = data.monsterName || 'Unknown Monster';
-        
-        // ✅ เก็บค่าตรงๆ ไม่แปลง
         this.gatherTime = data.gatherTime || 3000;
-        
         this.sprite = null;
         this.label = null;
         this.isDepleted = false;
+        
+        // ✅ คำนวณ HP
+        this.rank = data.rank || 0;
+        this.hp = this.calculateHP();
+        this.maxHp = this.hp;
+        this.rankName = this.getRankName();
     }
 
-    getActionTime(crewProficiency: number): number {
-        let baseTime = 0;
-        let difficultyFactor = 1;
-        
+    // ✅ คำนวณ HP ของโหนด
+    private calculateHP(): number {
         if (this.isRelic) {
-            baseTime = GAME_CONFIG.BASE_SEARCH_TIME; // 4500
-            difficultyFactor = 1.2 + Math.random() * 0.3;
+            return this.calculateRelicHP();
         } else if (this.isMonster) {
-            baseTime = GAME_CONFIG.BASE_HUNT_TIME; // 5000
-            difficultyFactor = 1 + (this.difficulty || 1) * 0.4;
+            return this.calculateMonsterHP();
         } else {
-            baseTime = GAME_CONFIG.BASE_GATHER_TIME; // 3000
-            const amountFactor = 1 + (this.amount / 100) * 0.6;
-            difficultyFactor = amountFactor;
+            return this.calculateGatherHP();
         }
+    }
+
+    // ✅ Gathering HP
+    private calculateGatherHP(): number {
+        // สุ่ม rank 0-3 ตาม amount
+        const amount = this.amount;
+        let rank = 0;
+        if (amount > 80) rank = 3;
+        else if (amount > 60) rank = 2;
+        else if (amount > 40) rank = 1;
+        else rank = 0;
         
-        // ✅ crewProficiency เป็นค่า 0-100 แล้ว
-        const proficiencyFactor = Math.max(0.1, crewProficiency / 100);
-        const actionTime = (baseTime * difficultyFactor) / proficiencyFactor;
+        this.rank = rank;
+        const hpPerUnit = GAME_CONFIG.GATHER_HP_PER_UNIT[rank] || 50;
+        return this.amount * hpPerUnit;
+    }
+
+    // ✅ Relic HP
+    private calculateRelicHP(): number {
+        const baseHP = GAME_CONFIG.RELIC_BASE_HP_RANGE;
+        const multipliers = GAME_CONFIG.RELIC_RARITY_MULTIPLY;
         
-        return actionTime;
+        // สุ่ม rank 0-3
+        this.rank = Math.floor(Math.random() * 4);
+        const base = baseHP.min + Math.random() * (baseHP.max - baseHP.min);
+        const hp = base * multipliers[this.rank];
+        return Math.floor(hp);
+    }
+
+    // ✅ Monster HP
+    private calculateMonsterHP(): number {
+        const baseHP = GAME_CONFIG.MONSTER_BASE_HP_RANGE;
+        const multipliers = GAME_CONFIG.MONSTER_RARITY_MULTIPLY;
+        
+        // rank ขึ้นอยู่กับ difficulty
+        this.rank = Math.min(this.difficulty - 1, 3);
+        const base = baseHP.min + Math.random() * (baseHP.max - baseHP.min);
+        const hp = base * multipliers[this.rank];
+        return Math.floor(hp);
+    }
+
+    // ✅ ดึงชื่อ Rank
+    private getRankName(): string {
+        if (this.isRelic) {
+            return GAME_CONFIG.RELIC_RANKS[this.rank] || 'Common';
+        } else if (this.isMonster) {
+            return GAME_CONFIG.MONSTER_RANKS[this.rank] || 'Common';
+        } else {
+            return GAME_CONFIG.GATHER_RANKS[this.rank] || 'Common';
+        }
+    }
+
+    // ✅ คำนวณเวลาที่ใช้ในการทำภารกิจ (ตามระบบใหม่)
+    getActionTime(crewProficiency: number): number {
+        // ✅ ห้ามหารด้วย 0
+        const proficiency = Math.max(0.1, crewProficiency);
+        // ✅ เวลา = HP / Proficiency (หน่วยเวลา)
+        return Math.ceil(this.hp / proficiency);
+    }
+
+    // ✅ รับความเสียหาย (ใช้ในการเก็บ/ล่า)
+    takeDamage(damage: number): boolean {
+        this.hp -= damage;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.isDepleted = true;
+            return true; // โหนดถูกทำลาย
+        }
+        return false;
+    }
+
+    // ✅ ดึงเปอร์เซ็นต์ HP ที่เหลือ
+    getHpPercentage(): number {
+        return (this.hp / this.maxHp) * 100;
     }
 
     getColor(): number {
@@ -77,4 +151,4 @@ export class ResourceNode {
         if (this.isMonster) return 0xe74c3c;
         return 0xf9ca24;
     }
-}
+}   

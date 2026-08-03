@@ -15,14 +15,16 @@ export class MissionDisplay {
     }
 
     showMission(crew: Crew, target: ResourceNode): void {
-        // Clear old display
         this.clear();
 
-        // ✅ คำนวณเวลา (ไม่ต้องคูณ TIME_UNIT_PER_SECOND เพราะได้ค่าเป็นหน่วยเวลาอยู่แล้ว)
         const distance = this.getDistance(crew.position, target.position);
         const travelTime = crew.calculateTravelTime(distance);
         const actionTime = target.getActionTime(crew.getEffectiveGathering());
-        const totalTime = travelTime * 2 + actionTime;
+        
+        // ✅ Single mission: ไป + ทำ + กลับฐาน
+        const returnDistance = this.getDistance(target.position, (this.scene.scene.get('GameScene') as any)?.mapGenerator?.getBasePosition() || crew.position);
+        const returnTime = crew.calculateTravelTime(returnDistance);
+        const totalTime = travelTime + actionTime + returnTime;
 
         // Draw line from crew to target
         this.line = this.scene.add.graphics();
@@ -96,17 +98,36 @@ export class MissionDisplay {
 
         for (let i = 0; i < targets.length; i++) {
             const target = targets[i];
+            const isLast = (i === targets.length - 1);
+            
+            // ✅ คำนวณระยะทางจากตำแหน่งปัจจุบันไปยัง target
             const distance = this.getDistance(lastPos, target.position);
             const travelTime = crew.calculateTravelTime(distance);
             const actionTime = target.getActionTime(crew.getEffectiveGathering());
-            const total = travelTime * 2 + actionTime;
+            
+            // ✅ เฉพาะภารกิจสุดท้ายเท่านั้นที่ต้องเดินทางกลับฐาน
+            let total = 0;
+            let travelBack = 0;
+            if (isLast) {
+                const returnDistance = this.getDistance(target.position, basePos);
+                travelBack = crew.calculateTravelTime(returnDistance);
+                total = travelTime + actionTime + travelBack;
+            } else {
+                total = travelTime + actionTime;
+            }
             
             totalTime += total;
-            infoText += `  #${i+1}: ${target.icon} ${target.type} (${Math.floor(total)} units)\n`;
+            
+            // ✅ แสดงรายละเอียด
+            if (isLast) {
+                infoText += `  #${i+1}: ${target.icon} ${target.type} (Travel: ${Math.floor(travelTime)}, Action: ${Math.floor(actionTime)}, Return: ${Math.floor(travelBack)}, Total: ${Math.floor(total)})\n`;
+            } else {
+                infoText += `  #${i+1}: ${target.icon} ${target.type} (Travel: ${Math.floor(travelTime)}, Action: ${Math.floor(actionTime)}, Total: ${Math.floor(total)})\n`;
+            }
             lastPos = target.position;
         }
 
-        infoText += `📊 Total: ${Math.floor(totalTime)} units`;
+        infoText += `📊 Total Chain Time: ${Math.floor(totalTime)} units`;
 
         const centerX = this.scene.cameras.main.width / 2;
         const centerY = this.scene.cameras.main.height / 2 - 80;
@@ -122,14 +143,14 @@ export class MissionDisplay {
             strokeThickness: 3
         }).setOrigin(0.5).setDepth(100);
 
-        // ✅ ตรวจสอบเวลา
+        // Check time
         const timeSystem = this.scene.scene.get('GameScene') as any;
         if (timeSystem && timeSystem.timeSystem) {
             const remaining = timeSystem.timeSystem.getRemainingTime();
             if (totalTime > remaining) {
                 const warning = this.scene.add.text(
                     centerX,
-                    centerY + 100,
+                    centerY + 120,
                     `⚠️ NOT ENOUGH TIME! (Need ${Math.floor(totalTime)}, Have ${Math.floor(remaining)})`,
                     {
                         fontSize: '16px',

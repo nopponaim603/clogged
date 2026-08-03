@@ -19,10 +19,12 @@ export class MissionSystem {
         this.resourceManager = resourceManager;
     }
 
-    // ✅ Method เดิมสำหรับ 1 คน (ปรับให้ทำงานแม้เวลาไม่พอ)
     executeMission(crew: Crew, target: ResourceNode): MissionResult {
+        // ✅ คำนวณระยะทางจริง
         const distance = this.getDistance(crew.position, target.position);
         const travelTime = crew.calculateTravelTime(distance);
+        
+        // ✅ คำนวณเวลาปฏิบัติการจาก HP / Proficiency
         const actionTime = target.getActionTime(crew.getEffectiveGathering());
         const totalTime = travelTime * 2 + actionTime;
 
@@ -35,7 +37,7 @@ export class MissionSystem {
         }
     }
 
-    // ✅ Gathering - รองรับเวลาไม่พอ
+    // ✅ Gathering - ใช้ระบบ HP
     private executeGathering(crew: Crew, target: ResourceNode, travelTime: number, actionTime: number): MissionResult {
         const totalTime = travelTime * 2 + actionTime;
         const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
@@ -50,15 +52,24 @@ export class MissionSystem {
                 };
             }
             
-            const ratio = remainingTime / actionTime;
-            const amount = Math.floor(target.amount * 0.5 * ratio);
-            if (amount > 0) {
-                this.resourceManager.addResource(target.type as any, amount);
-                return {
-                    success: true,
-                    message: `⚠️ ${crew.name} gathered only ${amount} ${target.type} (time ran out! Used ${Math.floor(totalTime)} units)`,
-                    resources: { [target.type]: amount }
-                };
+            // ✅ คำนวณ damage ที่ทำได้ในช่วงเวลาที่เหลือ
+            const proficiency = crew.getEffectiveGathering();
+            const damageDone = Math.floor(remainingTime * proficiency);
+            const remainingHp = target.hp - damageDone;
+            
+            if (damageDone > 0) {
+                // ✅ ได้ทรัพยากรตามสัดส่วน damage ที่ทำได้
+                const gatheredAmount = Math.floor((damageDone / target.maxHp) * target.amount);
+                const actualGathered = Math.min(gatheredAmount, target.amount);
+                
+                if (actualGathered > 0) {
+                    this.resourceManager.addResource(target.type as any, actualGathered);
+                    return {
+                        success: true,
+                        message: `⚠️ ${crew.name} gathered ${actualGathered} ${target.type} (time ran out! Did ${Math.floor(damageDone)} damage)`,
+                        resources: { [target.type]: actualGathered }
+                    };
+                }
             }
             return {
                 success: false,
@@ -66,22 +77,21 @@ export class MissionSystem {
             };
         }
 
-        // ✅ เวลาพอ
-        const amount = Math.floor(target.amount * (0.5 + crew.getEffectiveGathering() * 0.3));
+        // ✅ เวลาพอ → ได้ทรัพยากรเต็ม
+        const amount = target.amount;
         this.resourceManager.addResource(target.type as any, amount);
         return {
             success: true,
-            message: `✅ ${crew.name} gathered ${amount} ${target.type}! (${Math.floor(totalTime)} units)`,
+            message: `✅ ${crew.name} gathered ${amount} ${target.type}! (${Math.floor(totalTime)} units, ${target.rankName} rank)`,
             resources: { [target.type]: amount }
         };
     }
 
-    // ✅ Relic Search - รองรับเวลาไม่พอ
+    // ✅ Relic Search - ใช้ระบบ HP
     private executeRelicSearch(crew: Crew, target: ResourceNode, travelTime: number, actionTime: number): MissionResult {
         const totalTime = travelTime * 2 + actionTime;
         const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
 
-        // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
         if (totalTime > dayTimeLimit) {
             const remainingTime = dayTimeLimit - travelTime * 2;
             if (remainingTime <= 0) {
@@ -91,44 +101,41 @@ export class MissionSystem {
                 };
             }
             
-            // ✅ มีเวลาไปถึงแต่ไม่พอค้นหา
-            const ratio = remainingTime / actionTime;
-            if (ratio > 0.3) {
-                // ✅ พอมีเวลาค้นหาบ้าง
-                const successRate = 0.2 + crew.getEffectiveSearching() * 0.2 * ratio;
+            // ✅ คำนวณ damage ที่ทำได้
+            const proficiency = crew.getEffectiveSearching();
+            const damageDone = Math.floor(remainingTime * proficiency);
+            const remainingHp = target.hp - damageDone;
+            
+            if (damageDone > 0 && remainingHp <= 0) {
+                // ✅ ค้นพบ relic (แม้เวลาจะเหลือน้อย)
+                const successRate = 0.3 + (damageDone / target.maxHp) * 0.5;
                 if (Math.random() < successRate) {
-                    this.resourceManager.addResource('food', 5);
-                    this.resourceManager.addResource('wood', 8);
+                    this.resourceManager.addResource('food', 10);
+                    this.resourceManager.addResource('wood', 15);
                     return {
                         success: true,
-                        message: `🎉 ${crew.name} found a small relic! (${Math.floor(totalTime)} units, time was running out!)`,
-                        relic: '🌟 Small Relic',
-                        resources: { food: 5, wood: 8 }
-                    };
-                } else {
-                    this.resourceManager.addResource('wood', 3);
-                    return {
-                        success: false,
-                        message: `⏰ ${crew.name} ran out of time... found some wood though! (${Math.floor(totalTime)} units)`,
-                        resources: { wood: 3 }
+                        message: `🎉 ${crew.name} found a ${target.rankName} Relic! (Time was running out!)`,
+                        relic: `🌟 ${target.rankName} Relic`,
+                        resources: { food: 10, wood: 15 }
                     };
                 }
             }
+            
             return {
                 success: false,
-                message: `⏰ ${crew.name} reached the relic site but had no time to search!`
+                message: `⏰ ${crew.name} ran out of time searching for relic!`,
             };
         }
 
         // ✅ เวลาพอ
-        const successRate = 0.4 + crew.getEffectiveSearching() * 0.3;
+        const successRate = 0.3 + crew.getEffectiveSearching() / 200;
         if (Math.random() < successRate) {
             this.resourceManager.addResource('food', 10);
             this.resourceManager.addResource('wood', 15);
             return {
                 success: true,
-                message: `🎉 ${crew.name} found an Ancient Relic! (${Math.floor(totalTime)} units)`,
-                relic: '🌟 Ancient Relic',
+                message: `🎉 ${crew.name} found a ${target.rankName} Relic! (${Math.floor(totalTime)} units)`,
+                relic: `🌟 ${target.rankName} Relic`,
                 resources: { food: 10, wood: 15 }
             };
         } else {
@@ -142,12 +149,11 @@ export class MissionSystem {
         }
     }
 
-    // ✅ Monster Hunt - รองรับเวลาไม่พอ
+    // ✅ Monster Hunt - ใช้ระบบ HP
     private executeMonsterHunt(crew: Crew, target: ResourceNode, travelTime: number, actionTime: number): MissionResult {
         const totalTime = travelTime * 2 + actionTime;
         const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
 
-        // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
         if (totalTime > dayTimeLimit) {
             const remainingTime = dayTimeLimit - travelTime * 2;
             if (remainingTime <= 0) {
@@ -157,54 +163,53 @@ export class MissionSystem {
                 };
             }
             
-            const ratio = remainingTime / actionTime;
-            if (ratio > 0.3) {
-                // ✅ พอมีเวลาสู้บ้าง (แต่ไม่เต็มที่)
-                const successRate = 0.1 + crew.getEffectiveHunting() * 0.2 * ratio - (target.difficulty || 1) * 0.05;
-                if (Math.random() < successRate) {
-                    const parts = ['Fangs', 'Hides', 'Claws'];
-                    const part = parts[Math.floor(Math.random() * parts.length)];
-                    this.resourceManager.addResource('food', 10);
-                    this.resourceManager.addMonsterPart(
-                        part.toLowerCase() as 'fangs' | 'hides' | 'claws',
-                        1
-                    );
-                    return {
-                        success: true,
-                        message: `🎉 ${crew.name} defeated ${target.monsterName}! Got ${part}! (${Math.floor(totalTime)} units, time was running out!)`,
-                        monsterPart: part,
-                        resources: { food: 10 }
-                    };
-                } else {
-                    const damage = 3 + Math.floor(Math.random() * 10);
-                    const dead = crew.takeDamage(damage);
-                    return {
-                        success: false,
-                        message: dead 
-                            ? `💀 ${crew.name} died fighting ${target.monsterName}! (${Math.floor(totalTime)} units)`
-                            : `💢 ${crew.name} failed to hunt ${target.monsterName} (took ${damage} damage, time ran out)!`
-                    };
-                }
+            // ✅ คำนวณ damage ที่ทำได้
+            const proficiency = crew.getEffectiveHunting();
+            const damageDone = Math.floor(remainingTime * proficiency);
+            const remainingHp = target.hp - damageDone;
+            
+            if (damageDone > 0 && remainingHp <= 0) {
+                // ✅ ล่าสำเร็จ (แม้เวลาจะเหลือน้อย)
+                const parts = ['Fangs', 'Hides', 'Claws'];
+                const part = parts[Math.floor(Math.random() * parts.length)];
+                this.resourceManager.addResource('food', 10);
+                this.resourceManager.addMonsterPart(
+                    part.toLowerCase() as 'fangs' | 'hides' | 'claws',
+                    1
+                );
+                return {
+                    success: true,
+                    message: `🎉 ${crew.name} defeated ${target.monsterName}! Got ${part}! (Time was running out!)`,
+                    monsterPart: part,
+                    resources: { food: 10 }
+                };
+            } else {
+                // ✅ ได้รับความเสียหาย (แต่ไม่ตาย เพราะมีเวลาสู้บ้าง)
+                const damage = Math.floor(5 + Math.random() * 10);
+                const dead = crew.takeDamage(damage);
+                return {
+                    success: false,
+                    message: dead 
+                        ? `💀 ${crew.name} died fighting ${target.monsterName}!`
+                        : `💢 ${crew.name} failed to hunt ${target.monsterName} (took ${damage} damage, time ran out)!`
+                };
             }
-            return {
-                success: false,
-                message: `⏰ ${crew.name} reached ${target.monsterName} but had no time to fight!`
-            };
         }
 
         // ✅ เวลาพอ
-        const successRate = 0.2 + crew.getEffectiveHunting() * 0.3 - (target.difficulty || 1) * 0.05;
+        const successRate = 0.2 + crew.getEffectiveHunting() / 300 - (target.difficulty || 1) * 0.05;
         if (Math.random() < successRate) {
             const parts = ['Fangs', 'Hides', 'Claws'];
             const part = parts[Math.floor(Math.random() * parts.length)];
+            const amount = 1 + Math.floor(Math.random() * 3);
             this.resourceManager.addResource('food', 20);
             this.resourceManager.addMonsterPart(
                 part.toLowerCase() as 'fangs' | 'hides' | 'claws',
-                1 + Math.floor(Math.random() * 3)
+                amount
             );
             return {
                 success: true,
-                message: `🎉 ${crew.name} defeated ${target.monsterName}! Got ${part}! (${Math.floor(totalTime)} units)`,
+                message: `🎉 ${crew.name} defeated ${target.monsterName}! Got ${part}x${amount}! (${Math.floor(totalTime)} units, ${target.rankName} rank)`,
                 monsterPart: part,
                 resources: { food: 20 }
             };
@@ -214,13 +219,13 @@ export class MissionSystem {
             return {
                 success: false,
                 message: dead 
-                    ? `💀 ${crew.name} died fighting ${target.monsterName}! (${Math.floor(totalTime)} units)`
-                    : `💢 ${crew.name} failed to hunt ${target.monsterName} (took ${damage} damage)! (${Math.floor(totalTime)} units)`
+                    ? `💀 ${crew.name} died fighting ${target.monsterName}!`
+                    : `💢 ${crew.name} failed to hunt ${target.monsterName} (took ${damage} damage)!`
             };
         }
     }
 
-    // ✅ Collaborative Gathering - รองรับเวลาไม่พอ
+    // ✅ Collaborative Gathering - ใช้ระบบ HP
     private executeCollaborativeGathering(
         crews: Crew[], 
         target: ResourceNode, 
@@ -229,8 +234,10 @@ export class MissionSystem {
     ): MissionResult {
         const totalTime = travelTime * 2 + actionTime;
         const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-        const totalGathering = crews.reduce((sum, c) => sum + c.getEffectiveGathering(), 0);
         const crewNames = crews.map(c => c.name).join(' + ');
+        
+        // ✅ คำนวณความสามารถรวม
+        const totalProficiency = crews.reduce((sum, c) => sum + c.getEffectiveGathering(), 0);
 
         // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
         if (totalTime > dayTimeLimit) {
@@ -242,18 +249,23 @@ export class MissionSystem {
                 };
             }
             
-            const ratio = remainingTime / actionTime;
-            const baseAmount = target.amount * 0.5;
-            const bonusMultiplier = 1 + (crews.length - 1) * 0.3;
-            const amount = Math.floor(baseAmount * bonusMultiplier * (totalGathering / crews.length) * ratio);
+            // ✅ คำนวณ damage รวมที่ทำได้ในช่วงเวลาที่เหลือ
+            const totalDamage = Math.floor(remainingTime * totalProficiency);
+            const damagePerCrew = Math.floor(totalDamage / crews.length);
             
-            if (amount > 0) {
-                this.resourceManager.addResource(target.type as any, amount);
-                return {
-                    success: true,
-                    message: `⚠️ ${crewNames} gathered only ${amount} ${target.type} (time ran out! ${crews.length} crews)`,
-                    resources: { [target.type]: amount }
-                };
+            if (totalDamage > 0 && target.hp > 0) {
+                // ✅ ได้ทรัพยากรตามสัดส่วน damage ที่ทำได้
+                const gatheredAmount = Math.floor((totalDamage / target.maxHp) * target.amount);
+                const actualGathered = Math.min(gatheredAmount, target.amount);
+                
+                if (actualGathered > 0) {
+                    this.resourceManager.addResource(target.type as any, actualGathered);
+                    return {
+                        success: true,
+                        message: `⚠️ ${crewNames} gathered ${actualGathered} ${target.type} (time ran out! Did ${Math.floor(totalDamage)} damage, ${crews.length} crews)`,
+                        resources: { [target.type]: actualGathered }
+                    };
+                }
             }
             return {
                 success: false,
@@ -261,20 +273,19 @@ export class MissionSystem {
             };
         }
 
-        // ✅ เวลาพอ
-        const baseAmount = target.amount * 0.5;
-        const bonusMultiplier = 1 + (crews.length - 1) * 0.3;
-        const amount = Math.floor(baseAmount * bonusMultiplier * (totalGathering / crews.length));
+        // ✅ เวลาพอ → ได้ทรัพยากรเต็ม (พร้อมโบนัสจากจำนวนคน)
+        const bonusMultiplier = 1 + (crews.length - 1) * 0.2; // +20% ต่อคนที่เพิ่ม
+        const amount = Math.floor(target.amount * bonusMultiplier);
         
         this.resourceManager.addResource(target.type as any, amount);
         return {
             success: true,
-            message: `✅ ${crewNames} gathered ${amount} ${target.type}! (${Math.floor(totalTime)} units, ${crews.length} crews)`,
+            message: `✅ ${crewNames} gathered ${amount} ${target.type}! (${Math.floor(totalTime)} units, ${target.rankName} rank, ${crews.length} crews)`,
             resources: { [target.type]: amount }
         };
     }
 
-    // ✅ Collaborative Relic Search - รองรับเวลาไม่พอ
+    // ✅ Collaborative Relic Search - ใช้ระบบ HP
     private executeCollaborativeRelicSearch(
         crews: Crew[], 
         target: ResourceNode, 
@@ -284,8 +295,10 @@ export class MissionSystem {
         const totalTime = travelTime * 2 + actionTime;
         const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
         const crewNames = crews.map(c => c.name).join(' + ');
-        const totalSearching = crews.reduce((sum, c) => sum + c.getEffectiveSearching(), 0);
-        const avgSearching = totalSearching / crews.length;
+        
+        // ✅ คำนวณความสามารถรวม
+        const totalProficiency = crews.reduce((sum, c) => sum + c.getEffectiveSearching(), 0);
+        const avgProficiency = totalProficiency / crews.length;
 
         // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
         if (totalTime > dayTimeLimit) {
@@ -297,27 +310,41 @@ export class MissionSystem {
                 };
             }
             
-            const ratio = remainingTime / actionTime;
-            if (ratio > 0.3) {
-                const successRate = 0.2 + avgSearching * 0.2 * ratio + (crews.length - 1) * 0.05;
-                if (Math.random() < successRate) {
-                    this.resourceManager.addResource('food', 5 + crews.length * 3);
-                    this.resourceManager.addResource('wood', 8 + crews.length * 3);
-                    return {
-                        success: true,
-                        message: `🎉 ${crewNames} found a small relic! (${Math.floor(totalTime)} units, time was running out!)`,
-                        relic: '🌟 Small Relic',
-                        resources: { food: 5 + crews.length * 3, wood: 8 + crews.length * 3 }
-                    };
-                } else {
-                    this.resourceManager.addResource('wood', 3 + crews.length);
+            // ✅ คำนวณ damage รวมที่ทำได้
+            const totalDamage = Math.floor(remainingTime * totalProficiency);
+            
+            if (totalDamage > 0 && target.hp > 0) {
+                // ✅ ค้นพบ relic ถ้าทำ damage ได้เกินครึ่งของ HP
+                const damageRatio = Math.min(1, totalDamage / target.maxHp);
+                
+                if (damageRatio > 0.5) {
+                    const successRate = 0.3 + damageRatio * 0.4 + (crews.length - 1) * 0.05;
+                    if (Math.random() < successRate) {
+                        const bonusFood = 5 + crews.length * 3;
+                        const bonusWood = 8 + crews.length * 3;
+                        this.resourceManager.addResource('food', bonusFood);
+                        this.resourceManager.addResource('wood', bonusWood);
+                        return {
+                            success: true,
+                            message: `🎉 ${crewNames} found a ${target.rankName} Relic! (Time was running out! ${crews.length} crews)`,
+                            relic: `🌟 ${target.rankName} Relic`,
+                            resources: { food: bonusFood, wood: bonusWood }
+                        };
+                    }
+                }
+                
+                // ✅ ไม่เจอแต่ได้ทรัพยากรบ้าง
+                const woodFound = Math.floor(5 * damageRatio * (1 + (crews.length - 1) * 0.2));
+                if (woodFound > 0) {
+                    this.resourceManager.addResource('wood', woodFound);
                     return {
                         success: false,
-                        message: `⏰ ${crewNames} ran out of time... found some wood though!`,
-                        resources: { wood: 3 + crews.length }
+                        message: `⏰ ${crewNames} ran out of time... found some wood though! (${woodFound} wood)`,
+                        resources: { wood: woodFound }
                     };
                 }
             }
+            
             return {
                 success: false,
                 message: `⏰ ${crewNames} reached the relic site but had no time to search!`
@@ -325,28 +352,32 @@ export class MissionSystem {
         }
 
         // ✅ เวลาพอ
-        const successRate = 0.4 + avgSearching * 0.25 + (crews.length - 1) * 0.1;
+        const successRate = 0.3 + avgProficiency / 200 + (crews.length - 1) * 0.08;
         if (Math.random() < successRate) {
-            this.resourceManager.addResource('food', 10 + crews.length * 5);
-            this.resourceManager.addResource('wood', 15 + crews.length * 5);
+            const bonusFood = 10 + crews.length * 5;
+            const bonusWood = 15 + crews.length * 5;
+            this.resourceManager.addResource('food', bonusFood);
+            this.resourceManager.addResource('wood', bonusWood);
             return {
                 success: true,
-                message: `🎉 ${crewNames} found an Ancient Relic! (${Math.floor(totalTime)} units, ${crews.length} crews)`,
-                relic: '🌟 Ancient Relic',
-                resources: { food: 10 + crews.length * 5, wood: 15 + crews.length * 5 }
+                message: `🎉 ${crewNames} found a ${target.rankName} Relic! (${Math.floor(totalTime)} units, ${crews.length} crews)`,
+                relic: `🌟 ${target.rankName} Relic`,
+                resources: { food: bonusFood, wood: bonusWood }
             };
         } else {
-            this.resourceManager.addResource('food', 5 + crews.length * 3);
-            this.resourceManager.addResource('stone', 5 + crews.length * 3);
+            const bonusFood = 5 + crews.length * 3;
+            const bonusStone = 5 + crews.length * 3;
+            this.resourceManager.addResource('food', bonusFood);
+            this.resourceManager.addResource('stone', bonusStone);
             return {
                 success: true,
                 message: `🔍 ${crewNames} didn't find relic but found resources! (${Math.floor(totalTime)} units)`,
-                resources: { food: 5 + crews.length * 3, stone: 5 + crews.length * 3 }
+                resources: { food: bonusFood, stone: bonusStone }
             };
         }
     }
 
-    // ✅ Collaborative Monster Hunt - รองรับเวลาไม่พอ
+    // ✅ Collaborative Monster Hunt - ใช้ระบบ HP
     private executeCollaborativeMonsterHunt(
         crews: Crew[], 
         target: ResourceNode, 
@@ -356,8 +387,15 @@ export class MissionSystem {
         const totalTime = travelTime * 2 + actionTime;
         const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
         const crewNames = crews.map(c => c.name).join(' + ');
-        const totalHunting = crews.reduce((sum, c) => sum + c.getEffectiveHunting(), 0);
-        const avgHunting = totalHunting / crews.length;
+        
+        // ✅ คำนวณความสามารถรวม
+        const totalProficiency = crews.reduce((sum, c) => sum + c.getEffectiveHunting(), 0);
+        const avgProficiency = totalProficiency / crews.length;
+        const avgDefense = crews.reduce((sum, c) => {
+            let defense = 0;
+            if (c.equipment.armor) defense += c.equipment.armor.defenseBonus || 0;
+            return sum + defense;
+        }, 0) / crews.length;
 
         // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
         if (totalTime > dayTimeLimit) {
@@ -369,10 +407,13 @@ export class MissionSystem {
                 };
             }
             
-            const ratio = remainingTime / actionTime;
-            if (ratio > 0.3) {
-                const successRate = 0.1 + avgHunting * 0.2 * ratio + (crews.length - 1) * 0.08 - (target.difficulty || 1) * 0.05;
-                if (Math.random() < successRate) {
+            // ✅ คำนวณ damage รวมที่ทำได้
+            const totalDamage = Math.floor(remainingTime * totalProficiency);
+            const damageRatio = Math.min(1, totalDamage / target.maxHp);
+            
+            if (totalDamage > 0 && target.hp > 0) {
+                // ✅ ถ้าทำ damage เกิน 60% ของ HP → ล่าสำเร็จ
+                if (damageRatio > 0.6) {
                     const parts = ['Fangs', 'Hides', 'Claws'];
                     const part = parts[Math.floor(Math.random() * parts.length)];
                     const amount = 1 + Math.floor(Math.random() * 2) + (crews.length - 1);
@@ -383,12 +424,13 @@ export class MissionSystem {
                     );
                     return {
                         success: true,
-                        message: `🎉 ${crewNames} defeated ${target.monsterName}! Got ${part}x${amount}! (${Math.floor(totalTime)} units, time was running out!)`,
+                        message: `🎉 ${crewNames} defeated ${target.monsterName}! Got ${part}x${amount}! (Time was running out! ${crews.length} crews)`,
                         monsterPart: part,
                         resources: { food: 10 + crews.length * 5 }
                     };
                 } else {
-                    const damagePerCrew = Math.floor((3 + Math.random() * 10) / crews.length);
+                    // ✅ สู้ไม่สำเร็จ แต่ได้รับความเสียหายน้อยลง (因为有队友帮忙)
+                    const damagePerCrew = Math.floor((3 + Math.random() * 8) / crews.length);
                     let deadCount = 0;
                     for (const crew of crews) {
                         const dead = crew.takeDamage(damagePerCrew);
@@ -402,6 +444,7 @@ export class MissionSystem {
                     };
                 }
             }
+            
             return {
                 success: false,
                 message: `⏰ ${crewNames} reached ${target.monsterName} but had no time to fight!`
@@ -409,7 +452,7 @@ export class MissionSystem {
         }
 
         // ✅ เวลาพอ
-        const successRate = 0.2 + avgHunting * 0.25 + (crews.length - 1) * 0.15 - (target.difficulty || 1) * 0.05;
+        const successRate = 0.2 + avgProficiency / 300 + (crews.length - 1) * 0.1 - (target.difficulty || 1) * 0.05;
         if (Math.random() < successRate) {
             const parts = ['Fangs', 'Hides', 'Claws'];
             const part = parts[Math.floor(Math.random() * parts.length)];
@@ -421,11 +464,12 @@ export class MissionSystem {
             );
             return {
                 success: true,
-                message: `🎉 ${crewNames} defeated ${target.monsterName}! Got ${part}x${amount}! (${Math.floor(totalTime)} units, ${crews.length} crews)`,
+                message: `🎉 ${crewNames} defeated ${target.monsterName}! Got ${part}x${amount}! (${Math.floor(totalTime)} units, ${target.rankName} rank, ${crews.length} crews)`,
                 monsterPart: part,
                 resources: { food: 20 + crews.length * 10 }
             };
         } else {
+            // ✅ ล่าไม่สำเร็จ แต่ได้รับความเสียหายน้อยลง (因为有队友帮忙)
             const damagePerCrew = Math.floor((5 + Math.random() * 15) / crews.length);
             let deadCount = 0;
             for (const crew of crews) {
@@ -435,8 +479,8 @@ export class MissionSystem {
             return {
                 success: false,
                 message: deadCount > 0
-                    ? `💀 ${deadCount} crew(s) died fighting ${target.monsterName}! (${Math.floor(totalTime)} units)`
-                    : `💢 ${crewNames} failed to hunt ${target.monsterName} (took ${damagePerCrew} damage each)! (${Math.floor(totalTime)} units)`
+                    ? `💀 ${deadCount} crew(s) died fighting ${target.monsterName}!`
+                    : `💢 ${crewNames} failed to hunt ${target.monsterName} (took ${damagePerCrew} damage each)!`
             };
         }
     }

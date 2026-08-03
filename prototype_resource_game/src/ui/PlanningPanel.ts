@@ -178,7 +178,7 @@ export class PlanningPanel {
         this.selectedCrewText.setText(`Selected: ${crew ? crew.name + ' ⭐' : 'None'}`);
         
         if (chainCount > 0) {
-            this.selectedTargetText.setText(`Chain: ${chainCount} nodes`);
+            this.selectedTargetText.setText(`Chain: ${chainCount} nodes (Order: ${this.getChainOrderText()})`);
             this.resetBtn.setVisible(true);
             this.undoBtn.setVisible(true);
         } else {
@@ -200,6 +200,16 @@ export class PlanningPanel {
             this.statusText.setColor('#b2bec3');
             this.confirmBtn.setVisible(false);
         }
+    }
+
+    // ✅ ดึงข้อความแสดงลำดับ chain
+    private getChainOrderText(): string {
+        const gameScene = this.scene.scene.get('GameScene') as any;
+        if (gameScene && gameScene.selectedTargets) {
+            const targets = gameScene.selectedTargets;
+            return targets.map((t: any, i: number) => `${i+1}.${t.icon}`).join(' → ');
+        }
+        return '';
     }
 
     setStatus(message: string, color: string = '#b2bec3'): void {

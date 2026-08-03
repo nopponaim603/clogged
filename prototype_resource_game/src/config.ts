@@ -6,7 +6,6 @@ export const GAME_CONFIG = {
     MAX_DAYS: 30,
     BASE_HP: 100,
     CREW_POINTS: 100,
-
     STARTING_FOOD: 100,
     
     TRAVEL_SPEED: 50,
@@ -17,11 +16,23 @@ export const GAME_CONFIG = {
     DAY_TIME_LIMIT: 12000,
     TIME_UNIT_PER_SECOND: 100,
     
-    // ✅ ปรับ Base Time ให้ใหญ่ขึ้น
-    BASE_TRAVEL_TIME: 500,      // จาก 200 เป็น 500
-    BASE_GATHER_TIME: 3000,     // จาก 1500 เป็น 3000
-    BASE_SEARCH_TIME: 4500,     // จาก 2500 เป็น 4500
-    BASE_HUNT_TIME: 5000,       // จาก 3000 เป็น 5000
+    // ✅ ค่า Base Travel (ใช้ระยะทางจริง)
+    BASE_TRAVEL_TIME: 200,
+    TRAVEL_DISTANCE_FACTOR: 2.0,
+    
+    // ✅ ระบบ HP ของโหนด (Gathering)
+    GATHER_HP_PER_UNIT: [500, 1000, 2000, 4000], // 4 ขั้น
+    GATHER_RANKS: ['Common', 'Uncommon', 'Rare', 'Epic'],
+    
+    // ✅ ระบบ HP ของโหนด (Relic)
+    RELIC_BASE_HP_RANGE: { min: 5000, max: 20000 },
+    RELIC_RARITY_MULTIPLY: [1.0, 2.0, 4.0, 8.0],
+    RELIC_RANKS: ['Common', 'Uncommon', 'Rare', 'Epic'],
+    
+    // ✅ ระบบ HP ของโหนด (Monster)
+    MONSTER_BASE_HP_RANGE: { min: 5000, max: 20000 },
+    MONSTER_RARITY_MULTIPLY: [1.0, 2.0, 4.0, 8.0],
+    MONSTER_RANKS: ['Common', 'Uncommon', 'Rare', 'Epic']
 };
 
 export const RESOURCE_ICONS = {

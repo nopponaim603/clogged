@@ -34,150 +34,113 @@ interface QueuedMission {
 }
 
 export class GameScene extends Scene {
-    // Systems
+    // === Systems ===
     private crewManager!: CrewManager;
     private resourceManager!: ResourceManager;
     private mapGenerator!: MapGenerator;
     private missionSystem!: MissionSystem;
     private timeSystem!: TimeSystem;
     
-    // UI Components
+    // === UI Components ===
     private resourcePanel!: ResourcePanel;
     private crewPanel!: CrewPanel;
     private planningPanel!: PlanningPanel;
     private notificationSystem!: NotificationSystem;
     private missionDisplay!: MissionDisplay;
 
-    // ✅ Selection - รองรับหลายโหนด
+    // === Selection ===
     private selectedCrew: Crew | null = null;
-    private selectedTargets: ResourceNode[] = []; // ✅ ใช้ Array แทน
+    private selectedTargets: ResourceNode[] = [];
     private tempMissions: { crew: Crew; target: ResourceNode }[] = [];
 
-    // ✅ เพิ่ม property สำหรับเก็บ selected sprites ที่เป็นไฮไลท์
+    // === UI Elements ===
     private selectedNodeHighlights: Phaser.GameObjects.Arc[] = [];
+    private selectedPathLines: Phaser.GameObjects.Graphics[] = [];
     
-    // Mission Queue
+    // === Mission Queue ===
     private missionQueue: QueuedMission[] = [];
     private isProcessingQueue: boolean = false;
 
-    // ✅ เพิ่มสำหรับ multi-crew collaboration
-    private activeMissions: Map<string, { 
-        crewIds: number[]; 
-        totalProficiency: number;
-        actionTime: number;
-        startTime: number;
-    }> = new Map();
-    
-    // State
-    private gameOver: boolean = false;
-    private isWin: boolean = false;
-    
-    // UI Elements
+    // === Sprites ===
+    private missionSprites: Map<number, Phaser.GameObjects.Text> = new Map();
+    private crewTimeTexts: Map<number, Phaser.GameObjects.Text> = new Map();
+    private resourceNodeSprites: Phaser.GameObjects.Arc[] = [];
+
+    // === UI Text ===
     private dayText!: Phaser.GameObjects.Text;
     private timeText!: Phaser.GameObjects.Text;
     private baseHPText!: Phaser.GameObjects.Text;
-    private baseSprite!: Phaser.GameObjects.Arc;
-    private resourceNodeSprites: Phaser.GameObjects.Arc[] = [];
     private queueText!: Phaser.GameObjects.Text;
-    private missionSprites: Map<number, Phaser.GameObjects.Text> = new Map();
-    private crewTimeTexts: Map<number, Phaser.GameObjects.Text> = new Map();
-    private selectedPathLines: Phaser.GameObjects.Graphics[] = [];
+    private baseSprite!: Phaser.GameObjects.Arc;
+
+    // === State ===
+    private gameOver: boolean = false;
+    private isWin: boolean = false;
+    private activeMissions: Map<string, any> = new Map();
+    private crewCurrentPositions: Map<number, { x: number; y: number }> = new Map();
 
     constructor() {
         super('GameScene');
     }
 
+    // ============================================================
+    // CREATE
+    // ============================================================
     create(): void {
-        // Initialize systems
+        this.initSystems();
+        this.setupCallbacks();
+        this.generateWorld();
+        this.createInitialCrews();
+        this.setupUI();
+        this.drawMap();
+        this.startDay();
+        this.setupKeyboardShortcuts();
+    }
+
+    private initSystems(): void {
         this.crewManager = new CrewManager();
         this.resourceManager = new ResourceManager();
         this.mapGenerator = new MapGenerator();
         this.missionSystem = new MissionSystem(this.resourceManager);
         this.timeSystem = new TimeSystem();
+    }
 
+    private setupCallbacks(): void {
         this.timeSystem.onSimulateStep = () => this.simulateStep();
-
-        this.notificationSystem = new NotificationSystem(this);
-        this.missionDisplay = new MissionDisplay(this);
-
         this.timeSystem.onDayEnd = () => this.startNightPhase();
         this.timeSystem.onNightEnd = () => this.startNewDay();
+    }
 
+    private generateWorld(): void {
         this.mapGenerator.generateResources();
         const basePos = this.mapGenerator.getBasePosition();
-
+        
         this.baseSprite = this.add.arc(basePos.x, basePos.y, 30, 0, 360, false, 0x00b894);
         this.baseSprite.setStrokeStyle(3, 0x00d2a0);
-        
         this.add.text(basePos.x - 30, basePos.y - 10, '🏠 BASE', {
             fontSize: '14px',
             color: '#ffffff',
             fontFamily: 'monospace'
         });
-
-        this.createInitialCrews(basePos);
-        this.setupUI();
-        this.drawMap();
-
-        this.timeSystem.startDay(this);
-
-        this.notificationSystem.showInfo('Click a crew, then click nodes to build a chain!', 4000);
-
-        // ✅ เพิ่ม Keyboard Shortcuts
-        this.input.keyboard?.on('keydown-ESC', () => {
-            this.deselectAll();
-        });
-
-        this.input.keyboard?.on('keydown-Z', (event: KeyboardEvent) => {
-            if (event.ctrlKey) {
-                this.removeLastNode();
-            }
-        });
-
-        this.input.keyboard?.on('keydown-R', () => {
-                this.clearAllSelection();
-        });
     }
 
+    private setupKeyboardShortcuts(): void {
+        this.input.keyboard?.on('keydown-ESC', () => this.deselectAll());
+        this.input.keyboard?.on('keydown-Z', (event: KeyboardEvent) => {
+            if (event.ctrlKey) this.removeLastNode();
+        });
+        this.input.keyboard?.on('keydown-R', () => this.clearAllSelection());
+    }
+
+    // ============================================================
+    // UI SETUP
+    // ============================================================
     private setupUI(): void {
         this.createTopBar();
-
-        this.resourcePanel = new ResourcePanel(
-            this,
-            this.resourceManager,
-            GAME_CONFIG.WIDTH - 190,
-            60
-        );
-
-        this.crewPanel = new CrewPanel(
-            this,
-            this.crewManager,
-            (crew: Crew) => this.selectCrew(crew),
-            30,
-            520
-        );
-
-        this.planningPanel = new PlanningPanel(
-            this,
-            () => this.confirmChain(),
-            30,
-            680
-        );
-
-        // ✅ ตั้งค่า Callbacks สำหรับปุ่ม Reset และ Undo
-        this.planningPanel.setupCallbacks(
-            () => this.clearAllSelection(),   // Reset
-            () => this.removeLastNode()        // Undo
-        );
-
-        this.queueText = this.add.text(30, 500,
-            `📋 Missions: 0 | Total Time: 0 units | ⏱️ Elapsed: 0/${this.timeSystem.dayTimeLimit} units`,
-            {
-                fontSize: '16px',
-                color: '#f9ca24',
-                fontFamily: 'monospace'
-            }
-        );
+        this.createResourcePanel();
+        this.createCrewPanel();
+        this.createPlanningPanel();
+        this.createQueueText();
     }
 
     private createTopBar(): void {
@@ -203,73 +166,51 @@ export class GameScene extends Scene {
         );
     }
 
-    private drawMap(): void {
-        this.resourceNodeSprites.forEach(sprite => sprite.destroy());
-        this.resourceNodeSprites = [];
-
-        const graphics = this.add.graphics();
-        graphics.lineStyle(1, 0x4a4a5a, 0.3);
-        for (let i = 0; i < 10; i++) {
-            graphics.beginPath();
-            graphics.moveTo(20 + i * 60, 60);
-            graphics.lineTo(20 + i * 60, GAME_CONFIG.HEIGHT - 160);
-            graphics.strokePath();
-            graphics.beginPath();
-            graphics.moveTo(20, 60 + i * 50);
-            graphics.lineTo(GAME_CONFIG.WIDTH - 180, 60 + i * 50);
-            graphics.strokePath();
-        }
-
-        this.mapGenerator.resourceNodes.forEach(node => {
-            const color = node.getColor();
-            const arc = this.add.arc(
-                node.position.x, 
-                node.position.y, 
-                18, 
-                0, 
-                360, 
-                false, 
-                color, 
-                0.7
-            );
-            arc.setStrokeStyle(2, color, 0.5);
-            arc.setInteractive();
-            arc.on('pointerdown', () => {
-                this.selectTarget(node);
-            });
-            node.sprite = arc as unknown as Phaser.GameObjects.Arc;
-            this.resourceNodeSprites.push(arc);
-
-            const text = this.add.text(
-                node.position.x - 12,
-                node.position.y - 10,
-                node.icon,
-                { fontSize: '20px' }
-            );
-            node.label = text;
-
-            const label = this.add.text(
-                node.position.x - 25,
-                node.position.y + 25,
-                node.isRelic ? 'RELIC' : 
-                node.isMonster ? `Lv.${node.difficulty}` : 
-                `${node.amount}`,
-                {
-                    fontSize: '10px',
-                    color: node.isRelic ? '#a29bfe' : 
-                           node.isMonster ? '#ff6b6b' : '#ffffff',
-                    fontFamily: 'monospace'
-                }
-            );
-            node.label = label;
-        });
+    private createResourcePanel(): void {
+        this.resourcePanel = new ResourcePanel(
+            this,
+            this.resourceManager,
+            GAME_CONFIG.WIDTH - 190,
+            60
+        );
     }
 
-    private createInitialCrews(basePos: { x: number; y: number }): void {
-        // ✅ ดึง Templates จาก CrewManager
+    private createCrewPanel(): void {
+        this.crewPanel = new CrewPanel(
+            this,
+            this.crewManager,
+            (crew: Crew) => this.selectCrew(crew),
+            30,
+            520
+        );
+    }
+
+    private createPlanningPanel(): void {
+        this.planningPanel = new PlanningPanel(
+            this,
+            () => this.confirmChain(),
+            30,
+            680
+        );
+        this.planningPanel.setupCallbacks(
+            () => this.clearAllSelection(),
+            () => this.removeLastNode()
+        );
+    }
+
+    private createQueueText(): void {
+        this.queueText = this.add.text(30, 500,
+            `📋 Missions: 0 | Total Time: 0 units | ⏱️ Elapsed: 0/${this.timeSystem.dayTimeLimit} units`,
+            { fontSize: '16px', color: '#f9ca24', fontFamily: 'monospace' }
+        );
+    }
+
+    // ============================================================
+    // CREW MANAGEMENT
+    // ============================================================
+    private createInitialCrews(): void {
+        const basePos = this.mapGenerator.getBasePosition();
         const allTemplates = this.crewManager.getCrewTemplates();
-        
-        // ✅ สุ่มเลือก 4 คนจากทั้งหมด
         const shuffled = [...allTemplates].sort(() => Math.random() - 0.5);
         const selectedTemplates = shuffled.slice(0, 4);
         
@@ -300,30 +241,28 @@ export class GameScene extends Scene {
             }
         });
 
-        // ✅ สร้าง sprites
-        hired.forEach((crew, index) => {
-            const text = this.add.text(
-                crew.position.x,
-                crew.position.y,
-                '🧑‍🤝‍🧑',
-                { fontSize: '24px' }
-            );
+        hired.forEach((crew) => {
+            const text = this.add.text(crew.position.x, crew.position.y, '🧑‍🤝‍🧑', { fontSize: '24px' });
             crew.sprite = text;
-
-            this.add.text(
-                crew.position.x - 20,
-                crew.position.y + 30,
-                crew.name,
-                { fontSize: '10px', color: '#ffffff', fontFamily: 'monospace' }
-            );
+            this.add.text(crew.position.x - 20, crew.position.y + 30, crew.name, {
+                fontSize: '10px', color: '#ffffff', fontFamily: 'monospace'
+            });
         });
     }
 
-    // ✅ เลือก Crew
+    private startDay(): void {
+        this.timeSystem.startDay(this);
+        this.notificationSystem = new NotificationSystem(this);
+        this.missionDisplay = new MissionDisplay(this);
+        this.notificationSystem.showInfo('Click a crew, then click nodes to build a chain!', 4000);
+    }
+
+    // ============================================================
+    // SELECTION
+    // ============================================================
     private selectCrew(crew: Crew): void {
         if (crew.isBusy || this.gameOver || this.timeSystem.isNightPhase) return;
-        if (this.timeSystem.isExecuting) return;
-        if (this.isProcessingQueue) return;
+        if (this.timeSystem.isExecuting || this.isProcessingQueue) return;
         
         if (this.selectedCrew && this.selectedCrew.id !== crew.id) {
             this.clearSelection();
@@ -333,84 +272,51 @@ export class GameScene extends Scene {
         this.selectedTargets = [];
         this.tempMissions = [];
         this.clearPathLines();
-        
         this.planningPanel.updateSelection(crew, null);
         this.notificationSystem.showInfo(`Selected ${crew.name} - Click nodes to build chain`, 2000);
         this.missionDisplay.clear();
     }
 
-    // ✅ เลือก Target (สามารถเลือกหลายอันได้) - ปรับปรุงให้คลิกซ้ำเพื่อยกเลิก
     private selectTarget(target: ResourceNode): void {
         if (!this.selectedCrew || this.gameOver || this.timeSystem.isNightPhase) return;
-        if (this.timeSystem.isExecuting) return;
-        if (this.isProcessingQueue) return;
+        if (this.timeSystem.isExecuting || this.isProcessingQueue) return;
         
-        // ✅ ถ้าเลือก node นี้ไปแล้ว → ยกเลิกการเลือก (คลิกซ้ำ)
+        // Click to remove
         const existingIndex = this.selectedTargets.indexOf(target);
         if (existingIndex !== -1) {
-            // ✅ ลบ node ออกจาก list
             this.selectedTargets.splice(existingIndex, 1);
             this.tempMissions.splice(existingIndex, 1);
-            
-            // ✅ อัพเดท highlight
             this.updateNodeHighlights();
-            
-            // ✅ อัพเดทเส้นทาง
             this.drawPathLines();
             
-            // ✅ อัพเดทข้อมูลเวลา
             if (this.selectedTargets.length > 0) {
                 this.missionDisplay.showMissionChain(this.selectedCrew, this.selectedTargets);
             } else {
                 this.missionDisplay.clear();
             }
             
-            // ✅ อัพเดท UI
             this.planningPanel.updateSelection(this.selectedCrew, null, this.selectedTargets.length);
             this.notificationSystem.showInfo(`❌ Removed ${target.icon} ${target.type} from chain`, 1500);
             return;
         }
         
-        // ✅ เพิ่ม target เข้าไปใน list
+        // Add to chain
         this.selectedTargets.push(target);
-        this.tempMissions.push({
-            crew: this.selectedCrew,
-            target: target
-        });
-        
-        // ✅ อัพเดท highlight
+        this.tempMissions.push({ crew: this.selectedCrew, target });
         this.updateNodeHighlights();
-        
-        // ✅ แสดงเส้นทาง
         this.drawPathLines();
-        
-        // ✅ แสดงข้อมูลเวลา
         this.missionDisplay.showMissionChain(this.selectedCrew, this.selectedTargets);
-        
-        // ✅ อัพเดท UI
         this.planningPanel.updateSelection(this.selectedCrew, target, this.selectedTargets.length);
         this.notificationSystem.showInfo(`📍 Added ${target.icon} ${target.type} (${this.selectedTargets.length} in chain)`, 1500);
     }
 
-    // ✅ อัพเดท highlight ของ node ที่ถูกเลือก
     private updateNodeHighlights(): void {
-        // ลบ highlight เดิม
         this.selectedNodeHighlights.forEach(h => h.destroy());
         this.selectedNodeHighlights = [];
         
-        // เพิ่ม highlight ใหม่
         for (const target of this.selectedTargets) {
             if (target.sprite) {
-                const highlight = this.add.arc(
-                    target.position.x,
-                    target.position.y,
-                    24,
-                    0,
-                    360,
-                    false,
-                    0xf9ca24,
-                    0.3
-                );
+                const highlight = this.add.arc(target.position.x, target.position.y, 24, 0, 360, false, 0xf9ca24, 0.3);
                 highlight.setStrokeStyle(3, 0xf9ca24, 0.8);
                 highlight.setDepth(5);
                 this.selectedNodeHighlights.push(highlight);
@@ -418,10 +324,19 @@ export class GameScene extends Scene {
         }
     }
 
-    // ✅ เคลียร์การเลือกทั้งหมด (ปุ่ม Reset)
+    private clearSelection(): void {
+        this.selectedCrew = null;
+        this.selectedTargets = [];
+        this.tempMissions = [];
+        this.clearPathLines();
+        this.selectedNodeHighlights.forEach(h => h.destroy());
+        this.selectedNodeHighlights = [];
+        this.missionDisplay.clear();
+        this.planningPanel.updateSelection(null, null, 0);
+    }
+
     private clearAllSelection(): void {
         if (!this.selectedCrew) return;
-        
         this.selectedTargets = [];
         this.tempMissions = [];
         this.clearPathLines();
@@ -432,7 +347,6 @@ export class GameScene extends Scene {
         this.notificationSystem.showInfo(`🔄 Cleared all selections for ${this.selectedCrew.name}`, 1500);
     }
 
-    // ✅ ยกเลิกการเลือกทั้งหมด (รวม crew)
     private deselectAll(): void {
         this.selectedCrew = null;
         this.selectedTargets = [];
@@ -445,32 +359,29 @@ export class GameScene extends Scene {
         this.notificationSystem.showInfo('🔄 Selection cleared', 1500);
     }
 
-    // ✅ ลบ node สุดท้ายออกจาก chain
     private removeLastNode(): void {
         if (this.selectedTargets.length === 0) return;
-        
         const removed = this.selectedTargets.pop();
         this.tempMissions.pop();
         
         if (removed) {
             this.updateNodeHighlights();
             this.drawPathLines();
-            
             if (this.selectedTargets.length > 0) {
                 this.missionDisplay.showMissionChain(this.selectedCrew!, this.selectedTargets);
             } else {
                 this.missionDisplay.clear();
             }
-            
             this.planningPanel.updateSelection(this.selectedCrew, null, this.selectedTargets.length);
             this.notificationSystem.showInfo(`↩️ Removed last node (${removed.icon} ${removed.type})`, 1500);
         }
     }
 
-    // ✅ วาดเส้นทาง
+    // ============================================================
+    // PATH DRAWING
+    // ============================================================
     private drawPathLines(): void {
         this.clearPathLines();
-        
         if (this.selectedTargets.length === 0) return;
         
         const basePos = this.mapGenerator.getBasePosition();
@@ -486,28 +397,21 @@ export class GameScene extends Scene {
             line.moveTo(startPos.x, startPos.y);
             line.lineTo(endPos.x, endPos.y);
             line.strokePath();
-            
             this.drawArrow(line, startPos, endPos);
             this.selectedPathLines.push(line);
             
             const midX = (startPos.x + endPos.x) / 2;
             const midY = (startPos.y + endPos.y) / 2 - 20;
             const orderText = this.add.text(midX, midY, `#${i + 1}`, {
-                fontSize: '14px',
-                color: '#f9ca24',
-                fontFamily: 'monospace',
-                backgroundColor: '#1a1a2e',
-                padding: { x: 4, y: 2 }
+                fontSize: '14px', color: '#f9ca24', fontFamily: 'monospace',
+                backgroundColor: '#1a1a2e', padding: { x: 4, y: 2 }
             }).setOrigin(0.5);
             this.selectedPathLines.push(orderText as any);
-            
             startPos = endPos;
         }
         
-        const lastPos = { x: this.selectedTargets[this.selectedTargets.length - 1].position.x, 
-                          y: this.selectedTargets[this.selectedTargets.length - 1].position.y };
+        const lastPos = this.selectedTargets[this.selectedTargets.length - 1].position;
         const line = this.add.graphics();
-        line.lineStyle(1, 0xff6b6b, 0.5);
         line.lineStyle(2, 0xff6b6b, 0.5);
         line.beginPath();
         line.moveTo(lastPos.x, lastPos.y);
@@ -536,78 +440,140 @@ export class GameScene extends Scene {
         this.selectedPathLines = [];
     }
 
-    private clearSelection(): void {
-        // ✅ ไม่ต้องเช็ค selectedCrew เพราะอาจเป็น null ได้
-        this.selectedCrew = null;
-        this.selectedTargets = [];
-        this.tempMissions = [];
-        this.clearPathLines();
-        this.selectedNodeHighlights.forEach(h => h.destroy());
-        this.selectedNodeHighlights = [];
-        this.missionDisplay.clear();
-        this.planningPanel.updateSelection(null, null, 0);
+    // ============================================================
+    // MAP DRAWING
+    // ============================================================
+    private drawMap(): void {
+        this.resourceNodeSprites.forEach(sprite => sprite.destroy());
+        this.resourceNodeSprites = [];
+
+        // Grid
+        const graphics = this.add.graphics();
+        graphics.lineStyle(1, 0x4a4a5a, 0.3);
+        for (let i = 0; i < 10; i++) {
+            graphics.beginPath();
+            graphics.moveTo(20 + i * 60, 60);
+            graphics.lineTo(20 + i * 60, GAME_CONFIG.HEIGHT - 160);
+            graphics.strokePath();
+            graphics.beginPath();
+            graphics.moveTo(20, 60 + i * 50);
+            graphics.lineTo(GAME_CONFIG.WIDTH - 180, 60 + i * 50);
+            graphics.strokePath();
+        }
+
+        // Nodes
+        this.mapGenerator.resourceNodes.forEach(node => {
+            const color = node.getColor();
+            const arc = this.add.arc(node.position.x, node.position.y, 18, 0, 360, false, color, 0.7);
+            arc.setStrokeStyle(2, color, 0.5);
+            arc.setInteractive();
+            arc.on('pointerdown', () => this.selectTarget(node));
+            node.sprite = arc as unknown as Phaser.GameObjects.Arc;
+            this.resourceNodeSprites.push(arc);
+
+            this.add.text(node.position.x - 12, node.position.y - 10, node.icon, { fontSize: '20px' });
+            
+            const infoText = node.isRelic ? `${node.rankName}` : 
+                            node.isMonster ? `${node.rankName} Lv.${node.difficulty}` : 
+                            `${node.amount} [${node.rankName}]`;
+            
+            this.add.text(node.position.x - 30, node.position.y + 25, infoText, {
+                fontSize: '9px',
+                color: node.isRelic ? '#a29bfe' : node.isMonster ? '#ff6b6b' : '#ffffff',
+                fontFamily: 'monospace'
+            });
+            
+            if (node.isRelic || node.isMonster) {
+                this.add.text(node.position.x - 25, node.position.y + 38,
+                    `HP: ${Math.floor(node.hp)}/${Math.floor(node.maxHp)}`,
+                    { fontSize: '8px', color: '#b2bec3', fontFamily: 'monospace' }
+                );
+            }
+        });
     }
 
-    // ✅ Confirm Chain - เพิ่มทุกภารกิจใน chain เข้า queue (พร้อมคำเตือน)
+    // ============================================================
+    // CONFIRM CHAIN
+    // ============================================================
     private confirmChain(): void {
-        // ✅ ตรวจสอบให้แน่ใจว่า selectedCrew ไม่เป็น null
         if (!this.selectedCrew) {
-            this.notificationSystem.showError('❌ No crew selected! Please select a crew first.', 2000);
+            this.notificationSystem.showError('❌ No crew selected!', 2000);
             return;
         }
-        
         if (this.selectedTargets.length === 0) {
-            this.notificationSystem.showWarning('⚠️ No nodes selected! Click nodes to build a chain.', 2000);
+            this.notificationSystem.showWarning('⚠️ No nodes selected!', 2000);
             return;
         }
-        
-        if (this.timeSystem.isExecuting || this.gameOver) return;
-        if (this.timeSystem.isNightPhase) return;
+        if (this.timeSystem.isExecuting || this.gameOver || this.timeSystem.isNightPhase) return;
         if (this.isProcessingQueue) return;
 
-        // ✅ เก็บ reference ของ selectedCrew ไว้ใช้
         const crew = this.selectedCrew;
-
         let totalChainTime = 0;
-        const missionsToAdd: { travelTime: number; actionTime: number; totalTime: number; target: ResourceNode }[] = [];
+        const missionsToAdd: { 
+            travelTime: number; 
+            actionTime: number; 
+            totalTime: number; 
+            target: ResourceNode;
+            isLast: boolean;
+        }[] = [];
+        
         let lastPosition = crew.position;
 
         for (let i = 0; i < this.selectedTargets.length; i++) {
             const target = this.selectedTargets[i];
+            const isLast = (i === this.selectedTargets.length - 1);
+            
+            // คำนวณระยะทางจากตำแหน่งปัจจุบันไปยัง target
             const distance = this.getDistance(lastPosition, target.position);
             const travelTime = crew.calculateTravelTime(distance);
             const actionTime = target.getActionTime(crew.getEffectiveGathering());
-            const totalTime = travelTime * 2 + actionTime;
             
-            missionsToAdd.push({ travelTime, actionTime, totalTime, target });
+            // ✅ เฉพาะภารกิจสุดท้ายเท่านั้นที่ต้องเดินทางกลับฐาน
+            let totalTime = 0;
+            if (isLast) {
+                const returnDistance = this.getDistance(target.position, this.mapGenerator.getBasePosition());
+                const returnTime = crew.calculateTravelTime(returnDistance);
+                totalTime = travelTime + actionTime + returnTime;
+            } else {
+                totalTime = travelTime + actionTime;
+            }
+            
+            missionsToAdd.push({ 
+                travelTime, 
+                actionTime, 
+                totalTime, 
+                target,
+                isLast 
+            });
+            
             totalChainTime += totalTime;
             lastPosition = target.position;
+            
+            // ✅ Debug log
+            console.log(`[${crew.name}] Mission ${i+1}: ${target.icon} ${target.type} - Travel: ${travelTime.toFixed(0)}, Action: ${actionTime.toFixed(0)}, Total: ${totalTime.toFixed(0)}`);
         }
 
-        // ✅ คำนวณเวลาที่ใช้ไปแล้วของ crew นี้
+        // Check time
         const crewUsedTime = this.missionQueue
             .filter(q => q.crew.id === crew.id && !q.completed)
             .reduce((sum, q) => sum + q.totalTime, 0);
-        
         const remainingTime = this.timeSystem.dayTimeLimit - this.timeSystem.elapsedTime - crewUsedTime;
         
-        // ✅ ถ้าเวลาไม่พอ → แค่เตือน ไม่ใช่ห้าม
         let isOverTime = false;
         if (totalChainTime > remainingTime) {
             isOverTime = true;
             this.notificationSystem.showWarning(
-                `⚠️ ${crew.name}: Chain needs ${Math.floor(totalChainTime)} units but only ${Math.floor(remainingTime)} units left! (Will exceed by ${Math.floor(totalChainTime - remainingTime)} units)`,
+                `⚠️ ${crew.name}: Chain needs ${Math.floor(totalChainTime)} units, only ${Math.floor(remainingTime)} left!`,
                 5000
             );
             this.notificationSystem.showWarning(
-                `💡 You can still add this chain, but ${crew.name} may not complete all missions!`,
+                `💡 You can still add this chain, but may not complete all missions!`,
                 4000
             );
         }
 
-        // ✅ เพิ่มภารกิจทั้งหมดใน chain เข้า queue (แม้จะเกินเวลา)
+        // Add to queue
         const existingMissions = this.missionQueue.filter(q => q.crew.id === crew.id && !q.completed);
-
         for (let i = 0; i < missionsToAdd.length; i++) {
             const data = missionsToAdd[i];
             const isChained = i > 0 || existingMissions.length > 0;
@@ -632,305 +598,271 @@ export class GameScene extends Scene {
             
             if (i > 0) {
                 const prevMission = this.missionQueue[this.missionQueue.length - 1];
-                if (prevMission) {
-                    prevMission.nextMission = mission;
-                }
+                if (prevMission) prevMission.nextMission = mission;
             }
             
             this.missionQueue.push(mission);
         }
 
-        // ✅ Mark crew as busy
         crew.isBusy = true;
-        
-        // ✅ อัพเดท UI
         this.updateQueueDisplay();
         this.crewPanel.update();
-        this.clearSelection(); // ✅ clearSelection จะตั้ง selectedCrew = null
+        this.clearSelection();
         
         const chainText = missionsToAdd.length > 1 ? ` (${missionsToAdd.length} nodes chained)` : '';
         const overTimeText = isOverTime ? ' ⚠️ (May exceed time limit!)' : '';
-        
         this.planningPanel.setStatus(
-            `✅ ${crew.name} assigned${chainText}!${overTimeText} (${this.missionQueue.length} total missions)`, 
+            `✅ ${crew.name} assigned${chainText}!${overTimeText}`,
             isOverTime ? '#f9ca24' : '#00b894'
         );
         
         this.notificationSystem.showInfo(
-            `📋 ${crew.name} assigned ${missionsToAdd.length} mission(s) in chain! Total: ${Math.floor(totalChainTime)} units${isOverTime ? ' ⚠️ (May not finish all!)' : ''}`,
+            `📋 ${crew.name} assigned ${missionsToAdd.length} mission(s) in chain! Total: ${Math.floor(totalChainTime)} units`,
             4000
         );
 
-        // ✅ เช็คว่ายังมี crew ที่ว่างอยู่ไหม
         const availableCrews = this.crewManager.getAvailableCount();
         if (availableCrews > 0 && this.timeSystem.dayTimeLimit - this.timeSystem.elapsedTime > 0) {
-            this.notificationSystem.showInfo(`📋 ${availableCrews} crew(s) still available. Assign more or execute!`, 3000);
+            this.notificationSystem.showInfo(`📋 ${availableCrews} crew(s) still available.`, 3000);
         }
 
-        // ✅ แสดงปุ่ม Execute เสมอ (ถ้ามีภารกิจในคิว)
         if (this.missionQueue.length > 0) {
             this.planningPanel.showExecuteButton(() => this.executeAllMissions());
         }
     }
 
-    // ✅ จัดกลุ่มภารกิจตาม target node
-    private groupMissionsByTarget(): Map<string, QueuedMission[]> {
-        const groups = new Map<string, QueuedMission[]>();
-        
-        for (const mission of this.missionQueue) {
-            if (mission.completed) continue;
-            const key = mission.target.id;
-            if (!groups.has(key)) {
-                groups.set(key, []);
-            }
-            groups.get(key)!.push(mission);
-        }
-        
-        return groups;
-    }
-
-    // ✅ executeAllMissions - ทำงานแม้จะเกินเวลา (แต่จะเตือน)
+    // ============================================================
+    // EXECUTION
+    // ============================================================
     private executeAllMissions(): void {
         if (this.missionQueue.length === 0) return;
-        if (this.isProcessingQueue) return;
-        if (this.timeSystem.isExecuting) return;
+        if (this.isProcessingQueue || this.timeSystem.isExecuting) return;
 
-        // ✅ คำนวณเวลาทั้งหมดและเช็คว่าเกินหรือไม่
-        let totalMissionTime = 0;
+        // Check over time
         let hasOverTimeMission = false;
-        const overTimeMissions: string[] = [];
-
         for (const mission of this.missionQueue) {
             const remainingTime = this.timeSystem.dayTimeLimit - this.timeSystem.elapsedTime;
             if (mission.totalTime > remainingTime) {
                 hasOverTimeMission = true;
-                overTimeMissions.push(`${mission.crew.name} (needs ${Math.floor(mission.totalTime)}, has ${Math.floor(remainingTime)})`);
+                this.notificationSystem.showWarning(
+                    `⚠️ ${mission.crew.name}'s mission may not finish (needs ${Math.floor(mission.totalTime)}, has ${Math.floor(remainingTime)})`,
+                    3000
+                );
             }
-            totalMissionTime += mission.totalTime;
         }
 
-        // ✅ ถ้ามีภารกิจที่เกินเวลา → แจ้งเตือน แต่ยังให้ทำได้
         if (hasOverTimeMission) {
-            this.notificationSystem.showWarning(
-                `⚠️ Some missions may not finish within the day limit!`,
-                4000
-            );
-            // ✅ แสดงรายละเอียด
-            for (const msg of overTimeMissions) {
-                this.notificationSystem.showWarning(`   ${msg}`, 3000);
-            }
-            this.notificationSystem.showInfo(
-                `💡 Missions will still be executed until time runs out!`,
-                3000
-            );
+            this.notificationSystem.showInfo('💡 Missions will still be executed until time runs out!', 3000);
         }
 
-        // ✅ เริ่ม execution
+        // Start execution
         this.isProcessingQueue = true;
         this.createMissionSprites();
         this.timeSystem.startExecution(this);
 
-        this.planningPanel.setStatus(
-            `⏳ Executing ${this.missionQueue.length} missions${hasOverTimeMission ? ' ⚠️ (Some may not finish)' : ''}...`, 
-            hasOverTimeMission ? '#f9ca24' : '#f9ca24'
-        );
+        this.planningPanel.setStatus(`⏳ Executing ${this.missionQueue.length} missions...`, '#f9ca24');
         this.planningPanel.hideExecuteButton();
-        this.notificationSystem.showInfo(`🚀 Starting ${this.missionQueue.length} missions!${hasOverTimeMission ? ' (Some may not complete)' : ''}`, 2000);
+        this.notificationSystem.showInfo(`🚀 Starting ${this.missionQueue.length} missions!`, 2000);
         
         this.updateQueueDisplay();
         this.crewPanel.update();
         this.simulateStep();
     }
 
+    // ============================================================
+    // SIMULATION
+    // ============================================================
     private simulateStep(): void {
         const elapsedTime = this.timeSystem.elapsedTime;
-        
-        // ✅ อัพเดทเวลาที่แสดง
-        this.timeText.setText(
-            `⏱️ Elapsed: ${Math.floor(elapsedTime)} / ${this.timeSystem.dayTimeLimit} units`
-        );
+        this.timeText.setText(`⏱️ Elapsed: ${Math.floor(elapsedTime)} / ${this.timeSystem.dayTimeLimit} units`);
 
-        // ✅ ถ้าเวลาหมดแล้ว ให้จบ execution
+        // No missions
+        if (this.missionQueue.length === 0) {
+            if (this.isProcessingQueue) this.finishExecution();
+            return;
+        }
+
+        // Time ran out
         if (elapsedTime >= this.timeSystem.dayTimeLimit) {
-            // ✅ ตรวจสอบว่ายังมีภารกิจค้างอยู่หรือไม่
-            const hasIncomplete = this.missionQueue.some(m => !m.completed);
-            if (hasIncomplete) {
-                // ✅ ภารกิจที่ยังไม่เสร็จให้ยกเลิก
-                for (const mission of this.missionQueue) {
-                    if (!mission.completed) {
-                        mission.completed = true;
-                        mission.phase = 'complete';
-                        // ✅ คืนค่า crew
-                        this.crewManager.completeMission(mission.crew.id);
-                        this.notificationSystem.showWarning(
-                            `⏰ ${mission.crew.name}'s mission was cut short (time ran out)!`,
-                            2000
-                        );
-                    }
-                }
-            }
-            
+            this.cancelIncompleteMissions();
             this.finishExecution();
             return;
         }
 
-        if (this.missionQueue.length === 0) {
-            // ✅ ถ้าไม่มีภารกิจในคิว และกำลัง execute อยู่ ให้จบ execution
-            if (this.isProcessingQueue) {
-                this.finishExecution();
-            }
-            return;
-        }
-
-        const groups = this.groupMissionsByTarget();
-        let allComplete = true;
-
-        for (const [targetId, missions] of groups) {
-            if (missions.length > 1) {
-                this.processCollaborativeMissions(missions, elapsedTime);
-            } else {
-                this.processSingleMission(missions[0], elapsedTime);
-            }
-            
-            for (const mission of missions) {
-                if (!mission.completed) {
-                    allComplete = false;
-                }
+        // Process each crew
+        const groups = this.groupMissionsByCrew();
+        for (const [crewId, missions] of groups) {
+            const sortedMissions = missions.sort((a, b) => a.chainIndex - b.chainIndex);
+            const activeMission = sortedMissions.find(m => !m.completed);
+            if (activeMission) {
+                this.processCrewMission(activeMission, elapsedTime, sortedMissions);
             }
         }
 
         this.updateQueueDisplay();
         this.updateCrewTimeDisplay();
 
-        // ✅ ถ้าทุกภารกิจเสร็จแล้ว ให้จบ execution
+        // Check if all complete
+        const allComplete = this.missionQueue.every(m => m.completed);
         if (allComplete) {
             this.finishExecution();
         }
     }
 
-    // ✅ processSingleMission
-    private processSingleMission(mission: QueuedMission, elapsedTime: number): void {
+    private groupMissionsByCrew(): Map<number, QueuedMission[]> {
+        const groups = new Map<number, QueuedMission[]>();
+        for (const mission of this.missionQueue) {
+            if (mission.completed) continue;
+            const crewId = mission.crew.id;
+            if (!groups.has(crewId)) groups.set(crewId, []);
+            groups.get(crewId)!.push(mission);
+        }
+        return groups;
+    }
+
+    // ============================================================
+    // PROCESS MISSION
+    // ============================================================
+    private processCrewMission(mission: QueuedMission, elapsedTime: number, allMissions: QueuedMission[]): void {
         if (mission.completed) return;
         
-        mission.usedTime = Math.min(elapsedTime, mission.totalTime);
+        const crew = mission.crew;
+        const target = mission.target;
+        
+        // ✅ คำนวณเวลาที่ใช้ไปของภารกิจนี้
+        // 1. หาเวลาที่ภารกิจก่อนหน้าใช้ไปทั้งหมด
+        let previousTotalTime = 0;
+        const previousMissions = allMissions.filter(m => m.chainIndex < mission.chainIndex);
+        for (const prev of previousMissions) {
+            previousTotalTime += prev.totalTime;
+        }
+        
+        // 2. คำนวณเวลาที่เหลือสำหรับภารกิจนี้
+        const timeForThisMission = elapsedTime - previousTotalTime;
+        
+        // 3. ใช้เวลาของภารกิจนี้ (ไม่เกิน totalTime)
+        mission.usedTime = Math.min(Math.max(0, timeForThisMission), mission.totalTime);
         const progress = mission.usedTime / mission.totalTime;
         
+        // ✅ Debug log
+        console.log(`[${crew.name}] Mission ${mission.chainIndex}: elapsed=${elapsedTime}, prevTotal=${previousTotalTime}, timeForThis=${timeForThisMission}, used=${mission.usedTime}/${mission.totalTime}, progress=${(progress*100).toFixed(1)}%`);
+        
+        // Update sprite
         this.updateMissionSprite(mission, progress);
         
         const travelOutEnd = mission.travelTime / mission.totalTime;
         const actionEnd = (mission.travelTime + mission.actionTime) / mission.totalTime;
         
+        // Phase: Travel Out
         if (progress < travelOutEnd) {
             mission.phase = 'travel_out';
             const p = progress / travelOutEnd;
-            this.updateCrewPosition(mission.crew, mission.target, p, 'out');
-        } else if (progress < actionEnd) {
+            this.updateCrewPosition(crew, target, p, 'out');
+        }
+        // Phase: Action
+        else if (progress < actionEnd) {
             mission.phase = 'action';
             if (!mission.actionDone) {
                 mission.actionDone = true;
-                this.notificationSystem.showInfo(`📍 ${mission.crew.name} reached ${mission.target.icon} ${mission.target.type}`, 1500);
+                this.notificationSystem.showInfo(`📍 ${crew.name} reached ${target.icon} ${target.type}`, 1500);
             }
             this.updateActionSprite(mission, (progress - travelOutEnd) / (actionEnd - travelOutEnd));
-        } else if (progress < 1) {
+        }
+        // Phase: Travel Back
+        else if (progress < 1) {
             mission.phase = 'travel_back';
             const p = (progress - actionEnd) / (1 - actionEnd);
-            this.updateCrewPosition(mission.crew, mission.target, p, 'back');
-        } else {
+            this.updateCrewPosition(crew, target, p, 'back');
+        }
+        // Phase: Complete
+        else {
             mission.phase = 'complete';
             mission.completed = true;
-            this.completeMission(mission);
+            this.handleMissionComplete(mission, allMissions);
         }
     }
 
-    // ✅ processCollaborativeMissions
-    private processCollaborativeMissions(missions: QueuedMission[], elapsedTime: number): void {
-        const firstMission = missions[0];
-        if (firstMission.completed) return;
+    // ============================================================
+    // MISSION COMPLETE HANDLER
+    // ============================================================
+    private handleMissionComplete(mission: QueuedMission, allMissions: QueuedMission[]): void {
+        const crew = mission.crew;
+        const target = mission.target;
         
-        const crews = missions.map(m => m.crew);
-        const target = firstMission.target;
+        // Execute real mission
+        const result = this.missionSystem.executeMission(crew, target);
         
-        const totalTravelTime = crews.reduce((sum, c, i) => sum + missions[i].travelTime, 0);
-        const avgTravelTime = totalTravelTime / crews.length;
-        
-        const totalTime = firstMission.totalTime;
-        const usedTime = Math.min(elapsedTime, totalTime);
-        const progress = usedTime / totalTime;
-        
-        for (let i = 0; i < missions.length; i++) {
-            const mission = missions[i];
-            const crew = crews[i];
-            
-            mission.usedTime = usedTime;
-            
-            const travelOutEnd = mission.travelTime / totalTime;
-            const actionEnd = (mission.travelTime + mission.actionTime) / totalTime;
-            
-            if (progress < travelOutEnd) {
-                mission.phase = 'travel_out';
-                const p = progress / travelOutEnd;
-                this.updateCrewPosition(crew, target, p, 'out');
-            } else if (progress < actionEnd) {
-                mission.phase = 'action';
-                if (!mission.actionDone) {
-                    mission.actionDone = true;
-                    this.notificationSystem.showInfo(`📍 ${crew.name} reached ${target.icon} ${target.type}`, 1500);
-                }
-                this.updateCollaborativeActionSprite(mission, (progress - travelOutEnd) / (actionEnd - travelOutEnd));
-            } else if (progress < 1) {
-                mission.phase = 'travel_back';
-                const p = (progress - actionEnd) / (1 - actionEnd);
-                this.updateCrewPosition(crew, target, p, 'back');
-            } else {
-                mission.phase = 'complete';
-                mission.completed = true;
-            }
+        // Show result
+        if (result.success) {
+            this.notificationSystem.showSuccess(`${crew.name}: ${result.message}`, 2000);
+        } else {
+            this.notificationSystem.showError(`${crew.name}: ${result.message}`, 2000);
         }
         
-        if (progress >= 1) {
-            const allCrews = missions.map(m => m.crew);
-            const target = firstMission.target;
-            
-            const result = this.missionSystem.executeCollaborativeMission(
-                allCrews,
-                target,
-                avgTravelTime
-            );
-            
-            for (const mission of missions) {
-                mission.completed = true;
-                mission.phase = 'complete';
-                
-                const crew = mission.crew;
-                const basePos = this.mapGenerator.getBasePosition();
-                crew.position.x = basePos.x - 60 + (crew.id - 1) * 40;
-                crew.position.y = basePos.y + 40;
-                if (crew.sprite) {
-                    crew.sprite.x = crew.position.x;
-                    crew.sprite.y = crew.position.y;
-                }
-                
-                this.crewManager.completeMission(crew.id);
-                
-                const sprite = this.missionSprites.get(crew.id);
-                if (sprite) {
-                    sprite.destroy();
-                    this.missionSprites.delete(crew.id);
-                }
-            }
-            
-            if (result.success) {
-                this.notificationSystem.showSuccess(result.message, 3000);
-            } else {
-                this.notificationSystem.showError(result.message, 3000);
-            }
-            
-            this.resourcePanel.update();
-            this.crewPanel.update();
+        if (!crew.isAlive) {
+            this.notificationSystem.showError(`💀 ${crew.name} has died!`, 3000);
+            this.crewManager.completeMission(crew.id);
             this.checkGameOver();
+            return;
+        }
+        
+        // Update UI
+        this.resourcePanel.update();
+        this.crewPanel.update();
+        
+        // Check for next mission in chain
+        const nextMission = allMissions.find(m => m.chainIndex === mission.chainIndex + 1 && !m.completed);
+        
+        if (nextMission) {
+            // ✅ Chain continues - update position to current target
+            // ✅ ตำแหน่งของ crew คือตำแหน่งของ target ที่เพิ่งทำเสร็จ (ไม่ใช่ฐาน)
+            crew.position.x = target.position.x;
+            crew.position.y = target.position.y;
+            if (crew.sprite) {
+                crew.sprite.x = crew.position.x;
+                crew.sprite.y = crew.position.y;
+            }
+            
+            // ✅ รีเซ็ต sprite สำหรับภารกิจถัดไป
+            const sprite = this.missionSprites.get(crew.id);
+            if (sprite) {
+                sprite.setText('🧑‍🤝‍🧑');
+            }
+            
+            // ✅ ตั้งค่า usedTime = 0 สำหรับภารกิจถัดไป (จะคำนวณใหม่ใน processCrewMission)
+            nextMission.usedTime = 0;
+            nextMission.progress = 0;
+            nextMission.phase = 'travel_out';
+            nextMission.travelOutDone = false;
+            nextMission.actionDone = false;
+            nextMission.travelBackDone = false;
+            
+            this.notificationSystem.showInfo(`🔄 ${crew.name} moving to next mission!`, 1500);
+        } else {
+            // ✅ Chain complete - free crew and return to base
+            const basePos = this.mapGenerator.getBasePosition();
+            crew.position.x = basePos.x - 60 + (crew.id - 1) * 40;
+            crew.position.y = basePos.y + 40;
+            if (crew.sprite) {
+                crew.sprite.x = crew.position.x;
+                crew.sprite.y = crew.position.y;
+            }
+            
+            this.crewManager.completeMission(crew.id);
+            
+            const sprite = this.missionSprites.get(crew.id);
+            if (sprite) {
+                sprite.destroy();
+                this.missionSprites.delete(crew.id);
+            }
+            
+            this.notificationSystem.showInfo(`✅ ${crew.name} completed all missions!`, 1500);
         }
     }
 
+    // ============================================================
+    // SPRITE MANAGEMENT
+    // ============================================================
     private createMissionSprites(): void {
         this.missionSprites.forEach(sprite => sprite.destroy());
         this.missionSprites.clear();
@@ -970,13 +902,9 @@ export class GameScene extends Scene {
         } else if (progress < actionEnd) {
             x = target.position.x;
             y = target.position.y;
-            if (mission.target.isRelic) {
-                sprite.setText('🔍');
-            } else if (mission.target.isMonster) {
-                sprite.setText('⚔️');
-            } else {
-                sprite.setText('⛏️');
-            }
+            if (mission.target.isRelic) sprite.setText('🔍');
+            else if (mission.target.isMonster) sprite.setText('⚔️');
+            else sprite.setText('⛏️');
         } else if (progress < 1) {
             const p = (progress - actionEnd) / (1 - actionEnd);
             const targetX = basePos.x - 60 + (crew.id - 1) * 40;
@@ -1031,127 +959,75 @@ export class GameScene extends Scene {
         }
     }
 
-    private updateCollaborativeActionSprite(mission: QueuedMission, progress: number): void {
-        const sprite = this.missionSprites.get(mission.crew.id);
-        if (!sprite) return;
-        
-        if (mission.target.isRelic) {
-            sprite.setText(progress > 0.7 ? '✨' : '🔍');
-        } else if (mission.target.isMonster) {
-            sprite.setText(progress > 0.7 ? '💥' : '⚔️');
-        } else {
-            sprite.setText(progress > 0.7 ? '✅' : '⛏️');
-        }
-    }
-
-    private completeMission(mission: QueuedMission): void {
-        const crew = mission.crew;
-        const target = mission.target;
-        
-        const result = this.missionSystem.executeMission(crew, target);
-        
-        const basePos = this.mapGenerator.getBasePosition();
-        crew.position.x = basePos.x - 60 + (crew.id - 1) * 40;
-        crew.position.y = basePos.y + 40;
-        if (crew.sprite) {
-            crew.sprite.x = crew.position.x;
-            crew.sprite.y = crew.position.y;
-        }
-        
-        this.crewManager.completeMission(crew.id);
-        
-        if (result.success) {
-            this.notificationSystem.showSuccess(`${crew.name}: ${result.message}`, 2000);
-        } else {
-            this.notificationSystem.showError(`${crew.name}: ${result.message}`, 2000);
-        }
-        
-        if (!crew.isAlive) {
-            this.notificationSystem.showError(`💀 ${crew.name} has died!`, 3000);
-            this.checkGameOver();
-        }
-        
-        this.resourcePanel.update();
-        this.crewPanel.update();
-        
-        const sprite = this.missionSprites.get(crew.id);
-        if (sprite) {
-            sprite.destroy();
-            this.missionSprites.delete(crew.id);
-        }
-    }
-
+    // ============================================================
+    // FINISH / CANCEL
+    // ============================================================
     private finishExecution(): void {
-        // ✅ ถ้าไม่ได้กำลัง execute อยู่ ให้ return
-        if (!this.isProcessingQueue && this.missionQueue.length === 0) {
+        if (!this.isProcessingQueue) return;
+        
+        this.timeSystem.endExecution();
+        
+        const hasIncomplete = this.missionQueue.some(m => !m.completed);
+        if (hasIncomplete) {
+            const incompleteCount = this.missionQueue.filter(m => !m.completed).length;
+            this.planningPanel.setStatus(`⏳ ${incompleteCount} missions remaining...`, '#f9ca24');
             return;
         }
         
-        // ✅ หยุด timer ใน TimeSystem
-        this.timeSystem.endExecution();
-        
-        // ✅ เคลียร์คิว
+        // All complete
         this.missionQueue = [];
         this.isProcessingQueue = false;
         
-        // ✅ อัพเดท UI
         this.updateQueueDisplay();
         this.crewTimeTexts.forEach(text => text.destroy());
         this.crewTimeTexts.clear();
         this.planningPanel.setStatus('✅ All missions complete!', '#00b894');
         this.crewPanel.update();
         this.resourcePanel.update();
-        
-        // ✅ ซ่อนปุ่ม Execute หลังจากเสร็จ
         this.planningPanel.hideExecuteButton();
         
         this.checkGameOver();
         
-        // ✅ ถ้าไม่ game over และยังมีเวลาอยู่
         if (!this.gameOver) {
             const remaining = this.timeSystem.dayTimeLimit - this.timeSystem.elapsedTime;
             if (remaining > 0) {
                 this.notificationSystem.showInfo(`⏱️ ${Math.floor(remaining)} units remaining. Plan more missions!`, 3000);
-                
                 const availableCrews = this.crewManager.getAvailableCount();
                 if (availableCrews > 0) {
-                    this.notificationSystem.showInfo(`📋 ${availableCrews} crew(s) available. Assign missions!`, 3000);
+                    this.notificationSystem.showInfo(`📋 ${availableCrews} crew(s) available.`, 3000);
                 }
             } else {
-                // ✅ ถ้าเวลาหมด ให้เริ่มกลางคืน
                 this.timeSystem.endDay();
             }
         }
     }
 
-    private cancelAllMissions(): void {
+    private cancelIncompleteMissions(): void {
         for (const mission of this.missionQueue) {
-            const crew = mission.crew;
-            crew.isBusy = false;
-            this.crewManager.completeMission(crew.id);
-            
-            const sprite = this.missionSprites.get(crew.id);
-            if (sprite) {
-                sprite.destroy();
-                this.missionSprites.delete(crew.id);
+            if (!mission.completed) {
+                mission.completed = true;
+                mission.phase = 'complete';
+                const crew = mission.crew;
+                this.crewManager.completeMission(crew.id);
+                this.notificationSystem.showWarning(
+                    `⏰ ${crew.name}'s mission was cut short!`,
+                    2000
+                );
+                const sprite = this.missionSprites.get(crew.id);
+                if (sprite) {
+                    sprite.destroy();
+                    this.missionSprites.delete(crew.id);
+                }
             }
         }
-        
-        this.missionQueue = [];
-        this.isProcessingQueue = false;
-        this.timeSystem.endExecution();
-        this.updateQueueDisplay();
-        this.crewTimeTexts.forEach(text => text.destroy());
-        this.crewTimeTexts.clear();
-        this.crewPanel.update();
-        this.planningPanel.setStatus('❌ Missions cancelled!', '#ff6b6b');
-        this.notificationSystem.showError('❌ All missions cancelled due to insufficient time!', 3000);
     }
 
+    // ============================================================
+    // UI UPDATE
+    // ============================================================
     private updateQueueDisplay(): void {
         const totalTime = this.missionQueue.reduce((sum, q) => sum + q.totalTime, 0);
         const remainingTime = this.timeSystem.dayTimeLimit - this.timeSystem.elapsedTime;
-        
         const chainCount = this.missionQueue.filter(q => q.isChained && q.chainIndex === 0).length;
         const chainText = chainCount > 0 ? ` | 🔗 Chains: ${chainCount}` : '';
         
@@ -1172,16 +1048,19 @@ export class GameScene extends Scene {
             const elapsed = Math.min(mission.usedTime, mission.totalTime);
             const progress = (elapsed / mission.totalTime * 100);
             
+            // ✅ คำนวณเวลาที่เหลือ
+            const remaining = Math.max(0, mission.totalTime - mission.usedTime);
+            
             let statusText = '⏳ Waiting';
-            if (mission.phase === 'travel_out') statusText = '🚶 Traveling to target';
-            else if (mission.phase === 'action') statusText = '⚡ Performing action';
-            else if (mission.phase === 'travel_back') statusText = '🚶 Returning to base';
+            if (mission.phase === 'travel_out') statusText = '🚶 Traveling';
+            else if (mission.phase === 'action') statusText = '⚡ Acting';
+            else if (mission.phase === 'travel_back') statusText = '🚶 Returning';
             else if (mission.phase === 'complete') statusText = '✅ Complete';
 
             const text = this.add.text(
                 GAME_CONFIG.WIDTH - 420,
                 y,
-                `${crew.name}: ${Math.floor(elapsed)}/${Math.floor(mission.totalTime)} units (${Math.floor(progress)}%) - ${statusText}`,
+                `${crew.name}: ${Math.floor(elapsed)}/${Math.floor(mission.totalTime)} units (${Math.floor(progress)}%) - ${statusText} [${Math.floor(remaining)} left]`,
                 {
                     fontSize: '14px',
                     color: mission.phase === 'complete' ? '#00b894' : '#4ecdc4',
@@ -1195,10 +1074,16 @@ export class GameScene extends Scene {
         }
     }
 
+    // ============================================================
+    // UTILITY
+    // ============================================================
     private getDistance(pos1: { x: number; y: number }, pos2: { x: number; y: number }): number {
         return Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2));
     }
 
+    // ============================================================
+    // NIGHT PHASE
+    // ============================================================
     private startNightPhase(): void {
         this.timeSystem.startNight(this);
         this.planningPanel.setStatus('🌙 NIGHT PHASE - Defend the base!', '#ff6b6b');
@@ -1224,7 +1109,6 @@ export class GameScene extends Scene {
 
             const monster = this.add.arc(x, y, 15, 0, 360, false, 0xe74c3c);
             monster.setStrokeStyle(2, 0xff0000, 0.5);
-            
             const monsterIcon = this.add.text(x - 10, y - 12, '👹', { fontSize: '24px' });
 
             this.tweens.add({
@@ -1239,7 +1123,6 @@ export class GameScene extends Scene {
 
                     const damage = 5 + Math.floor(Math.random() * 10);
                     const destroyed = this.resourceManager.takeBaseDamage(damage);
-                    
                     this.showDamageEffect(damage);
                     this.baseHPText.setText(`🏠 HP: ${Math.floor(this.resourceManager.baseHP)}`);
 
@@ -1268,16 +1151,9 @@ export class GameScene extends Scene {
 
     private showDamageEffect(damage: number): void {
         const basePos = this.mapGenerator.getBasePosition();
-        const text = this.add.text(
-            basePos.x - 30,
-            basePos.y - 60,
-            `-${Math.floor(damage)} HP!`,
-            {
-                fontSize: '28px',
-                color: '#ff0000',
-                fontFamily: 'monospace'
-            }
-        ).setOrigin(0.5);
+        const text = this.add.text(basePos.x - 30, basePos.y - 60, `-${Math.floor(damage)} HP!`, {
+            fontSize: '28px', color: '#ff0000', fontFamily: 'monospace'
+        }).setOrigin(0.5);
 
         this.tweens.add({
             targets: text,
@@ -1290,6 +1166,9 @@ export class GameScene extends Scene {
         this.cameras.main.shake(200, 0.02);
     }
 
+    // ============================================================
+    // DAY CYCLE
+    // ============================================================
     private startNewDay(): void {
         this.timeSystem.day++;
         
@@ -1322,7 +1201,6 @@ export class GameScene extends Scene {
         });
 
         this.drawMap();
-
         this.resourcePanel.update();
         this.crewPanel.update();
         this.dayText.setText(`Day ${this.timeSystem.day}/${GAME_CONFIG.MAX_DAYS}`);
@@ -1333,11 +1211,12 @@ export class GameScene extends Scene {
         this.planningPanel.setConfirmVisible(true);
         this.planningPanel.setStatus(`🌞 Day ${this.timeSystem.day} - Plan your missions!`, '#4ecdc4');
         this.notificationSystem.showInfo(`🌞 Day ${this.timeSystem.day} begins!`, 2000);
-        
-        // ✅ รีเซ็ตปุ่ม Execute (ซ่อนไว้ก่อน)
         this.planningPanel.hideExecuteButton();
     }
 
+    // ============================================================
+    // GAME OVER
+    // ============================================================
     private checkGameOver(): void {
         if (this.gameOver) return;
 
@@ -1359,6 +1238,9 @@ export class GameScene extends Scene {
         this.scene.start('GameOverScene', { message, isWin, day: this.timeSystem.day });
     }
 
+    // ============================================================
+    // UPDATE
+    // ============================================================
     update(): void {
         if (this.timeSystem.isExecuting && this.isProcessingQueue) {
             this.timeText.setText(
@@ -1371,9 +1253,7 @@ export class GameScene extends Scene {
         if (!this.timeSystem.isExecuting) {
             this.updateQueueDisplay();
             
-            // ✅ ถ้ามีภารกิจในคิวและยังไม่กำลัง execute ให้แสดงปุ่ม Execute
             if (this.missionQueue.length > 0 && !this.isProcessingQueue && !this.timeSystem.isExecuting) {
-                // ตรวจสอบว่าปุ่ม Execute ถูกแสดงอยู่หรือยัง
                 if (!this.planningPanel.isExecuteButtonVisible()) {
                     this.planningPanel.showExecuteButton(() => this.executeAllMissions());
                 }

@@ -1,4 +1,4 @@
-// src/systems/MapGenerator.ts - เฉพาะส่วนที่แก้ไข
+// src/systems/MapGenerator.ts
 import { ResourceNode, ResourceNodeData } from '../entities/ResourceNode';
 import { GAME_CONFIG } from '../config';
 
@@ -41,11 +41,10 @@ export class MapGenerator {
     }
 
     private createResourceNode(type: string): ResourceNode {
-        // ✅ ปรับให้ทรัพยากรอยู่ห่างจากฐานมากขึ้น
         const basePos = this.getBasePosition();
         let x, y;
         let attempts = 0;
-        const minDistance = 150; // ระยะห่างขั้นต่ำจากฐาน
+        const minDistance = 150;
         
         do {
             x = 50 + Math.random() * (GAME_CONFIG.WIDTH - 250);
@@ -56,7 +55,8 @@ export class MapGenerator {
             attempts < 50
         );
         
-        const amount = 30 + Math.floor(Math.random() * 120); // เพิ่ม amount
+        // ✅ amount 30-120
+        const amount = 30 + Math.floor(Math.random() * 90);
         
         return new ResourceNode({
             id: `res_${Date.now()}_${Math.random()}`,
@@ -66,6 +66,7 @@ export class MapGenerator {
             amount: amount,
             icon: RESOURCE_ICONS[type] || '📦',
             gatherTime: 3000 + Math.random() * 4000
+            // ✅ HP จะถูกคำนวณใน ResourceNode เอง
         });
     }
 

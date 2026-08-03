@@ -219,10 +219,11 @@ export class Crew {
         return this.perks.includes(perkId);
     }
 
-    // ✅ คำนวณเวลาเดินทางเป็นหน่วยเวลา
+    // ✅ คำนวณเวลาเดินทางเป็นหน่วยเวลา (ใช้ระยะทางจริง)
     calculateTravelTime(distance: number): number {
+        // ✅ ใช้ระยะทางจริง (pixel) คูณด้วย factor
         const baseTime = GAME_CONFIG.BASE_TRAVEL_TIME || 200;
-        const distanceFactor = distance * 1.8;
+        const distanceFactor = distance * GAME_CONFIG.TRAVEL_DISTANCE_FACTOR;
         const speed = this.getEffectiveSpeed();
         
         // ✅ speed 0-100 → ใช้ 100 เป็น speed สูงสุด
