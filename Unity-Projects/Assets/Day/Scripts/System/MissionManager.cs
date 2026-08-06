@@ -22,9 +22,18 @@ public class MissionManager : MonoBehaviour
     [Tooltip("Yield multiplier applied when another crew is present (arrived while gathering wasn't finished yet) at the same node.")]
     [Range(1f, 3f)]
     public float HelpYieldMultiplier = 1.5f;
+    [Tooltip("How many crew working the same node at once can stack speed bonus. E.g. 3 means a 4th crew joining doesn't speed things up further.")]
+    public int MaxCooperatingWorkers = 3;
+    [Tooltip("Chance, when cooperation happened, of an extra lump of the same resource on top of the yield multiplier.")]
+    [Range(0f, 1f)]
+    public float BonusDropChance = 0.4f;
+    public int MinBonusDropAmount = 5;
+    public int MaxBonusDropAmount = 15;
 
     // Tracks who is currently gathering at each node, across all crews'
-    // independent mission coroutines, so overlapping visits can be detected.
+    // independent mission coroutines, so overlapping visits can be detected
+    // and used to speed up gathering, grant a yield bonus, and roll for an
+    // extra bonus drop.
     private class WorkerEntry
     {
         public Crew Crew;
@@ -97,10 +106,9 @@ public class MissionManager : MonoBehaviour
 
                 WorkerEntry entry = RegisterWorker(target, crew);
 
-                float actionTime = target.GetActionTime(crew.GetEffectiveGathering());
-                yield return new WaitForSeconds(actionTime);
+                yield return Gather(target, crew);
 
-                // Read HadHelp AFTER waiting — another crew may have joined
+                // Read HadHelp AFTER gathering — another crew may have joined
                 // partway through and retroactively flagged this entry.
                 bool hadHelp = entry.HadHelp;
                 UnregisterWorker(target, entry);
@@ -147,9 +155,36 @@ public class MissionManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Runs the gathering wait for one crew at one node, frame by frame
+    /// (instead of a fixed WaitForSeconds) so the remaining time can speed up
+    /// mid-gather if more crew join the same node. Each additional crew
+    /// present multiplies progress speed, capped at MaxCooperatingWorkers.
+    /// </summary>
+    private IEnumerator Gather(ResourceNode target, Crew crew)
+    {
+        float remaining = target.GetActionTime(crew.GetEffectiveGathering());
+
+        while (remaining > 0f)
+        {
+            int activeCount = GetActiveWorkerCount(target);
+            float speedMultiplier = Mathf.Clamp(activeCount, 1, MaxCooperatingWorkers);
+
+            remaining -= Time.deltaTime * speedMultiplier;
+            yield return null;
+        }
+    }
+
+    private int GetActiveWorkerCount(ResourceNode node)
+    {
+        return _activeWorkers.TryGetValue(node, out var workers) ? workers.Count : 0;
+    }
+
+    /// <summary>
     /// Registers a crew as currently gathering at a node. If someone is
     /// already there, both the newcomer and everyone already present get
-    /// flagged as having had help. Returns the entry to check after waiting.
+    /// flagged as having had help (used for the yield bonus + drop roll).
+    /// The speed bonus itself is read live via GetActiveWorkerCount() during
+    /// Gather().
     /// </summary>
     private WorkerEntry RegisterWorker(ResourceNode node, Crew crew)
     {
@@ -215,14 +250,30 @@ public class MissionManager : MonoBehaviour
         int amount = Mathf.FloorToInt(target.Amount * (0.5f + crew.GetEffectiveGathering() * 0.3f));
 
         if (hadHelp)
+        {
             amount = Mathf.FloorToInt(amount * HelpYieldMultiplier);
+        }
+
+        bool gotBonusDrop = false;
+        int bonusAmount = 0;
+
+        // Bonus drop is a SEPARATE roll on top of the yield multiplier above —
+        // only possible when cooperation actually happened.
+        if (hadHelp && Random.value < BonusDropChance)
+        {
+            bonusAmount = Random.Range(MinBonusDropAmount, MaxBonusDropAmount + 1);
+            amount += bonusAmount;
+            gotBonusDrop = true;
+        }
 
         ResourceManager.AddResource(target.Type.ToString().ToLower(), amount);
 
         string helpNote = hadHelp ? " (with help!)" : "";
+        string bonusNote = gotBonusDrop ? $" Bonus drop +{bonusAmount}!" : "";
+
         return new MissionResult(
             true,
-            crew.Name + " gained " + amount + " " + target.Type + helpNote + "."
+            crew.Name + " gained " + amount + " " + target.Type + helpNote + bonusNote + "."
         );
     }
 }

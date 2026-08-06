@@ -47,7 +47,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
   Type: 7
-  Amount: 1
+  Amount: 2
   Difficulty: 3
   IsRelic: 1
   IsMonster: 0

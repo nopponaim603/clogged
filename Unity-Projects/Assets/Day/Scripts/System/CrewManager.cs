@@ -11,60 +11,95 @@ public class CrewManager : MonoBehaviour
 
     private int _nextId = 1;
 
+    // ------------------------------------------------------------------
+    // Preview-only stat generation (no GameObject created here)
+    // ------------------------------------------------------------------
+
     /// <summary>
-    /// Randomizes every crew stat (Name, Hp/MaxHp, Speed, proficiencies, Perks)
-    /// and assigns a fresh runtime Id + hire cost. Shared by both the plain
-    /// random crew path and the random-appearance path below, so stats are
-    /// generated the exact same way either way.
+    /// Generates a random crew's stats as plain data — no GameObject is
+    /// created. Reserves an Id up front so that if this data later gets
+    /// instantiated (see InstantiateFromData), the Id and displayed "Crew N"
+    /// name line up with no gaps. If it's never instantiated (not picked),
+    /// the Id is simply never used — harmless.
     /// </summary>
-    private void RandomizeStats(Crew crew, int hireCost)
+    public CrewData GenerateRandomCrewData(GameObject appearancePrefab, int hireCost)
     {
-        crew.Id = _nextId++;
-        crew.Name = "Crew " + crew.Id;
-        crew.Hp = Random.Range(80, 140);
-        crew.MaxHp = crew.Hp;
-        crew.Speed = Random.Range(1.2f, 2.4f);
-        crew.GatheringProficiency = Random.Range(0.7f, 1.5f);
-        crew.SearchingProficiency = Random.Range(0.7f, 1.5f);
-        crew.HuntingProficiency = Random.Range(0.7f, 1.5f);
-        crew.HireCost = hireCost;
-        crew.Position = Vector2.zero;
-        crew.Perks = new List<string> { "scout" };
+        int id = _nextId++;
+        float hp = Random.Range(80, 140);
+
+        return new CrewData
+        {
+            PreviewId = id,
+            Name = "Crew " + id,
+            Hp = hp,
+            MaxHp = hp,
+            Speed = Random.Range(1.2f, 2.4f),
+            GatheringProficiency = Random.Range(0.7f, 1.5f),
+            SearchingProficiency = Random.Range(0.7f, 1.5f),
+            HuntingProficiency = Random.Range(0.7f, 1.5f),
+            Perks = new List<string> { "scout" },
+            HireCost = hireCost,
+            AppearancePrefab = appearancePrefab
+        };
     }
 
     /// <summary>
-    /// Fully random crew with a plain, blank GameObject (no particular sprite).
-    /// Used as a fallback if no appearance prefabs are configured.
+    /// Turns previewed CrewData into an actual Crew GameObject in the scene —
+    /// call this ONLY once the player has actually picked this crew (e.g. on
+    /// intake Confirm). Nothing is instantiated for data that's never passed
+    /// here, so unpicked offers never touch the scene at all.
+    /// </summary>
+    public Crew InstantiateFromData(CrewData data)
+    {
+        if (data == null) return null;
+
+        GameObject instance = data.AppearancePrefab != null
+            ? Instantiate(data.AppearancePrefab)
+            : new GameObject("Crew");
+
+        Crew crew = instance.GetComponent<Crew>();
+        if (crew == null)
+            crew = instance.AddComponent<Crew>();
+
+        crew.Id = data.PreviewId;
+        crew.Name = data.Name;
+        crew.Hp = data.Hp;
+        crew.MaxHp = data.MaxHp;
+        crew.Speed = data.Speed;
+        crew.GatheringProficiency = data.GatheringProficiency;
+        crew.SearchingProficiency = data.SearchingProficiency;
+        crew.HuntingProficiency = data.HuntingProficiency;
+        crew.Perks = new List<string>(data.Perks);
+        crew.HireCost = data.HireCost;
+        crew.Position = Vector2.zero;
+
+        return crew;
+    }
+
+    // ------------------------------------------------------------------
+    // Immediate-instantiation helpers (kept for other callers/uses)
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Fully random crew with a plain, blank GameObject (no particular sprite),
+    /// instantiated immediately. Prefer GenerateRandomCrewData() + 
+    /// InstantiateFromData() when you need a preview-before-commit flow.
     /// </summary>
     public Crew CreateRandomCrew(int hireCost)
     {
-        var crew = new GameObject("Crew").AddComponent<Crew>();
-        RandomizeStats(crew, hireCost);
-        return crew;
+        CrewData data = GenerateRandomCrewData(null, hireCost);
+        return InstantiateFromData(data);
     }
 
     /// <summary>
-    /// Instantiates an appearance prefab (just for its sprite/visuals — any
-    /// stats set on the prefab itself are ignored) and gives it a fresh set of
-    /// randomized stats, same as CreateRandomCrew. Use this for a pool of
-    /// "look" variants that should still come out with random stats.
+    /// Instantiates an appearance prefab immediately with fresh randomized
+    /// stats. Prefer GenerateRandomCrewData() + InstantiateFromData() when you
+    /// need a preview-before-commit flow.
     /// </summary>
     public Crew CreateRandomCrewFromAppearance(GameObject appearancePrefab, int hireCost)
     {
-        if (appearancePrefab == null)
-            return CreateRandomCrew(hireCost);
-
-        GameObject instance = Instantiate(appearancePrefab);
-        Crew crew = instance.GetComponent<Crew>();
-
-        if (crew == null)
-        {
-            // Prefab was just a sprite/visual with no Crew component — add one.
-            crew = instance.AddComponent<Crew>();
-        }
-
-        RandomizeStats(crew, hireCost);
-        return crew;
+        CrewData data = GenerateRandomCrewData(appearancePrefab, hireCost);
+        return InstantiateFromData(data);
     }
 
     /// <summary>
@@ -93,6 +128,10 @@ public class CrewManager : MonoBehaviour
 
         return crew;
     }
+
+    // ------------------------------------------------------------------
+    // Hiring / mission state (unchanged)
+    // ------------------------------------------------------------------
 
     public bool HireCrew(Crew crew, int points)
     {
