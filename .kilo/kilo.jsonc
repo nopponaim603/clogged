@@ -4,8 +4,8 @@
     "naplab": {
       "name": "Naplab AI",
       "options": {
-        "baseURL": "https://chat.naplab.uk/v1/",
-        "apiKey": "sk-5547f0465c3d41c79f2a61a21c0517a0"
+        "baseURL": "https://ai.naplab.uk/v1",
+        "apiKey": "naplabcamtcmu"
       },
       "models": {
         "ornith-1.0-35b": {
