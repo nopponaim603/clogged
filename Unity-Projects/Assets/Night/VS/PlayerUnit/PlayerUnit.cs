@@ -43,43 +43,49 @@ public class PlayerUnit : MonoBehaviour
 
     void FindClosestEnemy()
     {
-        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        if (EnemyManager.Instance == null)
+            return;
 
+        EnemyMove closest = null;
         float closestDistance = Mathf.Infinity;
-        Transform closestEnemy = null;
 
-        foreach (GameObject enemy in enemies)
+        foreach (EnemyMove enemy in EnemyManager.Instance.enemies)
         {
+            if (enemy == null)
+                continue;
+
             float distance = Vector2.Distance(transform.position, enemy.transform.position);
 
-            if (distance < closestDistance && distance <= searchRange)
+            if (distance <= searchRange && distance < closestDistance)
             {
                 closestDistance = distance;
-                closestEnemy = enemy.transform;
+                closest = enemy;
             }
         }
 
-        target = closestEnemy;
+        target = (closest != null) ? closest.transform : null;
     }
 
     IEnumerator Attack()
     {
         isAttacking = true;
 
-        while (target != null)
+        while (true)
         {
+            if (target == null)
+                break;
+
             float distance = Vector2.Distance(transform.position, target.position);
 
             if (distance > attackRange)
                 break;
 
-            // ลดเลือดศัตรู
             EnemyHealth enemy = target.GetComponent<EnemyHealth>();
 
-            if (enemy != null)
-            {
-                enemy.TakeDamage(damage);
-            }
+            if (enemy == null)
+                break;
+
+            enemy.TakeDamage(damage);
 
             yield return new WaitForSeconds(attackRate);
         }

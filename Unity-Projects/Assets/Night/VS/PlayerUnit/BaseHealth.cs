@@ -1,6 +1,5 @@
 using UnityEngine;
 
-
 public class BaseHealth : MonoBehaviour
 {
     [Header("Base HP")]
@@ -25,15 +24,18 @@ public class BaseHealth : MonoBehaviour
         }
     }
 
-    void Die()
-    {
-        Debug.Log("GAME OVER");
-
-        NightGameManager.Instance.GameOver();
-    }
-
     public int GetHP()
     {
         return currentHP;
+    }
+
+    public int GetMaxHP()
+    {
+        return maxHP;
+    }
+
+    void Die()
+    {
+        Debug.Log("Game Over");
     }
 }

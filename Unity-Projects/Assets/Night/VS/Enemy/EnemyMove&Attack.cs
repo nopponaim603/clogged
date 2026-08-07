@@ -17,6 +17,19 @@ public class EnemyMove : MonoBehaviour
 
     private bool reachedBase = false;
     private BaseHealth baseHealth;
+    private PlayerHealth playerHealth;
+
+    void Start()
+    {
+        EnemyManager.Instance.RegisterEnemy(this);
+        if (target == null)
+        {
+            GameObject baseObj = GameObject.FindGameObjectWithTag("Base");
+
+            if (baseObj != null)
+                target = baseObj.transform;
+        }
+    }
 
     void Update()
     {
@@ -44,7 +57,15 @@ public class EnemyMove : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Base"))
+        if (other.CompareTag("PlayerUnit"))
+        {
+            reachedBase = true;
+
+            playerHealth = other.GetComponent<PlayerHealth>();
+
+            StartCoroutine(AttackPlayer());
+        }
+        else if (other.CompareTag("Base"))
         {
             reachedBase = true;
 
@@ -69,6 +90,17 @@ public class EnemyMove : MonoBehaviour
             playerHealth.TakeDamage(damage);
         }
     }
+    IEnumerator AttackPlayer()
+    {
+        while (playerHealth != null)
+        {
+            playerHealth.TakeDamage(damage);
+
+            yield return new WaitForSeconds(attackRate);
+        }
+
+        reachedBase = false;
+    }
     void FindTarget()
     {
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, searchRange);
@@ -91,5 +123,10 @@ public class EnemyMove : MonoBehaviour
         }
 
         currentTarget = closestTarget;
+    }
+    void OnDestroy()
+    {
+        if (EnemyManager.Instance != null)
+            EnemyManager.Instance.RemoveEnemy(this);
     }
 }
