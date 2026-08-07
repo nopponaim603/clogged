@@ -23,7 +23,7 @@
 
 ## 🛠 Technical Tasks (Git Log Updates)
 - [ ] `systems/MissionSystem.ts` — เพิ่มฟังก์ชันตรวจสอบ Multi-crew บน Target เดียวกันและคำนวณ Combined Proficiency
-- [ ] `scenes/GameScene.ts` — ปรับปรุงการประมวลผล Queue และการอัปเดตสไปรต์ของลูกเรือที่ทำภารกิจร่วมกัน
+- [ ] `scenes/MainScene.ts` — ปรับปรุงการประมวลผล Queue และการอัปเดตสไปรต์ของลูกเรือที่ทำภารกิจร่วมกัน
 - [ ] `ui/MissionDisplay.ts` — เพิ่มการแสดงผลสถานะ Collaborative Mission บน UI Panel
 
 ---

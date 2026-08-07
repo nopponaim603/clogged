@@ -21,7 +21,7 @@
 ## 2. System & Code Audit (ผลการตรวจอัปเดตระบบ)
 
 ### 2.1 Phaser Prototype (`prototype_resource_game/src/`)
-* **Day Cycle Bug Fix**: แก้ไขตรรกะใน `GameScene.ts` และ `MissionSystem.ts` เพื่อป้องกันปัญหาข้ามวันผิดพลาด และล้างสถานะงานของลูกเรือได้อย่างถูกต้องเมื่อเริ่มวันใหม่
+* **Day Cycle Bug Fix**: แก้ไขตรรกะใน `MainScene.ts` และ `MissionSystem.ts` เพื่อป้องกันปัญหาข้ามวันผิดพลาด และล้างสถานะงานของลูกเรือได้อย่างถูกต้องเมื่อเริ่มวันใหม่
 * **Resource Node Scaling**: ปรับปรุง `ResourceNode.ts` ให้รองรับการปรับระดับความยาก และการกระจายตัวบนโหนด 3 ประเภท (Wood, Food, Relic)
 * **Core Loop Verification**: ยืนยันว่า Core Loop (ส่งลูกเรือ → ทำภารกิจ → เก็บทรัพยากร → จบวันหักอาหาร/สลายทรัพยากร) สามารถเล่นได้จนจบด่านโดยไม่เกิด Crash
 

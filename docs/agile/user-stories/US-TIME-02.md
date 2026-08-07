@@ -23,8 +23,8 @@
 
 ## 🛠 Technical Tasks (Git Log Updates)
 - [ ] `systems/TimeSystem.ts` — ตรวจสอบและแก้ไขการเรียก `day++` ซ้ำซ้อนระหว่าง `TimeSystem.endNight()` และ `GameScene.startNewDay()`
-- [ ] `scenes/GameScene.ts` — แก้ไข `finishExecution()` ให้เรียก `this.timeSystem.endDay()` ทันทีเมื่อ `missionQueue` เสร็จสิ้นทั้งหมด เพื่อป้องกันเกมค้าง
-- [ ] `scenes/GameScene.ts` — ปรับปรุงการ Reset state ใน `initSystems()` และการเปลี่ยน Scene ไปยัง `GameOverScene`
+- [ ] `scenes/MainScene.ts` — แก้ไข `finishExecution()` ให้เรียก `this.timeSystem.endDay()` ทันทีเมื่อ `missionQueue` เสร็จสิ้นทั้งหมด เพื่อป้องกันเกมค้าง
+- [ ] `scenes/MainScene.ts` — ปรับปรุงการ Reset state ใน `initSystems()` และการเปลี่ยน Scene ไปยัง `GameOverScene`
 
 ---
 

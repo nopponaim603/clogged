@@ -22,7 +22,7 @@
 
 ## 🛠 Technical Tasks (Git Log Updates)
 - [ ] `entities/Monster.ts` — เพิ่มคุณสมบัติ Attack Power, Speed และ Resource Loot Type ให้มอนสเตอร์แต่ละประเภท
-- [ ] `scenes/GameScene.ts` — เพิ่มระบบสุ่มการสกัดจับของลูกเรือในฐาน (`spawnNightMonsters` & Defense Calculation)
+- [ ] `scenes/MainScene.ts` — เพิ่มระบบสุ่มการสกัดจับของลูกเรือในฐาน (`spawnNightMonsters` & Defense Calculation)
 - [ ] `systems/ResourceManager.ts` — ปรับปรุงสูตรคำนวณการสูญเสียทรัพยากรตามประเภทมอนสเตอร์ที่บุกเข้าถึงฐาน
 
 ---
