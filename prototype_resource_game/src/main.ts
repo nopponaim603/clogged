@@ -1,8 +1,9 @@
-// src/main.ts
 import * as Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
-import { GameScene } from './scenes/GameScene';
+import { TravelScene } from './scenes/TravelScene';
+import { DayScene } from './scenes/DayScene';
+import { NightScene } from './scenes/NightScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { GAME_CONFIG } from './config';
 
@@ -12,7 +13,7 @@ const config: Phaser.Types.Core.GameConfig = {
     height: GAME_CONFIG.HEIGHT,
     parent: 'game-container',
     backgroundColor: '#1a1a2e',
-    scene: [BootScene, MenuScene, GameScene, GameOverScene],
+    scene: [BootScene, MenuScene, TravelScene, DayScene, NightScene, GameOverScene],
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,

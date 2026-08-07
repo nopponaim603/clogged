@@ -19,6 +19,10 @@ export const GAME_CONFIG = {
     // ✅ ค่า Base Travel (ใช้ระยะทางจริง)
     BASE_TRAVEL_TIME: 200,
     TRAVEL_DISTANCE_FACTOR: 2.0,
+
+    // ✅ Speed Control
+    SPEED_OPTIONS: [1, 2, 4],
+    DEFAULT_SPEED: 1,
     
     // ✅ ระบบ HP ของโหนด (Gathering)
     GATHER_HP_PER_UNIT: [500, 1000, 2000, 4000], // 4 ขั้น

@@ -1,4 +1,3 @@
-// src/scenes/BootScene.ts
 import { Scene } from 'phaser';
 
 export class BootScene extends Scene {
@@ -13,14 +12,9 @@ export class BootScene extends Scene {
             this.cameras.main.width / 2,
             this.cameras.main.height / 2,
             'Loading...',
-            {
-                fontSize: '32px',
-                color: '#4ecdc4',
-                fontFamily: 'monospace'
-            }
+            { fontSize: '32px', color: '#4ecdc4', fontFamily: 'monospace' }
         ).setOrigin(0.5);
 
-        // Animation for loading
         let dots = 0;
         this.time.addEvent({
             delay: 500,
@@ -31,7 +25,6 @@ export class BootScene extends Scene {
             loop: true
         });
 
-        // Simulate loading
         this.time.delayedCall(1500, () => {
             loadingText.destroy();
             this.scene.start('MenuScene');

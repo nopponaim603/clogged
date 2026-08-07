@@ -12,7 +12,13 @@ export class TimeSystem {
     public onNightEnd: () => void;
     public elapsedTime: number = 0;
     public onSimulateStep: (() => void) | null = null;
-    private isEndingDay: boolean = false; // ✅ ป้องกันการเรียกซ้ำ
+    private isEndingDay: boolean = false;
+    public worldTime: number = 0;
+    public speed: number = 1;
+    private updateInterval: number = 1000;
+    
+    // ✅ เก็บ Scene ไว้ใช้ใน setSpeed
+    private currentScene: Phaser.Scene | null = null;
 
     constructor() {
         this.day = 1;
@@ -24,29 +30,34 @@ export class TimeSystem {
         this.onDayEnd = () => {};
         this.onNightEnd = () => {};
         this.onSimulateStep = null;
+        this.speed = GAME_CONFIG.DEFAULT_SPEED || 1;
+        this.currentScene = null;
     }
 
     startDay(scene: Phaser.Scene): void {
         this.isPlanningPhase = true;
         this.isNightPhase = false;
-        this.elapsedTime = 0;
+        this.worldTime = 0;
         this.dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
         this.isEndingDay = false;
+        this.currentScene = scene;
     }
 
     startExecution(scene: Phaser.Scene): void {
         this.isExecuting = true;
         this.isPlanningPhase = false;
-        this.elapsedTime = 0;
+        this.worldTime = 0;
         this.isEndingDay = false;
+        this.currentScene = scene;
         
         if (this.executionTimer) {
             this.executionTimer.remove();
         }
         
-        // ✅ Simulation: อัพเดททุก 1 วินาที เพิ่ม TIME_UNIT_PER_SECOND หน่วยเวลา
+        // ✅ ใช้ interval ตาม speed
+        const interval = this.updateInterval / this.speed;
         this.executionTimer = scene.time.addEvent({
-            delay: 1000,
+            delay: interval,
             callback: this.updateTime,
             callbackScope: this,
             loop: true
@@ -55,17 +66,40 @@ export class TimeSystem {
         this.simulateStep();
     }
 
+    // ✅ เปลี่ยน Speed
+    setSpeed(newSpeed: number): void {
+        this.speed = Math.max(1, newSpeed);
+        // ✅ ถ้ากำลัง execute อยู่ ให้ restart timer
+        if (this.isExecuting && this.executionTimer && this.currentScene) {
+            this.executionTimer.remove();
+            const interval = this.updateInterval / this.speed;
+            this.executionTimer = this.currentScene.time.addEvent({
+                delay: interval,
+                callback: this.updateTime,
+                callbackScope: this,
+                loop: true
+            });
+        }
+    }
+
+    // ✅ Skip - ให้ไปจบวันทันที
+    skipDay(): void {
+        if (this.isExecuting || this.isPlanningPhase) {
+            this.worldTime = this.dayTimeLimit;
+            this.simulateStep();
+            this.endDay();
+        }
+    }
+
     updateTime(): void {
-        // ✅ ถ้ากำลังจะจบวัน หรือจบวันแล้ว ไม่ต้องทำอะไร
         if (this.isEndingDay || this.isNightPhase) return;
         
-        // ✅ Simulation: เพิ่ม TIME_UNIT_PER_SECOND หน่วยเวลา
-        this.elapsedTime += GAME_CONFIG.TIME_UNIT_PER_SECOND;
+        // ✅ เพิ่มเวลาตาม speed
+        this.worldTime += GAME_CONFIG.TIME_UNIT_PER_SECOND * this.speed;
         
-        // ✅ ถ้าเวลาถึงหรือเกิน limit
-        if (this.elapsedTime >= this.dayTimeLimit) {
-            this.elapsedTime = this.dayTimeLimit;
-            this.simulateStep(); // เรียก simulateStep ครั้งสุดท้าย
+        if (this.worldTime >= this.dayTimeLimit) {
+            this.worldTime = this.dayTimeLimit;
+            this.simulateStep();
             this.endDay();
             return;
         }
@@ -74,16 +108,14 @@ export class TimeSystem {
     }
 
     private simulateStep(): void {
-        // ✅ ถ้ากำลังจะจบวัน ไม่ต้อง simulate
         if (this.isEndingDay) return;
-        
         if (this.onSimulateStep) {
             this.onSimulateStep();
         }
     }
 
     getRemainingTime(): number {
-        return Math.max(0, this.dayTimeLimit - this.elapsedTime);
+        return Math.max(0, this.dayTimeLimit - this.worldTime);
     }
 
     endExecution(): void {
@@ -96,7 +128,6 @@ export class TimeSystem {
     }
 
     endDay(): void {
-        // ✅ ป้องกันการเรียกซ้ำ
         if (this.isEndingDay || this.isNightPhase) return;
         
         this.isEndingDay = true;
@@ -113,7 +144,7 @@ export class TimeSystem {
 
     startNight(scene: Phaser.Scene): void {
         this.isNightPhase = true;
-        // ✅ ตรวจสอบว่า night phase ยังไม่ถูกเรียก
+        this.currentScene = scene;
         scene.time.delayedCall(GAME_CONFIG.NIGHT_DURATION, () => {
             this.endNight();
         });
@@ -127,15 +158,15 @@ export class TimeSystem {
     }
 
     getTimeString(): string {
-        return `${Math.floor(this.dayTimeLimit - this.elapsedTime)}`;
+        return `${Math.floor(this.dayTimeLimit - this.worldTime)}`;
     }
 
     getElapsedTime(): string {
-        return `${Math.floor(this.elapsedTime)}`;
+        return `${Math.floor(this.worldTime)}`;
     }
 
     getFormattedTime(): string {
-        const remaining = this.dayTimeLimit - this.elapsedTime;
+        const remaining = this.dayTimeLimit - this.worldTime;
         return `${Math.floor(remaining)}`;
     }
 }

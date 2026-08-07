@@ -88,11 +88,15 @@ export class MenuScene extends Scene {
         });
 
         startBtn.on('pointerdown', () => {
-            this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('GameScene');
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            // ✅ ไปที่ TravelScene แทน GameScene
+            this.scene.start('TravelScene', { 
+                day: 1,
+                isFirstTime: true 
             });
         });
+    });
 
         // Version
         this.add.text(centerX, centerY + 280, 'v1.0 - Prototype', {
