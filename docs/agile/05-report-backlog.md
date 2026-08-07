@@ -1,12 +1,15 @@
-# System Test Reports Backlog — clogged
+# System Test & Audit Reports Backlog — clogged
 
-**Last Updated:** 2026-07-13
+**Last Updated:** 2026-08-07
 
-ยังไม่มี test report อย่างเป็นทางการ — เฟส 1 (Prototype) เพิ่งเริ่ม การทดสอบระบบตาม [Testing Guidelines](../wiki/guidelines/system-test-guideline.md) จะเริ่มหลัง vertical slice เล่นได้ครบ 1 ด่าน
+รายการรายงานผลการทดสอบระบบและ audit ความก้าวหน้าโครงการตาม [Testing Guidelines](../wiki/guidelines/system-test-guideline.md)
 
 | Category | Report | Date |
 |---|---|---|
-| — | ยังไม่มี | — |
+| Sprint Audit | [Sprint 01 Progress & System Audit Report](./report-logs/2026-08-07-sprint-01-progress-report.md) | 2026-08-07 |
 
 ## Related Documents
 - [Sprint 01](./sprint-backlogs/sprint-01.md)
+- [Product Backlog](./01-product-backlog.md)
+- [Kanban Board](./kanban.md)
+

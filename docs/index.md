@@ -2,7 +2,7 @@
 
 **Project:** clogged
 **Status:** Active | **Current Sprint:** [Sprint 01 — Prototype](./agile/sprint-backlogs/sprint-01.md)
-**Last Updated:** 2026-07-30 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+**Last Updated:** 2026-08-07 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
 
 > ⚠️ GDD ได้อัปเดต **v1.0 (Prototype Reverse-Engineered)** — เอกสาร GDD ฉบับใหม่Reverse Engineering จาก source code `prototype_resource_game/` — ดู [Design Evolution](./gdd/00-concept.md#6-design-evolution)
 
@@ -28,9 +28,10 @@
 - [Sprint Planning & Roadmap](./agile/02-sprint-planning.md)
 - [Meeting Backlogs](./agile/03-meeting-backlogs.md)
 - [Retrospectives Backlog](./agile/04-retrospectives-backlog.md)
-- [Report Backlog](./agile/05-report-backlog.md)
+- [Report Backlog & System Audits](./agile/05-report-backlog.md) ([Latest Report 2026-08-07](./agile/report-logs/2026-08-07-sprint-01-progress-report.md))
 - [Kanban Board](./agile/kanban.md)
 - [Team Roster](./agile/team.md)
+
 
 ---
 
