@@ -2,14 +2,30 @@
   "$schema": "https://app.kilo.ai/config.json",
   "provider": {
     "naplab": {
-      "name": "Naplab AI",
+      "name": "local-vllm",
       "options": {
-        "baseURL": "https://ai.naplab.uk/v1",
-        "apiKey": "naplabcamtcmu"
+        "baseURL": "https://chat.naplab.uk/api/v1/",
+        "apiKey": "sk-5547f0465c3d41c79f2a61a21c0517a0"
       },
       "models": {
         "ornith-1.0-35b": {
           "name": "Ornith 1.0 35B",
+          "tool_call": true,
+          "limit": {
+            "context": 128000,
+            "output": 8192
+          }
+        },
+        "camt-dg": {
+          "name": "DG 2562 Curriculum",
+          "tool_call": true,
+          "limit": {
+            "context": 128000,
+            "output": 8192
+          }
+        },
+        "camtdg-local-llm": {
+          "name": "CAMTDG Local LLM",
           "tool_call": true,
           "limit": {
             "context": 128000,

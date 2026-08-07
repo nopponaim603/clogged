@@ -10,18 +10,22 @@
 | Provider ID  | `naplab-ai`                |
 | Display name | `local-vllm`               |
 | Provider API | OpenAI Compatible            |
-| Base URL     | `https://ai.naplab.uk/v1/` |
-| API Key      | `naplabcamtcmu`            |
+| Base URL     | `https://chat.naplab.uk/api/v1/` |
+| API Key      | `sk-5547f0465c3d41c79f2a61a21c0517a0`            |
 
 ## Models
 
-| ID                 | Name   |
-| ------------------ | ------ |
-| `ornith-1.0-35b` | ornith |
+| ID                   | Name                 |
+| -------------------- | --------------------- |
+| `ornith-1.0-35b`     | ornith / Ornith 1.0 35B (base model) |
+| `camt-dg`            | DG 2562 Curriculum (preset ครอบ `ornith-1.0-35b` + knowledge หลักสูตร) |
+| `camtdg-local-llm`   | CAMTDG Local LLM (preset ครอบ `ornith-1.0-35b`) |
+
+> หมายเหตุ: endpoint `/v1/models` ยังคืน `arena-model` (โหมด Open WebUI Arena สำหรับโหวตเปรียบเทียบ chatbot) มาด้วย แต่ไม่ใช่โมเดลที่เรียกใช้ตรงๆ ผ่าน API ได้ จึงไม่ได้เพิ่มเข้า config
 
 ## การตั้งค่าใน Kilo (`.kilo/kilo.jsonc`)
 
-Provider นี้ถูกตั้งค่าไว้แล้วที่ root ของโปรเจกต์ในไฟล์ [`.kilo/kilo.jsonc`](../../.kilo/kilo.jsonc):
+Provider นี้ถูกตั้งค่าไว้แล้วที่ root ของโปรเจกต์ในไฟล์ [`.kilo/kilo.jsonc`](../../../.kilo/kilo.jsonc):
 
 ```jsonc
 {
@@ -29,12 +33,28 @@ Provider นี้ถูกตั้งค่าไว้แล้วที่ r
     "naplab": {
       "name": "Naplab AI",
       "options": {
-        "baseURL": "https://ai.naplab.uk/v1",
-        "apiKey": "naplabcamtcmu"
+        "baseURL": "https://chat.naplab.uk/api/v1/",
+        "apiKey": "sk-5547f0465c3d41c79f2a61a21c0517a0"
       },
       "models": {
         "ornith-1.0-35b": {
           "name": "Ornith 1.0 35B",
+          "tool_call": true,
+          "limit": {
+            "context": 128000,
+            "output": 8192
+          }
+        },
+        "camt-dg": {
+          "name": "DG 2562 Curriculum",
+          "tool_call": true,
+          "limit": {
+            "context": 128000,
+            "output": 8192
+          }
+        },
+        "camtdg-local-llm": {
+          "name": "CAMTDG Local LLM",
           "tool_call": true,
           "limit": {
             "context": 128000,
@@ -57,5 +77,5 @@ Provider นี้ถูกตั้งค่าไว้แล้วที่ r
 
 ## Reference
 
-- Endpoint: https://ai.naplab.uk/v1/
+- Endpoint: https://chat.naplab.uk/api/v1/
 - ดูวิธีเชื่อม MCP/AI client อื่นๆ เพิ่มเติมได้ที่ [Unity MCP Setup Guide](unity-mcp-setup.md)
