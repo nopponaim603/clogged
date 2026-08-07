@@ -1,6 +1,6 @@
 # 🌐 clogged — Knowledge Wiki
 
-**Last Updated:** 2026-07-13 | **Maintained by:** ทีม clogged
+**Last Updated:** 2026-08-07 | **Maintained by:** ทีม clogged
 
 ## 🎯 Quick Access
 - **Concept & Architecture:** [GDD Concept](../gdd/00-concept.md)
@@ -15,6 +15,7 @@
 
 ### 📚 Development
 - [Unity MCP Setup Guide](unity-mcp-setup.md) — คู่มือการตั้งค่า Unity MCP Server/Bridge เพื่อใช้งาน AI ร่วมกับ Unity Editor
+- [Naplab AI Provider Setup](ai-provider-naplab.md) — ค่า config ของ AI Provider "Naplab AI" (local vLLM, model ornith-1.0-35b) สำหรับ Kilo
 - [Google Drive Resource Index](google-drive-index.md) — รวม link ทุกเอกสาร Google Drive ของโปรเจกต์ (Draft, GDD, Core Loop, Drive Folders)
 - (ว่าง — เพิ่ม setup guide สำหรับ `prototype_resource_game/` ที่นี่ เมื่อ onboarding สมาชิกใหม่)
 
