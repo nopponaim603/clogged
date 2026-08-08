@@ -8,11 +8,11 @@
 | Phase | Timeline | Weeks | Focus Area | Milestone | Status |
 |:---|:---|:---|:---|:---|:---|
 | 0 — Pre-production | 2026-06-29 → 2026-07-12 | W1–W2 | ล็อกดีไซน์ + tech setup | GDD + Tech setup เสร็จ | 🟡 ล่าช้า — คำถามออกแบบหลักยังไม่ปิดอย่างเป็นทางการ แม้จะมี prototype โค้ดล่วงหน้าแล้ว (ดู [Design Pivot](../gdd/00-concept.md)) |
-| [sprint-01](./sprint-backlogs/sprint-01.md) — Prototype | 2026-07-13 → 2026-08-09 | W3–W6 | พิสูจน์ว่า core loop สนุก (vertical slice) | เล่นจบ 1 ด่านได้ | 🔵 In Progress |
-| 2a — Production Sprint 1 | 2026-08-10 → 2026-09-06 | W7–W9 | สร้างระบบหลักให้ Playable Loop | **M2 — Presentable Playable Loop** | ⬜ Not started |
-| 2b — Production Sprint 2 | 2026-09-07 → 2026-09-20 | W10–W11 | Polish + Should Have | Feature-complete (Alpha) | ⬜ Not started |
-| 3 — Content & Polish | 2026-09-21 → 2026-10-18 | W12–W16 | เนื้อหา + ขัดเกลา + บาลานซ์ | Content-complete (Beta) | ⬜ Not started |
-| 4 — Test & Release | 2026-10-19 → 2026-11-01 | W17–W18 | เทส แก้บั๊ก ปล่อยเกม | Release build (Gold) | ⬜ Not started |
+| [sprint-01](./sprint-backlogs/sprint-01.md) — Prototype | 2026-07-13 → 2026-08-09 | W3–W6 | พิสูจน์ว่า core loop สนุก (vertical slice) | M1 — Core loop vertical slice | 🟢 Done / Near Gate |
+| [sprint-02a](./sprint-backlogs/sprint-02a.md) — Production Sprint 1 | 2026-08-10 → 2026-09-06 | W7–W9 | สร้างระบบหลักให้ Playable Loop | **M2 — Presentable Playable Loop** | ⬜ Ready |
+| [sprint-02b](./sprint-backlogs/sprint-02b.md) — Production Sprint 2 | 2026-09-07 → 2026-09-20 | W10–W11 | Equipment Crafting + Upgrades + Save/Load | M3 — Feature-complete (Alpha) | ⬜ Planned |
+| [sprint-03](./sprint-backlogs/sprint-03.md) — Content & Polish | 2026-09-21 → 2026-10-18 | W12–W16 | เนื้อหา + Art/Audio Polish + Balance | M4 — Content-complete (Beta) | ⬜ Planned |
+| [sprint-04](./sprint-backlogs/sprint-04.md) — Test & Release | 2026-10-19 → 2026-11-01 | W17–W18 | Full Regression QA, Optimize, Gold Build | M5 — Release (Gold) | ⬜ Planned |
 
 ## 🎯 Milestones (Presentation + Presentation Timeline)
 
@@ -32,11 +32,11 @@
 
 | Priority | User Story | สถานะปัจจุบัน |
 |:---:|:---|:---|
-| 🔴 P0 | US-MISSION-02 — Multi-crew collaborative missions | 🏗️ In-Progress |
-| 🔴 P0 | US-BASE-02 — Base defense + scaling waves | 🏗️ In-Progress |
+| 🔴 P0 | US-MISSION-02 — Multi-crew collaborative missions | 🟢 Done |
+| 🔴 P0 | US-BASE-02 — Base defense + scaling waves | 🟢 Done |
 | 🟡 P1 | US-FOOD-02 — Starvation debuffs | 🏗️ In-Progress |
 | 🟡 P1 | US-MAP-01 — Dynamic difficulty scaling | 🏗️ In-Progress |
-| 🟢 P2 | US-TIME-02 — Day progression + state reset | 🏗️ In-Progress |
+| 🟢 P2 | US-TIME-02 — Day progression + state reset | 🟢 Done |
 | 🟢 P2 | US-WARN-01 — Proactive warnings | 🟡 Partial |
 
 **Timeline สำหรับ M2 (W7–W9):**
@@ -60,11 +60,11 @@ Sep  1     │ **M2 — Presentable Playable Loop** ✅
 
 ## 🚀 Sprint Details
 
-- **[sprint-01](./sprint-backlogs/sprint-01.md)**: Prototype / Vertical Slice — core loop (crew dispatch, mission, day/night, base defense) ส่วนใหญ่มีอยู่แล้วจากการทดลองก่อนเฟส 0 จบ งานที่เหลือคือปิดช่องว่างตาม [Product Backlog](01-product-backlog.md) (🟡/⬜ items) แล้ว playtest ในทีม
-- **[Phase 2a (W7–W9)]**: สร้างระบบหลัก 4 ใช้รี่ให้เสร็จ → Presentable Playable Loop
-- **[Phase 2b (W10–W11)]**: Polish, balance, เริ่ม Should Have (US-ECON-01, US-EQUIP-01)
-- **[Phase 3 (W12–W16)]**: เนื้อหาเพิ่ม, content polish, gameplay balance
-- **[Phase 4 (W17–W18)]**: เทสแก้บั๊ก, release build สำหรับ Gold
+- **[sprint-01](./sprint-backlogs/sprint-01.md)**: Prototype / Vertical Slice — Core loop verification & grayblock playtest (2026-07-13 → 2026-08-09)
+- **[sprint-02a](./sprint-backlogs/sprint-02a.md)**: Production Sprint 1 — Unity C# Integration & Presentable Playable Loop (2026-08-10 → 2026-09-06)
+- **[sprint-02b](./sprint-backlogs/sprint-02b.md)**: Production Sprint 2 — Equipment Crafting, Upgrades & Save/Load Manager (2026-09-07 → 2026-09-20)
+- **[sprint-03](./sprint-backlogs/sprint-03.md)**: Content & Polish — Content Complete, Visual & Audio Art Direction, Game Balance (2026-09-21 → 2026-10-18)
+- **[sprint-04](./sprint-backlogs/sprint-04.md)**: Test & Release — Full Regression QA, Performance Optimization, Gold Release Build (2026-10-19 → 2026-11-01)
 
 ## หลักการบริหารแผน
 - **เผื่อ buffer:** อย่าอัดงาน 100% ทุกสัปดาห์
