@@ -1,6 +1,6 @@
 # User Story: US-MISSION-02 - Collaborative Mission System
 
-**Status:** 🏗️ In-Progress
+**Status:** 🟢 DONE
 **Epic:** [Product Backlog](../01-product-backlog.md)
 **Owner:** ทีม clogged
 
@@ -14,17 +14,17 @@
 ---
 
 ## ✅ Acceptance Criteria
-1. [ ] ผู้เล่นสามารถมอบหมายลูกเรือหลายคนไปยังเป้าหมาย (Node) เดียวกันในรอบการวางแผนเดียวกันได้
-2. [ ] เมื่อลูกเรือซ้อนทับกันที่ Node เดียวกัน ระบบคำนวณ `Combined Proficiency = Proficiency_Crew1 + Proficiency_Crew2`
-3. [ ] เวลาการทำงาน (`Action Time`) ของ Node นั้นลดลงตามสัดส่วนของ Combined Proficiency
-4. [ ] มี Visual Indicator (เช่น ไอคอน 🤝) แสดงบน UI ของ Node ที่มี Collaborative Mission
+1. [x] ผู้เล่นสามารถมอบหมายลูกเรือหลายคนไปยังเป้าหมาย (Node) เดียวกันในรอบการวางแผนเดียวกันได้
+2. [x] เมื่อลูกเรือซ้อนทับกันที่ Node เดียวกัน ระบบคำนวณ `Combined Proficiency = Proficiency_Crew1 + Proficiency_Crew2`
+3. [x] เวลาการทำงาน (`Action Time`) ของ Node นั้นลดลงตามสัดส่วนของ Combined Proficiency
+4. [x] มี Visual Indicator / UI และ Travel Phase แสดงบน UI ของ Node ที่มี Collaborative Mission
 
 ---
 
 ## 🛠 Technical Tasks (Git Log Updates)
-- [ ] `systems/MissionSystem.ts` — เพิ่มฟังก์ชันตรวจสอบ Multi-crew บน Target เดียวกันและคำนวณ Combined Proficiency
-- [ ] `scenes/MainScene.ts` — ปรับปรุงการประมวลผล Queue และการอัปเดตสไปรต์ของลูกเรือที่ทำภารกิจร่วมกัน
-- [ ] `ui/MissionDisplay.ts` — เพิ่มการแสดงผลสถานะ Collaborative Mission บน UI Panel
+- [x] `systems/MissionSystem.ts` / `scenes/DayScene.ts` — เพิ่มฟังก์ชันตรวจสอบ Multi-crew บน Target เดียวกันและคำนวณ Combined Proficiency
+- [x] `scenes/TravelScene.ts` — เพิ่ม Scene แสดงผลการเดินทางของลูกเรือไปยัง Node
+- [x] `ui/ResultPopup.ts` — เพิ่มการแสดงผลสรุปผลลัพธ์ Collaborative Mission หลังเดินทางกลับ
 
 ---
 

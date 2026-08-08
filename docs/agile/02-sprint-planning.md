@@ -77,25 +77,31 @@ Sep  1     │ **M2 — Presentable Playable Loop** ✅
 ```mermaid
 gantt
     title clogged - Project Schedule Jun - Nov 2026
-
     dateFormat  YYYY-MM-DD
     axisFormat  %b %d
 
     section Pre-production
-    Phase 0: Pre-production           :milestone, 2026-06-29, 2026-07-12
+    Phase 0 - Pre-production          :p0, 2026-06-29, 2026-07-12
 
     section Sprint 01
-    Sprint 01: Prototype              :milestone, 2026-07-13, 2026-08-09
+    Sprint 01 - Prototype             :s1, 2026-07-13, 2026-08-09
 
     section Production
-    Phase 2a: Production Sprint 1     :2026-08-10, 2026-09-06
-    Phase 2b: Production Sprint 2     :2026-09-07, 2026-09-20
+    Phase 2a - Production Sprint 1    :p2a, 2026-08-10, 2026-09-06
+    Phase 2b - Production Sprint 2    :p2b, 2026-09-07, 2026-09-20
 
     section Content and Polish
-    Phase 3: Content and Polish       :milestone, 2026-09-21, 2026-10-18
+    Phase 3 - Content and Polish      :p3, 2026-09-21, 2026-10-18
 
     section Release
-    Phase 4: Test and Release         :milestone, 2026-10-19, 2026-11-01
+    Phase 4 - Test and Release        :p4, 2026-10-19, 2026-11-01
+
+    section Milestones
+    M1 Sprint 01 Decision Gate        :milestone, m1, 2026-08-09, 0d
+    M2 Presentable Playable Loop      :milestone, m2, 2026-09-01, 0d
+    M3 Feature-complete (Alpha)       :milestone, m3, 2026-09-20, 0d
+    M4 Content-complete (Beta)        :milestone, m4, 2026-10-18, 0d
+    M5 Release (Gold)                 :milestone, m5, 2026-11-01, 0d
 ```
 
 ## Related Documents

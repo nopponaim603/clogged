@@ -1,6 +1,6 @@
 # User Story: US-TIME-02 - Day Cycle Bug Fix & Clean State Reset
 
-**Status:** 🏗️ In-Progress
+**Status:** 🟢 DONE
 **Epic:** [Product Backlog](../01-product-backlog.md)
 **Owner:** ทีม clogged
 
@@ -14,17 +14,17 @@
 ---
 
 ## ✅ Acceptance Criteria
-1. [ ] วันในเกมเพิ่มขึ้นทีละ 1 วันหลังผ่าน Night Phase (Day 1 → Day 2 → Day 3 ... → Day 30)
-2. [ ] เมื่อชนะในวันที่ 30 (`Day > 30`) แสดงหน้าจอ GameOverScene พร้อมข้อความชนะ (YOU WIN)
-3. [ ] เมื่อกด Restart จาก GameOverScene ค่าตัวแปรใน `TimeSystem`, `ResourceManager`, และ `CrewManager` ถูก Reset สะอาด
-4. [ ] เมื่อภารกิจในคิว (`missionQueue`) ที่เตรียมไว้ทำเสร็จสิ้นทั้งหมดแล้ว ให้ระบบส่งต่อไปยัง Night Phase ทันทีอัตโนมัติ (`this.timeSystem.endDay()`) โดยไม่ค้างเวลาค้างเฟส
+1. [x] วันในเกมเพิ่มขึ้นทีละ 1 วันหลังผ่าน Night Phase (Day 1 → Day 2 → Day 3 ... → Day 30)
+2. [x] เมื่อชนะในวันที่ 30 (`Day > 30`) แสดงหน้าจอ GameOverScene พร้อมข้อความชนะ (YOU WIN)
+3. [x] เมื่อกด Restart จาก GameOverScene ค่าตัวแปรใน `TimeSystem`, `ResourceManager`, และ `CrewManager` ถูก Reset สะอาด
+4. [x] เมื่อภารกิจในคิว (`missionQueue`) ที่เตรียมไว้ทำเสร็จสิ้นทั้งหมดแล้ว ให้ระบบส่งต่อไปยัง Night Phase ทันทีอัตโนมัติ (`this.timeSystem.endDay()`) โดยไม่ค้างเวลาค้างเฟส
 
 ---
 
 ## 🛠 Technical Tasks (Git Log Updates)
-- [ ] `systems/TimeSystem.ts` — ตรวจสอบและแก้ไขการเรียก `day++` ซ้ำซ้อนระหว่าง `TimeSystem.endNight()` และ `GameScene.startNewDay()`
-- [ ] `scenes/MainScene.ts` — แก้ไข `finishExecution()` ให้เรียก `this.timeSystem.endDay()` ทันทีเมื่อ `missionQueue` เสร็จสิ้นทั้งหมด เพื่อป้องกันเกมค้าง
-- [ ] `scenes/MainScene.ts` — ปรับปรุงการ Reset state ใน `initSystems()` และการเปลี่ยน Scene ไปยัง `GameOverScene`
+- [x] `systems/TimeSystem.ts` — ตรวจสอบและแก้ไขการเรียก `day++` ซ้ำซ้อนระหว่าง `TimeSystem.endNight()` และ `GameScene.startNewDay()`
+- [x] `scenes/MainScene.ts` / `scenes/DayScene.ts` — แก้ไข `finishExecution()` ให้เรียก `this.timeSystem.endDay()` ทันทีเมื่อ `missionQueue` เสร็จสิ้นทั้งหมด เพื่อป้องกันเกมค้าง
+- [x] `scenes/DayScene.ts` — ปรับปรุงการ Reset state ใน `initSystems()` และการเปลี่ยน Scene ไปยัง `GameOverScene`
 
 ---
 
