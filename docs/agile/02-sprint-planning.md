@@ -76,11 +76,10 @@ Sep  1     │ **M2 — Presentable Playable Loop** ✅
 
 ```mermaid
 gantt
-    title clogged — Project Schedule (Jun – Nov 2026)
+    title clogged - Project Schedule Jun - Nov 2026
 
     dateFormat  YYYY-MM-DD
     axisFormat  %b %d
-    excludes    weekends
 
     section Pre-production
     Phase 0: Pre-production           :milestone, 2026-06-29, 2026-07-12
@@ -92,11 +91,11 @@ gantt
     Phase 2a: Production Sprint 1     :2026-08-10, 2026-09-06
     Phase 2b: Production Sprint 2     :2026-09-07, 2026-09-20
 
-    section Content & Polish
-    Phase 3: Content & Polish         :milestone, 2026-09-21, 2026-10-18
+    section Content and Polish
+    Phase 3: Content and Polish       :milestone, 2026-09-21, 2026-10-18
 
     section Release
-    Phase 4: Test & Release           :milestone, 2026-10-19, 2026-11-01
+    Phase 4: Test and Release         :milestone, 2026-10-19, 2026-11-01
 ```
 
 ## Related Documents

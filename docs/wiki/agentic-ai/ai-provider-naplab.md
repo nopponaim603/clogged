@@ -5,21 +5,21 @@
 
 ## ข้อมูล Provider
 
-| Field        | Value                        |
-| ------------ | ---------------------------- |
-| Provider ID  | `naplab-ai`                |
-| Display name | `local-vllm`               |
-| Provider API | OpenAI Compatible            |
-| Base URL     | `https://chat.naplab.uk/api/v1/` |
-| API Key      | `sk-5547f0465c3d41c79f2a61a21c0517a0`            |
+| Field        | Value                                   |
+| ------------ | --------------------------------------- |
+| Provider ID  | `naplab-ai`                           |
+| Display name | Naplab-LM                               |
+| Provider API | OpenAI Compatible                       |
+| Base URL     | `https://chat.naplab.uk/api/v1/`      |
+| API Key      | `sk-5547f0465c3d41c79f2a61a21c0517a0` |
 
 ## Models
 
-| ID                   | Name                 |
-| -------------------- | --------------------- |
-| `ornith-1.0-35b`     | ornith / Ornith 1.0 35B (base model) |
-| `camt-dg`            | DG 2562 Curriculum (preset ครอบ `ornith-1.0-35b` + knowledge หลักสูตร) |
-| `camtdg-local-llm`   | CAMTDG Local LLM (preset ครอบ `ornith-1.0-35b`) |
+| ID                   | Name                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| `ornith-1.0-35b`   | ornith / Ornith 1.0 35B (base model)                                                 |
+| `camt-dg`          | DG 2562 Curriculum (preset ครอบ `ornith-1.0-35b` + knowledge หลักสูตร) |
+| `camtdg-local-llm` | CAMTDG Local LLM (preset ครอบ `ornith-1.0-35b`)                                |
 
 > หมายเหตุ: endpoint `/v1/models` ยังคืน `arena-model` (โหมด Open WebUI Arena สำหรับโหวตเปรียบเทียบ chatbot) มาด้วย แต่ไม่ใช่โมเดลที่เรียกใช้ตรงๆ ผ่าน API ได้ จึงไม่ได้เพิ่มเข้า config
 
@@ -69,11 +69,8 @@ Provider นี้ถูกตั้งค่าไว้แล้วที่ r
 
 > ⚠️ **หมายเหตุความปลอดภัย:** API Key ด้านบนถูก commit ไว้ใน repo แล้ว (`.kilo/kilo.jsonc`) — หากเป็น key จริงที่ใช้งานในระบบ production ควรพิจารณาย้ายไปเก็บใน environment variable หรือ secret manager แทนการ hardcode/commit ลง git
 
-![1786079337209](image/ai-provider-naplab/1786079337209.png)
+![1786202509047](image/ai-provider-naplab/1786202509047.png)
 
-![1786079343816](image/ai-provider-naplab/1786079343816.png)
-
-![1786079350469](image/ai-provider-naplab/1786079350469.png)
 
 ## Reference
 
