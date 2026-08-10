@@ -8,8 +8,8 @@
         "apiKey": "sk-5547f0465c3d41c79f2a61a21c0517a0"
       },
       "models": {
-        "ornith-1.0-35b": {
-          "name": "Ornith 1.0 35B",
+        "dg-lm1": {
+          "name": "dg-lm1",
           "tool_call": true,
           "limit": {
             "context": 128000,
@@ -24,8 +24,8 @@
             "output": 8192
           }
         },
-        "camtdg-local-llm": {
-          "name": "CAMTDG Local LLM",
+        "arena-model": {
+          "name": "Arena Model",
           "tool_call": true,
           "limit": {
             "context": 128000,
