@@ -1,5 +1,12 @@
 # Documentation Changelog — clogged
 
+## 2026-08-08
+
+- **Task & Progress Tracker Weekly Report (W32)**:
+  - Generated [weekly-2026-W32.md](./agile/reports/weekly/weekly-2026-W32.md) under `docs/agile/reports/weekly/` using the `task-tracker` skill.
+  - Updated User Stories status: [US-TIME-02](./agile/user-stories/US-TIME-02.md) (🟢 DONE), [US-MISSION-02](./agile/user-stories/US-MISSION-02.md) (🟢 DONE), [US-BASE-02](./agile/user-stories/US-BASE-02.md) (🟢 DONE).
+  - Updated [Product Backlog](./agile/01-product-backlog.md), [Sprint 01 Backlog](./agile/sprint-backlogs/sprint-01.md), [Report Backlog](./agile/05-report-backlog.md), [Kanban Board](./agile/kanban.md), and [Index](./index.md).
+
 ## 2026-08-07
 
 - **Sprint 01 System & Progress Audit Report**:

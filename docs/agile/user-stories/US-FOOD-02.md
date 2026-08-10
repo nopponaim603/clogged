@@ -24,7 +24,7 @@
 ## 🛠 Technical Tasks (Git Log Updates)
 - [ ] `entities/Crew.ts` — เพิ่มสถานะ `isStarving` และคำนวณ Effective Stats หักลบจาก Debuff
 - [ ] `systems/ResourceManager.ts` — ปรับฟังก์ชัน `consumeFood()` ให้ส่งคืนค่าเป็นจำนวนส่วนขาด (Shortage) แทนการสั่ง Game Over ทันที
-- [ ] `scenes/GameScene.ts` — ปรับแต่งกระบวนการ `startNewDay()` เพื่อปรับปรุงการแจ้งเตือนและการลด HP ของลูกเรือที่อดอาหาร
+- [ ] `scenes/MainScene.ts` — ปรับแต่งกระบวนการ `startNewDay()` เพื่อปรับปรุงการแจ้งเตือนและการลด HP ของลูกเรือที่อดอาหาร
 
 ---
 

@@ -68,11 +68,8 @@ Provider นี้ถูกตั้งค่าไว้แล้วที่ r
 
 > ⚠️ **หมายเหตุความปลอดภัย:** API Key ด้านบนถูก commit ไว้ใน repo แล้ว (`.kilo/kilo.jsonc`) — หากเป็น key จริงที่ใช้งานในระบบ production ควรพิจารณาย้ายไปเก็บใน environment variable หรือ secret manager แทนการ hardcode/commit ลง git
 
-![1786079337209](image/ai-provider-naplab/1786079337209.png)
+![1786202509047](image/ai-provider-naplab/1786202509047.png)
 
-![1786079343816](image/ai-provider-naplab/1786079343816.png)
-
-![1786079350469](image/ai-provider-naplab/1786079350469.png)
 
 ## Reference
 

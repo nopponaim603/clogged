@@ -1,4 +1,4 @@
-// src/scenes/GameScene.ts
+// src/scenes/DayScene.ts
 import { Scene } from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { Crew } from '../entities/Crew';

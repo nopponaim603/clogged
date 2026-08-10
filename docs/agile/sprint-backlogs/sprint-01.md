@@ -22,28 +22,32 @@ gantt
 
 ## 📋 Committed Stories & Tasks
 
+**Sprint Progress:** 🟢 ~88% Completed (Targeting Decision Gate: 2026-08-09)
+
 | ID | Story / Task | Owner | Estimate | Status |
 |----|--------------|-------|----------|--------|
-| [US-CREW-01](../user-stories/US-CREW-01.md) | Hire & manage crew | - | M | ✅ Done (carried over) |
-| [US-MISSION-01](../user-stories/US-MISSION-01.md) | Gather/search/hunt missions | - | L | ✅ Done (carried over) |
-| [US-TIME-01](../user-stories/US-TIME-01.md) | Day/night cycle | - | M | ✅ Done (carried over) |
-| US-BASE-01 | Base attacked at night | - | M | ✅ Done (carried over) |
-| US-CLOG-01 | Unused resources decay each day | - | S | ✅ Done (carried over) |
-| US-WINLOSE-01 | Win/lose conditions | - | S | ✅ Done (carried over) |
-| US-FOOD-01 | Food shortage เกิดผลลบจริง (crew เสีย HP/ประสิทธิภาพ) | - | M | [ ] |
-| US-WARN-01 | เตือนผู้เล่นก่อนจบวันถ้าทรัพยากรจะตัน/ขาด | - | S | [ ] |
-| — | ปิดคำถามค้างใน [GDD ส่วนที่ยังต้องตัดสินใจ](../../gdd/01-mechanics.md#ส่วนที่ยังต้องตัดสินใจ-ต่อยอดจาก-idea-design-เดิม) | ทั้งทีม | S | [ ] |
-| — | ทดลองเล่นกันเองในทีม + เก็บ feedback | ทั้งทีม | S | [ ] |
+| [US-CREW-01](../user-stories/archives/US-CREW-01.md) | Hire & manage crew | ทั้งทีม | M | 🟢 Done |
+| [US-MISSION-01](../user-stories/archives/US-MISSION-01.md) | Gather/search/hunt missions | ไอซ์ | L | 🟢 Done |
+| [US-TIME-01](../user-stories/archives/US-TIME-01.md) | Day/night cycle | ไอซ์ | M | 🟢 Done |
+| [US-TIME-02](../user-stories/US-TIME-02.md) | Day cycle bug fix & clean state reset | ไอซ์ | S | 🟢 Done |
+| [US-MISSION-02](../user-stories/US-MISSION-02.md) | Collaborative multi-crew mission system | ไอซ์ | L | 🟢 Done |
+| [US-BASE-02](../user-stories/US-BASE-02.md) | Night phase base defense & monster scaling | อั้น/ปาร์ค/ไอซ์ | M | 🟢 Done |
+| [US-FOOD-02](../user-stories/US-FOOD-02.md) | Food shortage starvation debuffs & health decay | ไอซ์ | M | 🟡 In Progress |
+| [US-MAP-01](../user-stories/US-MAP-01.md) | Dynamic map generation & difficulty scaling | ปาร์ค | M | 🟡 In Progress |
+| US-CLOG-01 | Unused resources decay each day | เอก | S | 🟢 Done |
+| US-WINLOSE-01 | Win/lose conditions | เอก | S | 🟢 Done |
+| US-WARN-01 | เตือนผู้เล่นก่อนจบวันถ้าทรัพยากรจะตัน/ขาด | อั้น | S | 🟡 In Progress |
+| [Task Assignment](./2026-08-07-12-task-assignment.md) | สรุปแจกแจงงานรายบุคคล (อั้น, ปาร์ค, เอก, ไอซ์) | ทั้งทีม | M | 🟢 Done |
 
 ## 🚦 Decision Gate (สิ้น W6 · 2026-08-09)
 Core loop สนุกพอไหม?
-→ **สนุก:** ไปเฟส 2 (Production) · **ยัง:** ปรับดีไซน์ก่อน (มี buffer ในแผน)
+→ **สนุก:** ไปเฟส 2 (Production / M2 Presentable Playable Loop) · **ยัง:** ปรับดีไซน์ก่อน (มี buffer ในแผน)
 
 ## 🛠 Sprint Specifics
 - **Definition of Done:** ด่านทดลองเล่นได้ตั้งแต่ต้นวันถึงจบวัน โดยไม่ crash, ทีมเล่นจบครบทุกคนอย่างน้อย 1 รอบ
 - **Risks & Blockers:**
-  - README.md ยังระบุ Unity เป็น engine ทั้งที่ prototype ใช้ Phaser — อาจสร้างความสับสนกับผู้ประเมิน/อาจารย์ ต้องแก้ก่อนส่งงานเฟสนี้
-  - คำถามออกแบบหลัก (setting, platform) ยังไม่ปิดอย่างเป็นทางการ แม้ prototype จะเดินหน้าไปแล้ว — เสี่ยง rework ถ้าทีมไม่เห็นตรงกัน
+  - การเชื่อมต่อ Scene Flow ใน Unity C# (Day ↔ Night) ต้องทำให้สมบูรณ์เต็มรูปแบบก่อนสปรินท์ถัดไป
+  - เอกสาร README.md ต้องปรับปรุงการอธิบาย Phaser prototype และ Unity C# roadmap ให้ชัดเจน
 
 ## Related Documents
 - [Product Backlog](../01-product-backlog.md)
