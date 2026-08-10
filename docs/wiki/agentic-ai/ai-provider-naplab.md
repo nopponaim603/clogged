@@ -5,21 +5,20 @@
 
 ## ข้อมูล Provider
 
-| Field        | Value                        |
-| ------------ | ---------------------------- |
-| Provider ID  | `naplab-ai`                |
-| Display name | `local-vllm`               |
-| Provider API | OpenAI Compatible            |
-| Base URL     | `https://chat.naplab.uk/api/v1/` |
-| API Key      | `sk-5547f0465c3d41c79f2a61a21c0517a0`            |
+| Field        | Value                                   |
+| ------------ | --------------------------------------- |
+| Provider ID  | `naplab-ai`                           |
+| Display name | `NAPLAB AI`                           |
+| Provider API | OpenAI Compatible                       |
+| Base URL     | `https://chat.naplab.uk/api/v1/`      |
+| API Key      | `sk-5547f0465c3d41c79f2a61a21c0517a0` |
 
 ## Models
 
-| ID                   | Name                 |
-| -------------------- | --------------------- |
-| `ornith-1.0-35b`     | ornith / Ornith 1.0 35B (base model) |
-| `camt-dg`            | DG 2562 Curriculum (preset ครอบ `ornith-1.0-35b` + knowledge หลักสูตร) |
-| `camtdg-local-llm`   | CAMTDG Local LLM (preset ครอบ `ornith-1.0-35b`) |
+| ID          | Name                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------ |
+| `dg-lm1`  | ornith / Ornith 1.0 35B (base model)                                                 |
+| `camt-dg` | DG 2562 Curriculum (preset ครอบ `ornith-1.0-35b` + knowledge หลักสูตร) |
 
 > หมายเหตุ: endpoint `/v1/models` ยังคืน `arena-model` (โหมด Open WebUI Arena สำหรับโหวตเปรียบเทียบ chatbot) มาด้วย แต่ไม่ใช่โมเดลที่เรียกใช้ตรงๆ ผ่าน API ได้ จึงไม่ได้เพิ่มเข้า config
 
