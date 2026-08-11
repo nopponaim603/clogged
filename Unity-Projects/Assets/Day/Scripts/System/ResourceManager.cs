@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class ResourceManager : MonoBehaviour
 {
+    [System.NonSerialized]
     public Dictionary<string, int> Resources = new Dictionary<string, int>
     {
         ["wood"] = 0,
@@ -10,7 +11,10 @@ public class ResourceManager : MonoBehaviour
         ["relic"] = 0
     };
 
+    [System.NonSerialized]
     public Dictionary<string, int> DayResources = new Dictionary<string, int>();
+
+    [System.NonSerialized]
     public Dictionary<string, int> MonsterParts = new Dictionary<string, int>
     {
         ["fangs"] = 0
@@ -62,6 +66,22 @@ public class ResourceManager : MonoBehaviour
 
         DayResources.Clear();
         return lost;
+    }
+
+    /// <summary>
+    /// Spends a resource outright (e.g. paying a recruit cost). Unlike
+    /// AddResource with a negative amount, this does NOT touch DayResources —
+    /// spending isn't "gained today" and shouldn't show up as a loss in the
+    /// end-of-day summary or get halved by LoseDayResources(). Returns false
+    /// (and spends nothing) if there isn't enough of the resource.
+    /// </summary>
+    public bool SpendResource(string type, int amount)
+    {
+        if (!Resources.ContainsKey(type)) return false;
+        if (Resources[type] < amount) return false;
+
+        Resources[type] -= amount;
+        return true;
     }
 
     public bool ConsumeFood(int crewCount)

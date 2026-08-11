@@ -12,6 +12,8 @@ public class GameManager : MonoBehaviour
     public TimeManager TimeManager;
     public CrewIntakeUI CrewIntakeUI;
     public UIManager UIManager;
+    public DayEndSummaryUI DayEndSummaryUI;
+    public ShipNavigatorUI ShipNavigatorUI;
 
     public Transform BaseTransform;
 
@@ -43,6 +45,13 @@ public class GameManager : MonoBehaviour
 
     /// <summary>True once the day's timer has run out and end-of-day resolution has run.</summary>
     public bool DayEnded { get; private set; } = false;
+
+    /// <summary>
+    /// Set by a Bonus Ship node (via SetNextDayResourceBias) to weight what
+    /// spawns in today's GenerateWorld(). Cleared automatically once BeginDay()
+    /// consumes it, so it only ever affects a single day.
+    /// </summary>
+    public string PendingResourceBias { get; private set; }
 
     private void Awake()
     {
@@ -84,15 +93,39 @@ public class GameManager : MonoBehaviour
         CrewManager.HealDownCrews(DailyHealAmount);
 
         // First time the run reaches ShipDay, no crew have been hired yet.
-        // Show the free intake screen and only start the day once it's confirmed.
+        // Show the free intake screen first — the Ship Navigator (and any
+        // Recruit event within it) needs at least a starting crew to make sense.
         if (CrewManager.Crews.Count == 0 && CrewIntakeUI != null)
         {
-            CrewIntakeUI.ShowIntake(BeginDay);
+            CrewIntakeUI.ShowIntake(ShowShipNavigatorThenBeginDay);
+        }
+        else
+        {
+            ShowShipNavigatorThenBeginDay();
+        }
+    }
+
+    /// <summary>
+    /// Ship Phase step: show the node-picker (Normal/Bonus/Recruit), resolve
+    /// whichever the player picks, then start the day. Falls straight through
+    /// to BeginDay() if no ShipNavigatorUI is wired up.
+    /// </summary>
+    private void ShowShipNavigatorThenBeginDay()
+    {
+        if (ShipNavigatorUI != null)
+        {
+            ShipNavigatorUI.ShowNavigator(BeginDay);
         }
         else
         {
             BeginDay();
         }
+    }
+
+    /// <summary>Called by a Bonus Ship node — biases today's GenerateWorld() toward this resource type.</summary>
+    public void SetNextDayResourceBias(string resourceType)
+    {
+        PendingResourceBias = resourceType;
     }
 
     private void BeginDay()
@@ -101,33 +134,45 @@ public class GameManager : MonoBehaviour
         MissionManager.ClearActiveWorkers();
         TimeManager.StartDay();
         GenerateWorld();
+        PendingResourceBias = null; // consumed — only ever applies to the day it was picked for
     }
 
     /// <summary>
-    /// Fired once by TimeManager.OnDayEnded when the clock hits zero.
-    /// Resolves food consumption and day-resource loss, then waits for the
-    /// player to confirm before moving on (see ProceedToNight()).
+    /// Fired once by TimeManager.OnDayEnded when the clock hits zero (or when
+    /// the day is ended early once the mission queue is empty). Resolves food
+    /// consumption and day-resource loss, then shows the end-of-day summary
+    /// panel. The player reviews it and presses Continue (wired to GoToNight())
+    /// to move on.
     /// </summary>
     private void HandleDayEnded()
     {
         int crewCount = CrewManager.Crews.Count;
         bool fedEveryone = ResourceManager.ConsumeFood(crewCount);
+
+        // Snapshot what was gained today BEFORE LoseDayResources() clears it.
+        var gainedToday = new Dictionary<string, int>(ResourceManager.DayResources);
         var lost = ResourceManager.LoseDayResources();
 
-        string summary = fedEveryone
-            ? "The day is over. Everyone ate."
-            : "The day is over. Food ran out — the crew went hungry!";
+        DayEnded = true;
 
-        if (lost.Count > 0)
+        if (DayEndSummaryUI != null)
         {
+            DayEndSummaryUI.Show(gainedToday, lost, fedEveryone, GoToNight);
+        }
+        else
+        {
+            // Fallback if no summary panel is wired up: plain text via UIManager.
+            string summary = fedEveryone
+                ? "The day is over. Everyone ate."
+                : "The day is over. Food ran out — the crew went hungry!";
+
             foreach (var kvp in lost)
             {
                 summary += $" Lost {kvp.Value} {kvp.Key} overnight.";
             }
-        }
 
-        UIManager?.ShowMessage(summary);
-        DayEnded = true;
+            UIManager?.ShowMessage(summary);
+        }
     }
 
     /// <summary>
@@ -143,6 +188,27 @@ public class GameManager : MonoBehaviour
         }
 
         GoToNight();
+    }
+
+    /// <summary>
+    /// Call this from an "End Day" UI button. Ends the day right now —
+    /// regardless of remaining CurrentTime — as long as no missions are
+    /// currently active (i.e. the dispatched queue has finished running).
+    /// This is the queue-based alternative to waiting for the clock to hit
+    /// zero.
+    /// </summary>
+    public void EndDayEarly()
+    {
+        if (DayEnded)
+            return;
+
+        if (TimeManager.IsMissionRunning)
+        {
+            UIManager?.ShowMessage("Wait for all crew to return before ending the day.");
+            return;
+        }
+
+        TimeManager.EndDay();
     }
 
     private void Update()
@@ -237,10 +303,33 @@ public class GameManager : MonoBehaviour
 
     private GameObject GetRandomPrefab()
     {
+        if (!string.IsNullOrEmpty(PendingResourceBias))
+        {
+            // 70% chance to spawn the biased type; falls through to the
+            // normal even split the rest of the time so it isn't guaranteed
+            // every single node.
+            if (Random.value < 0.7f)
+            {
+                GameObject biased = GetPrefabForType(PendingResourceBias);
+                if (biased != null) return biased;
+            }
+        }
+
         float roll = Random.value;
 
         if (roll < 0.33f) return NodeWoodPrefab;
         if (roll < 0.66f) return NodeFoodPrefab;
         return NodeRelicPrefab;
+    }
+
+    private GameObject GetPrefabForType(string type)
+    {
+        switch (type)
+        {
+            case "wood": return NodeWoodPrefab;
+            case "food": return NodeFoodPrefab;
+            case "relic": return NodeRelicPrefab;
+            default: return null;
+        }
     }
 }
