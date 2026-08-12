@@ -26,24 +26,90 @@
 
 The project follows a **layered architecture** typical of game development:
 
-```
-┌─────────────────────────────────────────────┐
-│                 SCENES                       │  ← State Management (Phaser Scene)
-├─────────────────────────────────────────────┤
-│  DayScene │ NightScene │ TravelScene │ ...   │
-├─────────────────────────────────────────────┤
-│         UI COMPONENTS                       │  ← Presentation Layer
-│  PlanningPanel │ CrewPanel │ ResourcePanel   │
-├─────────────────────────────────────────────┤
-│           SYSTEMS                           │  ← Business Logic
-│  MissionSystem │ CrewManager │ ResourceManager│
-├─────────────────────────────────────────────┤
-│            ENTITIES                         │  ← Data Models
-│  Crew │ ResourceNode │ Monster │ Base        │
-├─────────────────────────────────────────────┤
-│        DATA LAYER  │  UTILS                 │  ← Static Data & Helpers
-│  Constants │ ResourceData │ CrewData         │
-└─────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph SCENES["SCENES — State Management (Phaser Scene)"]
+        BS["BootScene"]
+        MS["MenuScene"]
+        TS["TravelScene"]
+        DS["DayScene"]
+        NS["NightScene"]
+        GS["GameOverScene"]
+    end
+
+    subgraph UI["UI COMPONENTS — Presentation Layer"]
+        CP["CrewPanel"]
+        PP["PlanningPanel"]
+        RP["ResourcePanel"]
+        SP["SpeedControl"]
+        JP["ResultPopup"]
+        NP["NotificationSystem"]
+        MD["MissionDisplay"]
+        UM["UIManager"]
+    end
+
+    subgraph SYSTEMS["SYSTEMS — Business Logic"]
+        CMS["CrewManager"]
+        RSM["ResourceManager"]
+        MIS["MissionSystem"]
+        MMG["MapGenerator"]
+        TMS["TimeSystem"]
+    end
+
+    subgraph ENTITIES["ENTITIES — Data Models"]
+        CREW["Crew"]
+        RNODE["ResourceNode"]
+        MON["Monster"]
+        BASE["Base"]
+    end
+
+    subgraph DATA["DATA LAYER — Static Data"]
+        CONST["Constants"]
+        RDATA["ResourceData"]
+        CDATA["CrewData"]
+    end
+
+    subgraph UTILS["UTILITY LAYER — Helpers"]
+        HELP["Helpers"]
+        RGEN["RandomGenerator"]
+    end
+
+    SCENES --> UI
+    SCENES --> SYSTEMS
+    SYSTEMS --> ENTITIES
+    SYSTEMS --> DATA
+    SYSTEMS --> UTILS
+    ENTITIES --> DATA
+    ENTITIES --> UTILS
+
+    DS --> CMS
+    DS --> RSM
+    DS --> MIS
+    DS --> MMG
+    DS --> TMS
+    DS --> UM
+    UM --> CP
+    UM --> PP
+    UM --> RP
+    UM --> SP
+    UM --> JP
+    UM --> NP
+    UM --> MD
+
+    MIS --> RSM
+    CMS --> CREW
+    MIS --> RNODE
+    MIS --> MON
+
+    MS --> TS
+    TS --> DS
+    DS --> NS
+    NS --> DS
+
+    NS --> MON
+
+    classDef layer fill:#1e293b,color:#fff,stroke:none
+    class SCENES,UI,SYSTEMS,ENTITIES,DATA,UTILS layer
 ```
 
 **Dependency Flow**: Scenes → UI → Systems → Entities → Data/Utils (bottom-up)
