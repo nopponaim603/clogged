@@ -78,8 +78,8 @@ public class MissionManager : MonoBehaviour
             return;
         }
 
-        if (TimeManager != null)
-            TimeManager.IsMissionRunning = true;
+        // Reference-counted — safe even when several crew are dispatched at once.
+        TimeManager?.BeginMission();
 
         var workOrder = new List<ResourceNode>(targets);
         StartCoroutine(ExecuteMissionChain(crew, workOrder, baseTransform));
@@ -137,8 +137,7 @@ public class MissionManager : MonoBehaviour
         }
         finally
         {
-            if (TimeManager != null)
-                TimeManager.IsMissionRunning = false;
+            TimeManager?.EndMission();
 
             if (CrewManager != null)
             {

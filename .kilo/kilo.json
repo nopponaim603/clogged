@@ -1,15 +1,15 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
   "provider": {
-    "naplab": {
-      "name": "Naplab AI",
+    "naplab-vllm": {
+      "name": "Naplab-LM",
       "options": {
-        "baseURL": "https://chat.naplab.uk/v1/",
+        "baseURL": "https://chat.naplab.uk/api/v1/",
         "apiKey": "sk-5547f0465c3d41c79f2a61a21c0517a0"
       },
       "models": {
-        "ornith-1.0-35b": {
-          "name": "Ornith 1.0 35B",
+        "dg-lm1": {
+          "name": "dg-lm1",
           "tool_call": true,
           "limit": {
             "context": 128000,
@@ -22,11 +22,11 @@
   "mcp": {
     "mcp-unity": {
       "type": "local",
-      "enabled": true,
       "command": [
         "node",
         "${workspaceFolder}/mcp-unity/cloned/Server~/build/index.js"
-      ]
+      ],
+      "enabled": true
     }
   }
 }

@@ -23,7 +23,7 @@
 ## 🛠 Technical Tasks (Git Log Updates)
 - [ ] `systems/MapGenerator.ts` — ปรับปรุงสูตร `generateResources()` โดยรับค่า `currentDay` เข้าไปคำนวณ Distance Factor และ Rarity Spawn Table
 - [ ] `entities/ResourceNode.ts` — รองรับการบันทึกและรักษาสถานะ HP ของ Node
-- [ ] `scenes/GameScene.ts` — ปรับแต่งกระบวนการ `drawMap()` ให้แสดงผลความยากและสถานะความเสียหายของ Node บนแผนที่
+- [ ] `scenes/MainScene.ts` — ปรับแต่งกระบวนการ `drawMap()` ให้แสดงผลความยากและสถานะความเสียหายของ Node บนแผนที่
 
 ---
 
