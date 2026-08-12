@@ -15,22 +15,6 @@
             "context": 128000,
             "output": 8192
           }
-        },
-        "camt-dg": {
-          "name": "DG 2562 Curriculum",
-          "tool_call": true,
-          "limit": {
-            "context": 128000,
-            "output": 8192
-          }
-        },
-        "arena-model": {
-          "name": "Arena Model",
-          "tool_call": true,
-          "limit": {
-            "context": 128000,
-            "output": 8192
-          }
         }
       }
     }
