@@ -1,4 +1,4 @@
-// src/scenes/GameScene.ts
+// src/scenes/DayScene.ts
 import { Scene } from 'phaser';
 import { GAME_CONFIG } from '../config';
 import { Crew } from '../entities/Crew';
@@ -82,11 +82,33 @@ export class DayScene extends Scene {
     // === State ===
     private gameOver: boolean = false;
     private isWin: boolean = false;
+    private day: number = 1;
     private activeMissions: Map<string, any> = new Map();
     private crewCurrentPositions: Map<number, { x: number; y: number }> = new Map();
+    
+    // ✅ Travel Bonus
+    private travelBonus: any = null;
+    private travelState: any = null;
+    private actualDay: number = 1;
 
     constructor() {
         super('DayScene');
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    init(data: any): void {
+        if (data) {
+            this.crewManager = data.crewManager;
+            this.resourceManager = data.resourceManager;
+            this.mapGenerator = data.mapGenerator;
+            this.timeSystem = data.timeSystem;
+            this.day = data.day || 1;
+            this.actualDay = data.actualDay || this.day;
+            this.travelBonus = data.travelBonus || null;
+            this.travelState = data.travelState || null;
+        }
     }
 
     // ============================================================
@@ -96,39 +118,24 @@ export class DayScene extends Scene {
         this.initSystems();
         this.setupCallbacks();
         this.generateWorld();
+        this.applyTravelBonus();
         this.createInitialCrews();
         this.setupUI();
         this.drawMap();
         this.startDay();
         this.setupKeyboardShortcuts();
         this.resultPopup = new ResultPopup(this, () => {
-            // ✅ เมื่อกด Continue to Night
             this.pendingNightStart = true;
             this.startNightPhase();
         });
-        // ✅ เพิ่ม Speed Control (มุมขวาบน)
-        this.speedControl = new SpeedControl(
-            this,
-            GAME_CONFIG.WIDTH - 270,
-            60,
-            (speed: number) => {
-                this.timeSystem.setSpeed(speed);
-                this.notificationSystem?.showInfo(`Speed: ${speed}x`, 1000);
-            },
-            () => {
-                // ✅ Skip
-                this.notificationSystem?.showWarning('⏭️ Skipping to night...', 1500);
-                this.timeSystem.skipDay();
-            }
-        );
     }
 
     private initSystems(): void {
-        this.crewManager = new CrewManager();
-        this.resourceManager = new ResourceManager();
-        this.mapGenerator = new MapGenerator();
-        this.missionSystem = new MissionSystem(this.resourceManager);
-        this.timeSystem = new TimeSystem();
+        if (!this.crewManager) this.crewManager = new CrewManager();
+        if (!this.resourceManager) this.resourceManager = new ResourceManager();
+        if (!this.mapGenerator) this.mapGenerator = new MapGenerator();
+        if (!this.missionSystem) this.missionSystem = new MissionSystem(this.resourceManager);
+        if (!this.timeSystem) this.timeSystem = new TimeSystem();
     }
 
     private setupCallbacks(): void {
@@ -149,6 +156,43 @@ export class DayScene extends Scene {
         });
     }
 
+    // ============================================================
+    // TRAVEL BONUS
+    // ============================================================
+    private applyTravelBonus(): void {
+        if (!this.travelBonus) return;
+        
+        const bonusType = this.travelBonus.resourceType;
+        const bonusChance = this.travelBonus.bonusChance || 0;
+        const bonusAmount = this.travelBonus.bonusAmount || 0;
+        
+        if (bonusType && bonusChance > 0) {
+            // ✅ เพิ่มทรัพยากรในโหนดที่มีประเภทตรงกัน
+            this.mapGenerator.resourceNodes.forEach(node => {
+                // ถ้า node เป็นประเภทเดียวกับโบนัส และสุ่มเจอ
+                if (node.type === bonusType && Math.random() * 100 < bonusChance) {
+                    node.amount += bonusAmount;
+                }
+            });
+            
+            this.notificationSystem?.showInfo(
+                `⬆️ ${bonusType} boosted! +${bonusAmount} (${bonusChance}% chance)`,
+                3000
+            );
+        }
+        
+        // ✅ ถ้าเป็น relic หรือ monster
+        if (this.travelBonus.nodeType === 'relic') {
+            // เพิ่มโอกาสเจอ relic
+            this.notificationSystem?.showInfo(`🏛️ Relic search rate boosted!`, 2000);
+        }
+        
+        if (this.travelBonus.nodeType === 'monster') {
+            // เพิ่มค่าล่า monster
+            this.notificationSystem?.showInfo(`⚔️ Monster loot boosted!`, 2000);
+        }
+    }
+
     private setupKeyboardShortcuts(): void {
         this.input.keyboard?.on('keydown-ESC', () => this.deselectAll());
         this.input.keyboard?.on('keydown-Z', (event: KeyboardEvent) => {
@@ -163,7 +207,7 @@ export class DayScene extends Scene {
     private setupUI(): void {
         this.createTopBar();
         
-        // ✅ Speed Control (มุมขวาบน ใต้ Top Bar)
+        // ✅ Speed Control
         this.speedControl = new SpeedControl(
             this,
             GAME_CONFIG.WIDTH - 270,
@@ -191,7 +235,7 @@ export class DayScene extends Scene {
         );
 
         this.timeText = this.add.text(250, 20,
-            `⏱️ Elapsed: ${Math.floor(this.timeSystem.worldTime)} / ${this.timeSystem.dayTimeLimit} units`,
+            `⏱️ World Time: ${Math.floor(this.timeSystem.worldTime)} / ${this.timeSystem.dayTimeLimit} units`,
             { fontSize: '20px', color: '#4ecdc4', fontFamily: 'monospace' }
         );
 
@@ -205,7 +249,7 @@ export class DayScene extends Scene {
             `⏳ Left: ${Math.floor(remaining)} units`,
             { fontSize: '16px', color: '#f9ca24', fontFamily: 'monospace' }
         );
-        // ✅ แสดง Speed
+        
         this.add.text(20, 50,
             `⚡ Speed: ${this.timeSystem.speed}x`,
             { fontSize: '14px', color: '#f9ca24', fontFamily: 'monospace' }
@@ -246,7 +290,7 @@ export class DayScene extends Scene {
 
     private createQueueText(): void {
         this.queueText = this.add.text(30, 500,
-            `📋 Missions: 0 | Total Time: 0 units | ⏱️ Elapsed: 0/${this.timeSystem.dayTimeLimit} units`,
+            `📋 Missions: 0 | Total Time: 0 units | ⏱️ World Time: 0/${this.timeSystem.dayTimeLimit} units`,
             { fontSize: '16px', color: '#f9ca24', fontFamily: 'monospace' }
         );
     }
@@ -327,7 +371,6 @@ export class DayScene extends Scene {
         if (!this.selectedCrew || this.gameOver || this.timeSystem.isNightPhase) return;
         if (this.timeSystem.isExecuting || this.isProcessingQueue) return;
         
-        // Click to remove
         const existingIndex = this.selectedTargets.indexOf(target);
         if (existingIndex !== -1) {
             this.selectedTargets.splice(existingIndex, 1);
@@ -346,7 +389,6 @@ export class DayScene extends Scene {
             return;
         }
         
-        // Add to chain
         this.selectedTargets.push(target);
         this.tempMissions.push({ crew: this.selectedCrew, target });
         this.updateNodeHighlights();
@@ -569,12 +611,10 @@ export class DayScene extends Scene {
             const target = this.selectedTargets[i];
             const isLast = (i === this.selectedTargets.length - 1);
             
-            // คำนวณระยะทางจากตำแหน่งปัจจุบันไปยัง target
             const distance = this.getDistance(lastPosition, target.position);
             const travelTime = crew.calculateTravelTime(distance);
             const actionTime = target.getActionTime(crew.getEffectiveGathering());
             
-            // ✅ เฉพาะภารกิจสุดท้ายเท่านั้นที่ต้องเดินทางกลับฐาน
             let totalTime = 0;
             if (isLast) {
                 const returnDistance = this.getDistance(target.position, this.mapGenerator.getBasePosition());
@@ -594,9 +634,6 @@ export class DayScene extends Scene {
             
             totalChainTime += totalTime;
             lastPosition = target.position;
-            
-            // ✅ Debug log
-            console.log(`[${crew.name}] Mission ${i+1}: ${target.icon} ${target.type} - Travel: ${travelTime.toFixed(0)}, Action: ${actionTime.toFixed(0)}, Total: ${totalTime.toFixed(0)}`);
         }
 
         // Check time
@@ -684,7 +721,6 @@ export class DayScene extends Scene {
         if (this.missionQueue.length === 0) return;
         if (this.isProcessingQueue || this.timeSystem.isExecuting) return;
 
-        // Check over time
         let hasOverTimeMission = false;
         for (const mission of this.missionQueue) {
             const remainingTime = this.timeSystem.dayTimeLimit - this.timeSystem.worldTime;
@@ -701,7 +737,6 @@ export class DayScene extends Scene {
             this.notificationSystem.showInfo('💡 Missions will still be executed until time runs out!', 3000);
         }
 
-        // Start execution
         this.isProcessingQueue = true;
         this.createMissionSprites();
         this.timeSystem.startExecution(this);
@@ -720,22 +755,19 @@ export class DayScene extends Scene {
     // ============================================================
     private simulateStep(): void {
         const elapsedTime = this.timeSystem.worldTime;
-        this.timeText.setText(`⏱️ Elapsed: ${Math.floor(elapsedTime)} / ${this.timeSystem.dayTimeLimit} units`);
+        this.timeText.setText(`⏱️ World Time: ${Math.floor(elapsedTime)} / ${this.timeSystem.dayTimeLimit} units`);
 
-        // No missions
         if (this.missionQueue.length === 0) {
             if (this.isProcessingQueue) this.finishExecution();
             return;
         }
 
-        // Time ran out
         if (elapsedTime >= this.timeSystem.dayTimeLimit) {
             this.cancelIncompleteMissions();
             this.finishExecution();
             return;
         }
 
-        // Process each crew
         const groups = this.groupMissionsByCrew();
         for (const [crewId, missions] of groups) {
             const sortedMissions = missions.sort((a, b) => a.chainIndex - b.chainIndex);
@@ -748,7 +780,6 @@ export class DayScene extends Scene {
         this.updateQueueDisplay();
         this.updateCrewTimeDisplay();
 
-        // Check if all complete
         const allComplete = this.missionQueue.every(m => m.completed);
         if (allComplete) {
             this.finishExecution();
@@ -775,53 +806,37 @@ export class DayScene extends Scene {
         const crew = mission.crew;
         const target = mission.target;
         
-        // ✅ คำนวณเวลาที่ใช้ไปของภารกิจนี้
-        // 1. หาเวลาที่ภารกิจก่อนหน้าใช้ไปทั้งหมด
         let previousTotalTime = 0;
         const previousMissions = allMissions.filter(m => m.chainIndex < mission.chainIndex);
         for (const prev of previousMissions) {
             previousTotalTime += prev.totalTime;
         }
         
-        // 2. คำนวณเวลาที่เหลือสำหรับภารกิจนี้
         const timeForThisMission = elapsedTime - previousTotalTime;
-        
-        // 3. ใช้เวลาของภารกิจนี้ (ไม่เกิน totalTime)
         mission.usedTime = Math.min(Math.max(0, timeForThisMission), mission.totalTime);
         const progress = mission.usedTime / mission.totalTime;
         
-        // ✅ Debug log
-        console.log(`[${crew.name}] Mission ${mission.chainIndex}: elapsed=${elapsedTime}, prevTotal=${previousTotalTime}, timeForThis=${timeForThisMission}, used=${mission.usedTime}/${mission.totalTime}, progress=${(progress*100).toFixed(1)}%`);
-        
-        // Update sprite
         this.updateMissionSprite(mission, progress);
         
         const travelOutEnd = mission.travelTime / mission.totalTime;
         const actionEnd = (mission.travelTime + mission.actionTime) / mission.totalTime;
         
-        // Phase: Travel Out
         if (progress < travelOutEnd) {
             mission.phase = 'travel_out';
             const p = progress / travelOutEnd;
             this.updateCrewPosition(crew, target, p, 'out');
-        }
-        // Phase: Action
-        else if (progress < actionEnd) {
+        } else if (progress < actionEnd) {
             mission.phase = 'action';
             if (!mission.actionDone) {
                 mission.actionDone = true;
                 this.notificationSystem.showInfo(`📍 ${crew.name} reached ${target.icon} ${target.type}`, 1500);
             }
             this.updateActionSprite(mission, (progress - travelOutEnd) / (actionEnd - travelOutEnd));
-        }
-        // Phase: Travel Back
-        else if (progress < 1) {
+        } else if (progress < 1) {
             mission.phase = 'travel_back';
             const p = (progress - actionEnd) / (1 - actionEnd);
             this.updateCrewPosition(crew, target, p, 'back');
-        }
-        // Phase: Complete
-        else {
+        } else {
             mission.phase = 'complete';
             mission.completed = true;
             this.handleMissionComplete(mission, allMissions);
@@ -835,10 +850,8 @@ export class DayScene extends Scene {
         const crew = mission.crew;
         const target = mission.target;
         
-        // Execute real mission
         const result = this.missionSystem.executeMission(crew, target);
         
-        // Show result
         if (result.success) {
             this.notificationSystem.showSuccess(`${crew.name}: ${result.message}`, 2000);
         } else {
@@ -852,16 +865,12 @@ export class DayScene extends Scene {
             return;
         }
         
-        // Update UI
         this.resourcePanel.update();
         this.crewPanel.update();
         
-        // Check for next mission in chain
         const nextMission = allMissions.find(m => m.chainIndex === mission.chainIndex + 1 && !m.completed);
         
         if (nextMission) {
-            // ✅ Chain continues - update position to current target
-            // ✅ ตำแหน่งของ crew คือตำแหน่งของ target ที่เพิ่งทำเสร็จ (ไม่ใช่ฐาน)
             crew.position.x = target.position.x;
             crew.position.y = target.position.y;
             if (crew.sprite) {
@@ -869,13 +878,11 @@ export class DayScene extends Scene {
                 crew.sprite.y = crew.position.y;
             }
             
-            // ✅ รีเซ็ต sprite สำหรับภารกิจถัดไป
             const sprite = this.missionSprites.get(crew.id);
             if (sprite) {
                 sprite.setText('🧑‍🤝‍🧑');
             }
             
-            // ✅ ตั้งค่า usedTime = 0 สำหรับภารกิจถัดไป (จะคำนวณใหม่ใน processCrewMission)
             nextMission.usedTime = 0;
             nextMission.progress = 0;
             nextMission.phase = 'travel_out';
@@ -885,7 +892,6 @@ export class DayScene extends Scene {
             
             this.notificationSystem.showInfo(`🔄 ${crew.name} moving to next mission!`, 1500);
         } else {
-            // ✅ Chain complete - free crew and return to base
             const basePos = this.mapGenerator.getBasePosition();
             crew.position.x = basePos.x - 60 + (crew.id - 1) * 40;
             crew.position.y = basePos.y + 40;
@@ -1020,15 +1026,12 @@ export class DayScene extends Scene {
             return;
         }
         
-        // ✅ All complete - collect results
         this.collectDayResult();
         
-        // ✅ Show popup before clearing queue
         if (this.dayResult && !this.resultPopup.isShowing()) {
             this.resultPopup.show(this.dayResult);
         }
         
-        // ✅ Clear queue after popup is shown
         this.missionQueue = [];
         this.isProcessingQueue = false;
         
@@ -1042,15 +1045,12 @@ export class DayScene extends Scene {
         
         this.checkGameOver();
         
-        // ✅ ถ้า game over ไม่ต้องทำต่อ
         if (this.gameOver) return;
         
-        // ✅ ถ้า popup กำลังแสดง ให้รอ
         if (this.resultPopup.isShowing()) {
             return;
         }
         
-        // ✅ ถ้าไม่มี popup และยังมีเวลาอยู่
         const remaining = this.timeSystem.dayTimeLimit - this.timeSystem.worldTime;
         if (remaining > 0) {
             this.notificationSystem.showInfo(`⏱️ ${Math.floor(remaining)} units remaining. Plan more missions!`, 3000);
@@ -1059,7 +1059,6 @@ export class DayScene extends Scene {
                 this.notificationSystem.showInfo(`📋 ${availableCrews} crew(s) available.`, 3000);
             }
         } else {
-            // ✅ ถ้าเวลาหมด แสดง popup แล้วเริ่มกลางคืน
             if (!this.resultPopup.isShowing()) {
                 this.collectDayResult();
                 if (this.dayResult) {
@@ -1088,7 +1087,6 @@ export class DayScene extends Scene {
             }
         }
         
-        // ✅ Collect results and show popup
         this.collectDayResult();
         if (this.dayResult && !this.resultPopup.isShowing()) {
             this.resultPopup.show(this.dayResult);
@@ -1106,7 +1104,7 @@ export class DayScene extends Scene {
         
         this.queueText.setText(
             `📋 Missions: ${this.missionQueue.length} | Total Time: ${Math.floor(totalTime)} units${chainText} | ` +
-            `⏱️ Elapsed: ${Math.floor(this.timeSystem.worldTime)}/${this.timeSystem.dayTimeLimit} units | ` +
+            `⏱️ World Time: ${Math.floor(this.timeSystem.worldTime)}/${this.timeSystem.dayTimeLimit} units | ` +
             `⏳ Remaining: ${Math.floor(remainingTime)} units`
         );
     }
@@ -1120,8 +1118,6 @@ export class DayScene extends Scene {
             const crew = mission.crew;
             const elapsed = Math.min(mission.usedTime, mission.totalTime);
             const progress = (elapsed / mission.totalTime * 100);
-            
-            // ✅ คำนวณเวลาที่เหลือ
             const remaining = Math.max(0, mission.totalTime - mission.usedTime);
             
             let statusText = '⏳ Waiting';
@@ -1178,7 +1174,6 @@ export class DayScene extends Scene {
         const remainingTime = this.timeSystem.dayTimeLimit - totalTimeUsed;
         const baseHPLost = 0;
         
-        // ✅ สร้าง DayResult object เสมอ (ไม่เป็น null)
         const result: DayResult = {
             day: this.timeSystem.day,
             resources: dayResourceGain,
@@ -1202,7 +1197,6 @@ export class DayScene extends Scene {
     // ============================================================
     // NIGHT PHASE
     // ============================================================
-    // ✅ แก้ไข startNightPhase - ส่งต่อไปยัง NightScene แทน
     private startNightPhase(): void {
         if (this.resultPopup.isShowing()) {
             return;
@@ -1212,23 +1206,18 @@ export class DayScene extends Scene {
             this.pendingNightStart = false;
         }
         
-        // ✅ เก็บข้อมูลที่ต้องส่งต่อไป
         const dayResult = this.collectDayResult();
         
-        // ✅ ไปที่ NightScene พร้อมข้อมูล
         this.scene.start('NightScene', {
-            day: this.timeSystem.day,
+            day: this.day,
+            actualDay: this.actualDay || this.day,
             dayResult: dayResult,
             crewManager: this.crewManager,
             resourceManager: this.resourceManager,
             mapGenerator: this.mapGenerator,
-            timeSystem: this.timeSystem
+            timeSystem: this.timeSystem,
+            travelState: this.travelState
         });
-    }
-
-    private collectDayResultData(): DayResult | null {
-        // ... collect data
-        return this.dayResult;
     }
 
     // ============================================================
@@ -1270,11 +1259,9 @@ export class DayScene extends Scene {
         if (!this.timeSystem.isExecuting) {
             this.updateQueueDisplay();
             
-            // ✅ ถ้า queue ว่างและยังไม่มีการแสดง popup
             if (this.missionQueue.length === 0 && !this.resultPopup.isShowing() && !this.gameOver) {
                 const remaining = this.timeSystem.dayTimeLimit - this.timeSystem.worldTime;
                 if (remaining <= 0) {
-                    // ✅ เวลาหมด แสดง popup
                     this.collectDayResult();
                     if (this.dayResult) {
                         this.resultPopup.show(this.dayResult);

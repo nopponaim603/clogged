@@ -85,6 +85,8 @@ export class NightScene extends Scene {
     private currentWave: number = 1;
     private totalWaves: number = 3;
 
+    private travelState: any = null;
+
     constructor() {
         super('NightScene');
     }
@@ -97,6 +99,7 @@ export class NightScene extends Scene {
         this.timeSystem = data.timeSystem;
         this.baseHP = this.resourceManager?.baseHP || 100;
         this.maxBaseHP = this.resourceManager?.maxBaseHP || 100;
+        this.travelState = data.travelState || null;
         
         // ✅ คำนวณจำนวนศัตรูทั้งหมดในคืนนี้
         this.totalEnemies = 10 + this.day * 3;
@@ -738,16 +741,18 @@ export class NightScene extends Scene {
     private finishNight(): void {
         this.notificationSystem?.showSuccess(`🌅 Night ${this.day} survived!`, 2000);
         
-        // ✅ เพิ่มวัน
-        this.day++;
+        const currentDay = (this as any).actualDay || this.day;
+        const nextDay = currentDay + 1;
         
-        // ✅ ไปที่ TravelScene
         this.scene.start('TravelScene', {
             crewManager: this.crewManager,
             resourceManager: this.resourceManager,
             mapGenerator: this.mapGenerator,
             timeSystem: this.timeSystem,
-            day: this.day
+            day: nextDay,
+            actualDay: currentDay,
+            travelState: this.travelState,
+            isReturningFromNight: true
         });
     }
 
