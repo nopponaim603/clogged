@@ -40,6 +40,10 @@ public class GameManager : MonoBehaviour
     [Tooltip("Hp restored to every Down crew each time the ShipDay scene starts (i.e. once per day).")]
     public float DailyHealAmount = 40f;
 
+    [Header("Ship Navigator Bonus")]
+    [Tooltip("How much more of a resource type spawns per node when today's Ship Navigator pick biased toward it — on top of that type being more likely to spawn at all (see GetRandomPrefab).")]
+    public float ResourceBiasAmountMultiplier = 1.5f;
+
     // Cross-scene run state that used to live in RunData
     public int CurrentBlockIndex { get; private set; } = 0;
 
@@ -298,6 +302,16 @@ public class GameManager : MonoBehaviour
         }
 
         node.Position = new Vector2(position.x, position.y);
+
+        // If this node's type matches today's Ship Navigator bonus, boost its
+        // yield too — not just "more likely to spawn" (see GetRandomPrefab)
+        // but "worth more when it does".
+        if (!string.IsNullOrEmpty(PendingResourceBias) &&
+            node.Type.ToString().Equals(PendingResourceBias, System.StringComparison.OrdinalIgnoreCase))
+        {
+            node.Amount = Mathf.RoundToInt(node.Amount * ResourceBiasAmountMultiplier);
+        }
+
         Nodes.Add(node);
     }
 
