@@ -24,13 +24,13 @@ export class ResourceManager {
 
     constructor() {
         this.resources = {
-            wood: 0,
-            stone: 0,
-            iron: 0,
-            food: GAME_CONFIG.STARTING_FOOD,
-            water: 0,
-            circuit: 0,
-            aluminum: 0,
+            wood: 100,      // ✅ จาก 0 เป็น 100
+            stone: 100,     // ✅ จาก 0 เป็น 100
+            iron: 100,      // ✅ จาก 0 เป็น 100
+            food: GAME_CONFIG.STARTING_FOOD || 100,
+            water: 100,     // ✅ จาก 0 เป็น 100
+            circuit: 100,   // ✅ จาก 0 เป็น 100
+            aluminum: 100,  // ✅ จาก 0 เป็น 100
             monsterParts: {
                 fangs: 0,
                 hides: 0,

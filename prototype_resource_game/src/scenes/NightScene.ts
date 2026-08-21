@@ -8,11 +8,12 @@ import { MapGenerator } from '../systems/MapGenerator';
 import { TimeSystem } from '../systems/TimeSystem';
 import { NotificationSystem } from '../ui/NotificationSystem';
 import { SpeedControl } from '../ui/SpeedControl';
+import { RESOURCE_DATA } from '../data/ResourceData';
 
 interface DefenseTower {
     x: number;
     y: number;
-    type: 'gun' | 'cannon' | 'laser';
+    type: 'gun' | 'cannon' | 'laser' | 'shield';
     level: number;
     damage: number;
     range: number;
@@ -20,6 +21,7 @@ interface DefenseTower {
     cooldownTimer: number;
     sprite: Phaser.GameObjects.Arc | null;
     target: Monster | null;
+    cost: Record<string, number>;
 }
 
 interface Monster {
@@ -51,9 +53,12 @@ export class NightScene extends Scene {
     // === Defense ===
     private towers: DefenseTower[] = [];
     private monsters: Monster[] = [];
-    private selectedTowerType: string = 'gun';
+    private selectedTowerType: string | null = null;
     private isPlacingTower: boolean = false;
     private towerPreview: Phaser.GameObjects.Arc | null = null;
+    private selectedTowerCost: Record<string, number> = {};
+    private isTowerSelected: boolean = false;
+    private isWaitingForPlace: boolean = false; // ✅ เพิ่ม: รอการคลิกวาง
     
     // === UI ===
     private dayText!: Phaser.GameObjects.Text;
@@ -63,6 +68,10 @@ export class NightScene extends Scene {
     private towerButtons: Phaser.GameObjects.Text[] = [];
     private buildModeText!: Phaser.GameObjects.Text;
     private popupElements: Phaser.GameObjects.GameObject[] = [];
+    private prepareStatusText!: Phaser.GameObjects.Text;
+    private confirmBtn!: Phaser.GameObjects.Text;
+    private placedTowerCount: number = 0;
+    private totalTowerCost: Record<string, number> = {};
     
     // === State ===
     private day: number = 1;
@@ -71,6 +80,8 @@ export class NightScene extends Scene {
     private gameOver: boolean = false;
     private isNightComplete: boolean = false;
     private isPopupShowing: boolean = false;
+    private isPreparationPhase: boolean = true;
+    private isDefensePhase: boolean = false;
     
     // === Enemy Tracking ===
     private totalEnemies: number = 0;
@@ -78,14 +89,56 @@ export class NightScene extends Scene {
     private enemiesSpawned: number = 0;
     private spawnTimer: Phaser.Time.TimerEvent | null = null;
     
-    // === Enemy Spawn Config ===
-    private spawnPoints: { x: number; y: number; direction: { x: number; y: number; label: string } }[] = [];
+    private enemyInfoPerDirection: Map<string, { count: number; hasElite: boolean; hasBoss: boolean }> = new Map();
+    private spawnPoints: { x: number; y: number; direction: { x: number; y: number; label: string; id: string } }[] = [];
     private spawnInterval: number = 2000;
-    private enemiesPerWave: number = 5;
-    private currentWave: number = 1;
-    private totalWaves: number = 3;
-
+    
     private travelState: any = null;
+    private enemyCountLabels: Phaser.GameObjects.Text[] = [];
+
+    private towerTypes: { 
+        type: string; 
+        label: string; 
+        damage: number; 
+        range: number; 
+        cooldown: number; 
+        cost: Record<string, number>;
+        isDefensive?: boolean;
+    }[] = [
+        { 
+            type: 'gun', 
+            label: '🔫 Gun', 
+            damage: 15, 
+            range: 160, 
+            cooldown: 400,
+            cost: { wood: 25, iron: 10 }
+        },
+        { 
+            type: 'cannon', 
+            label: '💥 Cannon', 
+            damage: 35, 
+            range: 220, 
+            cooldown: 900,
+            cost: { wood: 30, iron: 20, stone: 15 }
+        },
+        { 
+            type: 'laser', 
+            label: '⚡ Laser', 
+            damage: 20, 
+            range: 190, 
+            cooldown: 600,
+            cost: { wood: 20, circuit: 15, aluminum: 10 }
+        },
+        { 
+            type: 'shield', 
+            label: '🛡️ Shield', 
+            damage: 0, 
+            range: 100, 
+            cooldown: 0,
+            cost: { stone: 25, iron: 15, wood: 10 },
+            isDefensive: true
+        }
+    ];
 
     constructor() {
         super('NightScene');
@@ -101,47 +154,99 @@ export class NightScene extends Scene {
         this.maxBaseHP = this.resourceManager?.maxBaseHP || 100;
         this.travelState = data.travelState || null;
         
-        // ✅ คำนวณจำนวนศัตรูทั้งหมดในคืนนี้
         this.totalEnemies = 10 + this.day * 3;
-        this.enemiesPerWave = Math.min(5 + Math.floor(this.day / 2), 15);
-        this.totalWaves = Math.ceil(this.totalEnemies / this.enemiesPerWave);
         this.spawnInterval = Math.max(1000, 3000 - this.day * 50);
         this.completeEnemies = 0;
         this.isNightComplete = false;
         this.isPopupShowing = false;
+        this.isPreparationPhase = true;
+        this.isDefensePhase = false;
+        this.placedTowerCount = 0;
+        this.totalTowerCost = {};
+        this.isTowerSelected = false;
+        this.isPlacingTower = false;
+        this.isWaitingForPlace = false;
         
-        // ✅ สร้าง spawn points (4 ทิศทาง)
         this.generateSpawnPoints();
+        this.generateEnemyInfo();
         
-        // ✅ สร้าง NotificationSystem
         this.notificationSystem = new NotificationSystem(this);
     }
 
     create(): void {
-        // ✅ Setup UI (ต้องมาก่อน Speed Control)
         this.setupUI();
+        this.setupPreparationUI();
+        this.drawBaseAndEnemyInfo();
+        this.showPreparationPhase();
         
-        // ✅ เพิ่ม Speed Control (มุมขวาบน)
-        this.speedControl = new SpeedControl(
-            this,
-            GAME_CONFIG.WIDTH - 270,
-            60,
-            (speed: number) => {
-                // ✅ ปรับความเร็วการเคลื่อนที่ของมอนสเตอร์
-                this.setMonsterSpeed(speed);
-                this.notificationSystem?.showInfo(`Speed: ${speed}x`, 1000);
-            },
-            () => {
-                // ✅ Skip Night
-                this.skipNight();
+        // ✅ ตั้งค่า Right Click เพื่อยกเลิกการเลือก
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (pointer.rightButtonDown() && (this.isTowerSelected || this.isPlacingTower)) {
+                this.cancelPlacement();
+                this.notificationSystem?.showInfo('❌ Placement cancelled', 1000);
             }
-        );
+        });
         
-        // ✅ Setup towers
-        this.setupTowerSystem();
+        // ✅ คลิกซ้ายบนแผนที่เพื่อวางป้อม (เฉพาะเมื่ออยู่ในโหมดวาง)
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (pointer.rightButtonDown()) return;
+            
+            // ✅ ถ้ากำลังเลือก tower และอยู่ในโหมดวาง ให้วาง
+            if (this.isTowerSelected && this.isPlacingTower) {
+                // ✅ เช็คว่าคลิกที่ปุ่มหรือไม่ (ไม่ให้วางทับปุ่ม)
+                const clickedOnButton = this.towerButtons.some(btn => {
+                    const bounds = btn.getBounds();
+                    return pointer.x >= bounds.x && pointer.x <= bounds.x + bounds.width &&
+                        pointer.y >= bounds.y && pointer.y <= bounds.y + bounds.height;
+                });
+                
+                // ✅ เช็คว่าคลิกที่ปุ่มลบหรือไม่
+                let clickedOnRemove = false;
+                for (const tower of this.towers) {
+                    const removeBtn = (tower as any).removeBtn;
+                    if (removeBtn) {
+                        const bounds = removeBtn.getBounds();
+                        if (pointer.x >= bounds.x && pointer.x <= bounds.x + bounds.width &&
+                            pointer.y >= bounds.y && pointer.y <= bounds.y + bounds.height) {
+                            clickedOnRemove = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!clickedOnButton && !clickedOnRemove) {
+                    this.placeTower(pointer.x, pointer.y, this.selectedTowerType!, this.selectedTowerCost);
+                }
+            }
+        });
+    }
+
+    // ============================================================
+    // ENEMY INFO GENERATION
+    // ============================================================
+    private generateEnemyInfo(): void {
+        const directions = ['top', 'bottom', 'left', 'right'];
+        let remainingEnemies = this.totalEnemies;
         
-        // ✅ Start spawning enemies
-        this.startNight();
+        directions.forEach((dir, index) => {
+            let count: number;
+            if (index === directions.length - 1) {
+                count = remainingEnemies;
+            } else {
+                const maxCount = Math.floor(remainingEnemies / (directions.length - index) * (0.6 + Math.random() * 0.4));
+                count = Math.max(1, Math.floor(maxCount));
+                remainingEnemies -= count;
+            }
+            
+            const hasElite = count > 3 && Math.random() < 0.3 + this.day * 0.02;
+            const hasBoss = (this.day % 3 === 0) && Math.random() < 0.3 + this.day * 0.01;
+            
+            this.enemyInfoPerDirection.set(dir, {
+                count: count,
+                hasElite: hasElite,
+                hasBoss: hasBoss
+            });
+        });
     }
 
     private generateSpawnPoints(): void {
@@ -149,19 +254,18 @@ export class NightScene extends Scene {
         const centerX = GAME_CONFIG.WIDTH / 2;
         const centerY = GAME_CONFIG.HEIGHT / 2;
         
-        // ✅ 4 ทิศทาง: บน, ล่าง, ซ้าย, ขวา
         const positions = [
-            { x: centerX, y: padding, label: '⬆️' },
-            { x: centerX, y: GAME_CONFIG.HEIGHT - padding, label: '⬇️' },
-            { x: padding, y: centerY, label: '⬅️' },
-            { x: GAME_CONFIG.WIDTH - padding, y: centerY, label: '➡️' }
+            { x: centerX, y: padding, label: '⬆️', id: 'top' },
+            { x: centerX, y: GAME_CONFIG.HEIGHT - padding, label: '⬇️', id: 'bottom' },
+            { x: padding, y: centerY, label: '⬅️', id: 'left' },
+            { x: GAME_CONFIG.WIDTH - padding, y: centerY, label: '➡️', id: 'right' }
         ];
         
         const directions = [
-            { x: 0, y: 1, label: '⬆️ Top' },
-            { x: 0, y: -1, label: '⬇️ Bottom' },
-            { x: 1, y: 0, label: '⬅️ Left' },
-            { x: -1, y: 0, label: '➡️ Right' }
+            { x: 0, y: 1, label: '⬆️ Top', id: 'top' },
+            { x: 0, y: -1, label: '⬇️ Bottom', id: 'bottom' },
+            { x: 1, y: 0, label: '⬅️ Left', id: 'left' },
+            { x: -1, y: 0, label: '➡️ Right', id: 'right' }
         ];
         
         this.spawnPoints = positions.map((pos, index) => ({
@@ -169,35 +273,77 @@ export class NightScene extends Scene {
             y: pos.y,
             direction: directions[index]
         }));
-        
-        // ✅ แสดงจุดเกิด
-        this.spawnPoints.forEach((spawn, index) => {
-            const color = [0x4ecdc4, 0xf9ca24, 0xff6b6b, 0xa29bfe][index];
-            const arc = this.add.arc(spawn.x, spawn.y, 12, 0, 360, false, color, 0.6);
-            arc.setStrokeStyle(2, 0xffffff);
-            
-            this.add.text(spawn.x - 8, spawn.y - 25, spawn.direction.label, {
-                fontSize: '10px', color: '#ffffff', fontFamily: 'monospace'
-            });
-        });
-        
-        // ✅ วาด Base ตรงกลาง
-        const baseArc = this.add.arc(centerX, centerY, 40, 0, 360, false, 0x00b894, 0.8);
-        baseArc.setStrokeStyle(3, 0x00d2a0);
-        this.add.text(centerX - 25, centerY - 10, '🏠 BASE', {
-            fontSize: '16px', color: '#ffffff', fontFamily: 'monospace'
-        });
-        
-        // ✅ วาดรัศมี Base
-        const rangeCircle = this.add.circle(centerX, centerY, 120, 0x00b894, 0.05);
-        rangeCircle.setStrokeStyle(1, 0x00b894, 0.3);
     }
 
+    // ============================================================
+    // DRAW BASE & ENEMY INFO
+    // ============================================================
+    private drawBaseAndEnemyInfo(): void {
+        const centerX = GAME_CONFIG.WIDTH / 2;
+        const centerY = GAME_CONFIG.HEIGHT / 2;
+        
+        const baseArc = this.add.arc(centerX, centerY, 45, 0, 360, false, 0x00b894, 0.9);
+        baseArc.setStrokeStyle(4, 0x00d2a0);
+        this.add.text(centerX - 30, centerY - 12, '🏠 BASE', {
+            fontSize: '20px', color: '#ffffff', fontFamily: 'monospace'
+        });
+        
+        const rangeCircle = this.add.circle(centerX, centerY, 150, 0x00b894, 0.05);
+        rangeCircle.setStrokeStyle(1, 0x00b894, 0.3);
+        
+        this.enemyCountLabels.forEach(label => label.destroy());
+        this.enemyCountLabels = [];
+        
+        const directionLabels: { [key: string]: string } = {
+            'top': '⬆️',
+            'bottom': '⬇️',
+            'left': '⬅️',
+            'right': '➡️'
+        };
+        
+        this.enemyInfoPerDirection.forEach((info, dir) => {
+            const spawnPoint = this.spawnPoints.find(sp => sp.direction.id === dir);
+            if (!spawnPoint) return;
+            
+            const label = directionLabels[dir] || dir;
+            const count = info.count;
+            const hasElite = info.hasElite;
+            const hasBoss = info.hasBoss;
+            
+            let displayText = `${label} ${count}`;
+            if (hasElite) displayText += ' ⚡';
+            if (hasBoss) displayText += ' 👑';
+            
+            const text = this.add.text(spawnPoint.x - 20, spawnPoint.y - 30, displayText, {
+                fontSize: '18px',
+                color: hasBoss ? '#ff6b6b' : hasElite ? '#f9ca24' : '#4ecdc4',
+                fontFamily: 'monospace',
+                backgroundColor: '#1a1a2e',
+                padding: { x: 6, y: 3 },
+                stroke: '#000000',
+                strokeThickness: 3
+            });
+            this.enemyCountLabels.push(text);
+            
+            if (count > 5) {
+                const warning = this.add.text(spawnPoint.x - 30, spawnPoint.y + 15, '⚠️ LARGE WAVE', {
+                    fontSize: '12px',
+                    color: '#ff6b6b',
+                    fontFamily: 'monospace',
+                    backgroundColor: '#1a1a2e',
+                    padding: { x: 4, y: 2 }
+                });
+                this.enemyCountLabels.push(warning);
+            }
+        });
+    }
+
+    // ============================================================
+    // UI SETUP
+    // ============================================================
     private setupUI(): void {
-        // ✅ Background
         this.cameras.main.setBackgroundColor('#0a0a15');
         
-        // ✅ Top bar
         this.dayText = this.add.text(20, 20, 
             `🌙 Night ${this.day}`,
             { fontSize: '24px', color: '#ffffff', fontFamily: 'monospace' }
@@ -213,81 +359,196 @@ export class NightScene extends Scene {
             { fontSize: '20px', color: '#ff6b6b', fontFamily: 'monospace' }
         );
 
-        // ✅ Resource display
         this.createResourceUI();
+        this.createTowerSelectionUI();
+    }
 
-        // ✅ Build mode indicator
+    private setupPreparationUI(): void {
+        this.prepareStatusText = this.add.text(GAME_CONFIG.WIDTH / 2, 100,
+            '🔧 PREPARATION PHASE - Place your towers!',
+            {
+                fontSize: '20px',
+                color: '#4ecdc4',
+                fontFamily: 'monospace',
+                backgroundColor: '#1a1a2e',
+                padding: { x: 15, y: 8 }
+            }
+        ).setOrigin(0.5);
+
         this.buildModeText = this.add.text(20, 680,
-            '🔧 Select a tower from the bottom panel to build',
+            '🔧 Select a tower from the panel, then click on the map to place it (Right click to cancel)',
             { fontSize: '16px', color: '#b2bec3', fontFamily: 'monospace' }
         );
 
-        // ✅ Tower selection panel
-        this.createTowerSelectionUI();
+        this.confirmBtn = this.add.text(GAME_CONFIG.WIDTH - 200, 680,
+            '▶ START DEFENSE',
+            {
+                fontSize: '20px',
+                color: '#00b894',
+                fontFamily: 'monospace',
+                backgroundColor: '#2d3436',
+                padding: { x: 20, y: 10 }
+            }
+        ).setInteractive();
+        
+        this.confirmBtn.on('pointerover', () => this.confirmBtn.setStyle({ color: '#ffffff' }));
+        this.confirmBtn.on('pointerout', () => this.confirmBtn.setStyle({ color: '#00b894' }));
+        this.confirmBtn.on('pointerdown', () => this.startDefensePhase());
     }
 
     private createResourceUI(): void {
         const x = GAME_CONFIG.WIDTH - 200;
         let y = 60;
-        const resourceTypes = ['wood', 'stone', 'iron', 'food'];
+        const resourceTypes = ['wood', 'stone', 'iron', 'water', 'circuit', 'aluminum'];
         resourceTypes.forEach((type) => {
             const amount = this.resourceManager?.getResource(type) || 0;
+            const icon = RESOURCE_DATA[type]?.icon || '📦';
             const text = this.add.text(x, y, 
-                `${this.getIcon(type)} ${Math.floor(amount)}`,
+                `${icon} ${Math.floor(amount)}`,
                 { fontSize: '16px', color: '#ffffff', fontFamily: 'monospace' }
             );
             this.resourceTexts.set(type, text);
-            y += 30;
+            y += 28;
         });
     }
 
     private createTowerSelectionUI(): void {
-        const y = GAME_CONFIG.HEIGHT - 60;
-        const towers = [
-            { type: 'gun', label: '🔫 Gun', cost: 50 },
-            { type: 'cannon', label: '💥 Cannon', cost: 100 },
-            { type: 'laser', label: '⚡ Laser', cost: 150 }
-        ];
-
-        towers.forEach((tower, index) => {
-            const x = 100 + index * 200;
+        const y = GAME_CONFIG.HEIGHT - 70;
+        
+        this.towerTypes.forEach((tower, index) => {
+            const x = 80 + index * 270;
+            
+            let costText = '';
+            const costEntries = Object.entries(tower.cost);
+            costEntries.forEach(([type, amount], i) => {
+                const icon = RESOURCE_DATA[type]?.icon || type;
+                costText += `${icon}${amount}`;
+                if (i < costEntries.length - 1) costText += ' + ';
+            });
+            
             const btn = this.add.text(x, y, 
-                `${tower.label} (${tower.cost})`,
-                { fontSize: '16px', color: '#4ecdc4', fontFamily: 'monospace', backgroundColor: '#2d3436', padding: { x: 10, y: 5 } }
+                `${tower.label}\n${costText}`,
+                { 
+                    fontSize: '14px', 
+                    color: '#4ecdc4', 
+                    fontFamily: 'monospace', 
+                    backgroundColor: '#2d3436', 
+                    padding: { x: 10, y: 5 },
+                    align: 'center'
+                }
             );
             btn.setInteractive();
-            btn.on('pointerdown', () => this.selectTowerType(tower.type, tower.cost));
+            btn.on('pointerdown', () => {
+                this.selectTowerType(tower.type, tower.cost);
+            });
             btn.on('pointerover', () => btn.setStyle({ color: '#ffffff' }));
-            btn.on('pointerout', () => btn.setStyle({ color: '#4ecdc4' }));
+            btn.on('pointerout', () => {
+                if (this.isTowerSelected && this.selectedTowerType === tower.type) {
+                    btn.setStyle({ color: '#f9ca24' });
+                } else {
+                    btn.setStyle({ color: '#4ecdc4' });
+                }
+            });
             this.towerButtons.push(btn);
+            
+            const statsText = tower.isDefensive ? 
+                `🛡️ Shield: Protects base` :
+                `⚔️${tower.damage} 📏${tower.range} ⏱️${tower.cooldown}ms`;
+            
+            this.add.text(x + 70, y + 35, statsText, {
+                fontSize: '10px', color: '#636e72', fontFamily: 'monospace'
+            });
         });
     }
 
     private getIcon(type: string): string {
-        const icons: { [key: string]: string } = {
-            wood: '🪵', stone: '🪨', iron: '⛏️', food: '🍖'
-        };
-        return icons[type] || '📦';
+        return RESOURCE_DATA[type]?.icon || '📦';
     }
 
-    private selectTowerType(type: string, cost: number): void {
+    private hasEnoughResources(cost: Record<string, number>): boolean {
         const resources = this.resourceManager?.resources;
-        if (!resources) return;
+        if (!resources) return false;
         
-        if (resources.wood < cost) {
-            this.notificationSystem?.showError(`Not enough resources! Need ${cost} wood`, 2000);
+        for (const [type, amount] of Object.entries(cost)) {
+            const current = resources[type as keyof typeof resources] || 0;
+            if (typeof current === 'number' && current < amount) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private spendResources(cost: Record<string, number>): boolean {
+        const resources = this.resourceManager?.resources;
+        if (!resources) return false;
+        
+        for (const [type, amount] of Object.entries(cost)) {
+            const current = resources[type as keyof typeof resources] || 0;
+            if (typeof current === 'number' && current >= amount) {
+                (resources[type as keyof typeof resources] as number) -= amount;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // ============================================================
+    // PREPARATION PHASE
+    // ============================================================
+    private showPreparationPhase(): void {
+        this.isPreparationPhase = true;
+        this.isDefensePhase = false;
+        this.prepareStatusText.setText('🔧 PREPARATION PHASE - Place your towers!');
+        this.confirmBtn.setVisible(true);
+        this.buildModeText.setText('🔧 Select a tower from the panel, then click on the map to place it (Right click to cancel)');
+        this.enemyCounterText.setText(`👾 Enemy: ${this.completeEnemies}/${this.totalEnemies}`);
+        
+        this.notificationSystem?.showInfo(`🌙 Night ${this.day} - Place your towers!`, 2000);
+    }
+
+    private selectTowerType(type: string, cost: Record<string, number>): void {
+        if (this.isDefensePhase) {
+            this.notificationSystem?.showError('❌ Cannot place towers during defense phase!', 2000);
             return;
         }
         
-        this.selectedTowerType = type;
-        this.isPlacingTower = true;
-        this.buildModeText.setText(`🔧 Placing ${type} tower (${cost} wood) - Click on map to place`);
-        this.buildModeText.setColor('#f9ca24');
+        // ✅ ถ้าเลือก tower เดิม ให้ยกเลิกการเลือก
+        if (this.isTowerSelected && this.selectedTowerType === type) {
+            this.cancelPlacement();
+            this.notificationSystem?.showInfo('❌ Deselected tower', 1000);
+            return;
+        }
         
+        // ✅ ตรวจสอบทรัพยากร
+        if (!this.hasEnoughResources(cost)) {
+            let needText = '';
+            for (const [type, amount] of Object.entries(cost)) {
+                const icon = RESOURCE_DATA[type]?.icon || type;
+                const current = this.resourceManager?.getResource(type) || 0;
+                needText += `${icon}${current}/${amount} `;
+            }
+            this.notificationSystem?.showError(`Not enough resources! Need ${needText}`, 2000);
+            return;
+        }
+        
+        // ✅ เลือก tower และเข้าสู่โหมดวางทันที
+        this.selectedTowerType = type;
+        this.selectedTowerCost = cost;
+        this.isTowerSelected = true;
+        this.isPlacingTower = true;  // ✅ เข้าโหมดวางทันที
+        
+        this.updateTowerButtons();
+        
+        // ✅ สร้าง Preview (แสดงรูปป้อมที่กำลังเลือก)
+        if (this.towerPreview) {
+            this.towerPreview.destroy();
+        }
         this.towerPreview = this.add.arc(0, 0, 20, 0, 360, false, 0x4ecdc4, 0.3);
         this.towerPreview.setStrokeStyle(2, 0x4ecdc4);
         this.towerPreview.setVisible(false);
         
+        // ✅ Mouse move for preview
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             if (this.towerPreview && this.isPlacingTower) {
                 this.towerPreview.x = pointer.x;
@@ -296,112 +557,236 @@ export class NightScene extends Scene {
             }
         });
         
-        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (this.isPlacingTower && this.towerPreview) {
-                this.placeTower(pointer.x, pointer.y, type, cost);
+        let costText = '';
+        for (const [type, amount] of Object.entries(cost)) {
+            const icon = RESOURCE_DATA[type]?.icon || type;
+            costText += `${icon}${amount} `;
+        }
+        this.buildModeText.setText(`✅ Selected ${type} tower (${costText}) - Click on map to place (Right click to cancel)`);
+        this.buildModeText.setColor('#f9ca24');
+        
+        this.notificationSystem?.showInfo(`✅ ${type} tower selected! Click on map to place.`, 1500);
+    }
+
+    private updateTowerButtons(): void {
+        this.towerButtons.forEach((btn, index) => {
+            const tower = this.towerTypes[index];
+            if (!tower) return;
+            
+            if (this.isTowerSelected && this.selectedTowerType === tower.type) {
+                btn.setStyle({ color: '#f9ca24' });
+            } else {
+                btn.setStyle({ color: '#4ecdc4' });
             }
         });
     }
 
-    private placeTower(x: number, y: number, type: string, cost: number): void {
-        const resources = this.resourceManager?.resources;
-        if (!resources) return;
+    // ✅ placeTower - วางป้อม (แก้ไขปุ่มลบ)
+    private placeTower(x: number, y: number, type: string, cost: Record<string, number>): void {
+        if (this.isDefensePhase) {
+            this.notificationSystem?.showError('❌ Cannot place towers during defense phase!', 2000);
+            this.cancelPlacement();
+            return;
+        }
         
-        if (resources.wood < cost) {
+        if (!this.isTowerSelected || !this.isPlacingTower) {
+            return;
+        }
+        
+        if (!type || !cost || Object.keys(cost).length === 0) {
+            return;
+        }
+        
+        if (!this.hasEnoughResources(cost)) {
             this.notificationSystem?.showError(`Not enough resources!`, 2000);
             return;
         }
         
-        resources.wood -= cost;
+        this.spendResources(cost);
         this.updateResourceUI();
+        
+        const towerDef = this.towerTypes.find(t => t.type === type);
+        if (!towerDef) return;
         
         const tower: DefenseTower = {
             x, y,
-            type: type as 'gun' | 'cannon' | 'laser',
+            type: type as 'gun' | 'cannon' | 'laser' | 'shield',
             level: 1,
-            damage: type === 'gun' ? 10 : type === 'cannon' ? 25 : 15,
-            range: type === 'gun' ? 150 : type === 'cannon' ? 200 : 180,
-            cooldown: type === 'gun' ? 500 : type === 'cannon' ? 1000 : 800,
+            damage: towerDef.damage || 0,
+            range: towerDef.range || 0,
+            cooldown: towerDef.cooldown || 0,
             cooldownTimer: 0,
             sprite: null,
-            target: null
+            target: null,
+            cost: cost
         };
         
-        const color = type === 'gun' ? 0x4ecdc4 : type === 'cannon' ? 0xf9ca24 : 0xff6b6b;
-        const sprite = this.add.arc(x, y, 15, 0, 360, false, color, 0.8);
-        sprite.setStrokeStyle(2, 0xffffff);
+        const isShield = type === 'shield';
+        const color = isShield ? 0x4ecdc4 : 
+                    type === 'gun' ? 0x4ecdc4 : 
+                    type === 'cannon' ? 0xf9ca24 : 0xff6b6b;
+        
+        const sprite = this.add.arc(x, y, isShield ? 20 : 15, 0, 360, false, color, 0.8);
+        sprite.setStrokeStyle(isShield ? 3 : 2, 0xffffff);
         tower.sprite = sprite;
+        
+        if (isShield) {
+            const shieldCircle = this.add.circle(x, y, 50, 0x4ecdc4, 0.1);
+            shieldCircle.setStrokeStyle(2, 0x4ecdc4, 0.3);
+            (tower as any).shieldCircle = shieldCircle;
+        }
         
         this.add.text(x - 10, y - 30, type.toUpperCase(), {
             fontSize: '10px', color: '#ffffff', fontFamily: 'monospace'
         });
         
-        this.towers.push(tower);
-        this.isPlacingTower = false;
-        this.buildModeText.setText('🔧 Select a tower to build');
-        this.buildModeText.setColor('#b2bec3');
-        
-        if (this.towerPreview) {
-            this.towerPreview.setVisible(false);
-        }
-        
-        this.notificationSystem?.showSuccess(`${type} tower placed!`, 1500);
-    }
-
-    private setupTowerSystem(): void {
-        // Tower system will be updated in update loop
-    }
-
-    // ✅ ตั้งค่าความเร็วให้มอนสเตอร์
-    private setMonsterSpeed(speed: number): void {
-        // ✅ เก็บ speed ไว้ใช้ใน updateMonsters
-        (this as any).monsterSpeedMultiplier = speed;
-    }
-
-    // ✅ Skip Night
-    private skipNight(): void {
-        if (this.isSkipping || this.isNightComplete) return;
-        this.isSkipping = true;
-        
-        this.notificationSystem?.showWarning('⏭️ Skipping night...', 1500);
-        
-        // ✅ ทำให้มอนสเตอร์ทั้งหมดตาย
-        for (const monster of this.monsters) {
-            monster.hp = 0;
-            if (monster.sprite) monster.sprite.destroy();
-            if (monster.icon) monster.icon.destroy();
-            if ((monster as any).hpBarBg) (monster as any).hpBarBg.destroy();
-            if ((monster as any).hpBar) (monster as any).hpBar.destroy();
-            this.completeEnemies++;
-        }
-        this.monsters = [];
-        
-        // ✅ กระโดดไปจบคืน
-        this.completeEnemies = this.totalEnemies;
-        this.updateEnemyCounter();
-        this.isNightComplete = true;
-        
-        if (this.spawnTimer) {
-            this.spawnTimer.remove();
-            this.spawnTimer = null;
-        }
-        
-        this.time.delayedCall(500, () => {
-            this.isSkipping = false;
-            this.showNightComplete();
+        // ✅ ปุ่มลบ - แก้ไขแล้ว (ไม่มี e.stopPropagation)
+        const removeBtn = this.add.text(x + 15, y - 25, '✕', {
+            fontSize: '14px', color: '#ff6b6b', fontFamily: 'monospace', backgroundColor: '#2d3436'
+        }).setInteractive();
+        removeBtn.on('pointerdown', () => {
+            // ✅ ลบป้อมเท่านั้น ไม่มีการสร้างใหม่
+            this.removeTower(tower);
+            // ✅ ถ้ากำลังเลือกป้อมอยู่ ให้ยังคงอยู่ในโหมดวาง
+            if (this.isTowerSelected && this.isPlacingTower) {
+                this.buildModeText.setText(`✅ Still placing ${this.selectedTowerType} - Click on map to place (Right click to cancel)`);
+            }
         });
+        (tower as any).removeBtn = removeBtn;
+        
+        this.towers.push(tower);
+        this.placedTowerCount++;
+        
+        for (const [type, amount] of Object.entries(cost)) {
+            this.totalTowerCost[type] = (this.totalTowerCost[type] || 0) + amount;
+        }
+        
+        this.notificationSystem?.showSuccess(`${type} tower placed! (${this.placedTowerCount} towers)`, 1500);
+        
+        // ✅ ยังคงอยู่ในโหมดเลือก tower เดิม (เพื่อวางต่อ)
+        this.isTowerSelected = true;
+        this.isPlacingTower = true;
+        this.buildModeText.setText(`✅ ${type} placed! Click again to place more (Right click to cancel)`);
     }
 
-    // ✅ แก้ไข spawnInterval ใน startNight
-    private startNight(): void {
-        this.notificationSystem?.showWarning(`🌙 Night ${this.day} begins! ${this.totalEnemies} enemies approaching!`, 3000);
+    // ✅ removeTower - ลบป้อมเท่านั้น
+    private removeTower(tower: DefenseTower): void {
+        if (this.isDefensePhase) {
+            this.notificationSystem?.showError('❌ Cannot remove towers during defense phase!', 2000);
+            return;
+        }
+        
+        const resources = this.resourceManager?.resources;
+        if (resources) {
+            for (const [type, amount] of Object.entries(tower.cost)) {
+                (resources[type as keyof typeof resources] as number) += amount;
+                this.totalTowerCost[type] = (this.totalTowerCost[type] || 0) - amount;
+            }
+            this.placedTowerCount--;
+            this.updateResourceUI();
+        }
+        
+        // ✅ ลบ sprite
+        if (tower.sprite) tower.sprite.destroy();
+        if ((tower as any).removeBtn) (tower as any).removeBtn.destroy();
+        if ((tower as any).shieldCircle) (tower as any).shieldCircle.destroy();
+        
+        // ✅ ลบ label
+        this.children.list.forEach(child => {
+            if (child.type === 'Text' && 
+                (child as any).x === tower.x - 10 && 
+                (child as any).y === tower.y - 30) {
+                child.destroy();
+            }
+        });
+        
+        this.towers = this.towers.filter(t => t !== tower);
+        
+        this.notificationSystem?.showInfo(`↩️ Tower removed! (${this.placedTowerCount} towers left)`, 1500);
+    }
+
+    // ✅ cancelPlacement - ยกเลิกการเลือกและซ่อน Preview
+    private cancelPlacement(): void {
+        this.isTowerSelected = false;
+        this.isPlacingTower = false;
+        this.isWaitingForPlace = false;
+        this.selectedTowerType = null;
+        this.selectedTowerCost = {};
+        
+        // ✅ ลบ Preview
+        if (this.towerPreview) {
+            this.towerPreview.destroy();
+            this.towerPreview = null;
+        }
+        
+        // ✅ ลบ event listener pointermove
+        this.input.off('pointermove');
+        
+        this.updateTowerButtons();
+        this.buildModeText.setText('🔧 Select a tower from the panel, then click on the map to place it (Right click to cancel)');
+        this.buildModeText.setColor('#b2bec3');
+    }
+
+    // ✅ startDefensePhase - ยกเลิกการเลือกและซ่อน Preview
+    private startDefensePhase(): void {
+        if (this.isDefensePhase) return;
+        
+        // ✅ ยกเลิกการเลือกก่อนเริ่ม
+        if (this.isTowerSelected || this.isPlacingTower) {
+            this.cancelPlacement();
+        }
+        
+        // ✅ ไม่บังคับให้มีป้อม
+        if (this.towers.length === 0) {
+            this.notificationSystem?.showWarning('⚠️ No towers placed! You can still start defense, but it will be harder.', 3000);
+        }
+        
+        this.isPreparationPhase = false;
+        this.isDefensePhase = true;
+        this.isPlacingTower = false;
+        this.isTowerSelected = false;
+        
+        // ✅ ซ่อน Preview
+        if (this.towerPreview) {
+            this.towerPreview.destroy();
+            this.towerPreview = null;
+        }
+        
+        this.prepareStatusText.setText('⚔️ DEFENSE PHASE - Defend the base!');
+        this.confirmBtn.setVisible(false);
+        this.buildModeText.setText('⚔️ Fight!');
+        this.buildModeText.setColor('#ff6b6b');
+        
+        // ✅ ซ่อนปุ่มลบทั้งหมด
+        this.towers.forEach(tower => {
+            if ((tower as any).removeBtn) {
+                (tower as any).removeBtn.destroy();
+            }
+        });
+        
+        this.enemyCountLabels.forEach(label => label.destroy());
+        this.enemyCountLabels = [];
+        
+        this.speedControl = new SpeedControl(
+            this,
+            GAME_CONFIG.WIDTH - 270,
+            60,
+            (speed: number) => {
+                this.setMonsterSpeed(speed);
+                this.notificationSystem?.showInfo(`Speed: ${speed}x`, 1000);
+            },
+            () => {
+                this.skipNight();
+            }
+        );
+        
+        this.notificationSystem?.showWarning(`⚔️ Defense Phase ${this.day} begins! ${this.totalEnemies} enemies approaching!`, 3000);
         this.enemiesSpawned = 0;
         this.completeEnemies = 0;
         this.isNightComplete = false;
         this.isPopupShowing = false;
         this.isSkipping = false;
         
-        // ✅ spawnInterval ปรับตาม speed
         const currentSpeed = this.speedControl?.getSpeed() || 1;
         const interval = this.spawnInterval / currentSpeed;
         
@@ -415,6 +800,9 @@ export class NightScene extends Scene {
         this.spawnEnemy();
     }
 
+    // ============================================================
+    // ENEMY SPAWN
+    // ============================================================
     private spawnEnemy(): void {
         if (this.isNightComplete || this.gameOver || this.isPopupShowing || this.isSkipping) {
             if (this.spawnTimer) {
@@ -433,10 +821,8 @@ export class NightScene extends Scene {
             return;
         }
         
-        // ✅ เลือก spawn point แบบสุ่ม
         const spawnPoint = this.spawnPoints[Math.floor(Math.random() * this.spawnPoints.length)];
         
-        // ✅ สุ่มประเภทมอนสเตอร์
         const difficulty = 1 + Math.floor(this.day / 3);
         const types: ('normal' | 'fast' | 'tank' | 'boss')[] = ['normal', 'normal', 'fast', 'tank'];
         if (this.day % 3 === 0 && this.enemiesSpawned % 10 === 0) types.push('boss');
@@ -462,7 +848,6 @@ export class NightScene extends Scene {
             progress: 0
         };
         
-        // ✅ Create sprite
         const color = type === 'normal' ? 0xe74c3c : type === 'fast' ? 0xf9ca24 : type === 'tank' ? 0x8e44ad : 0xff0000;
         const size = type === 'boss' ? 25 : 15;
         const sprite = this.add.arc(monster.x, monster.y, size, 0, 360, false, color, 0.9);
@@ -473,7 +858,6 @@ export class NightScene extends Scene {
         const iconText = this.add.text(monster.x - 10, monster.y - 12, icon, { fontSize: '20px' });
         monster.icon = iconText;
         
-        // ✅ HP bar
         const hpBarBg = this.add.graphics();
         hpBarBg.fillStyle(0x333333);
         hpBarBg.fillRect(monster.x - 20, monster.y - 28, 40, 4);
@@ -491,6 +875,9 @@ export class NightScene extends Scene {
         this.notificationSystem?.showInfo(`👾 ${type} enemy spawned! (${this.enemiesSpawned}/${this.totalEnemies})`, 1000);
     }
 
+    // ============================================================
+    // UPDATE MONSTERS & TOWERS
+    // ============================================================
     private updateMonsters(): void {
         const speedMultiplier = (this as any).monsterSpeedMultiplier || 1;
         const baseSpeed = 0.8 * speedMultiplier;
@@ -506,13 +893,11 @@ export class NightScene extends Scene {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance < baseRadius) {
-                // ✅ ถึงฐาน! → completeEnemy++
                 this.baseHP -= monster.damage;
                 this.baseHPText.setText(`🏠 HP: ${Math.floor(this.baseHP)}/${this.maxBaseHP}`);
                 this.completeEnemies++;
                 monster.hp = 0;
                 
-                // ✅ Remove monster
                 if (monster.sprite) monster.sprite.destroy();
                 if (monster.icon) monster.icon.destroy();
                 if ((monster as any).hpBarBg) (monster as any).hpBarBg.destroy();
@@ -520,8 +905,6 @@ export class NightScene extends Scene {
                 
                 this.notificationSystem?.showError(`💥 Enemy reached base! (${this.completeEnemies}/${this.totalEnemies})`, 1500);
                 this.updateEnemyCounter();
-                
-                // ✅ ตรวจสอบว่าจบคืนหรือยัง
                 this.checkNightComplete();
                 
                 if (this.baseHP <= 0) {
@@ -535,7 +918,6 @@ export class NightScene extends Scene {
             monster.x += (dx / distance) * moveSpeed;
             monster.y += (dy / distance) * moveSpeed;
             
-            // ✅ Update sprite position
             if (monster.sprite) {
                 monster.sprite.x = monster.x;
                 monster.sprite.y = monster.y;
@@ -545,7 +927,6 @@ export class NightScene extends Scene {
                 monster.icon.y = monster.y - 12;
             }
             
-            // ✅ Update HP bar
             const hpPercent = monster.hp / monster.maxHp;
             if ((monster as any).hpBarBg) {
                 (monster as any).hpBarBg.x = monster.x - 20;
@@ -560,18 +941,18 @@ export class NightScene extends Scene {
             }
         }
         
-        // ✅ Remove dead monsters
         this.monsters = this.monsters.filter(m => m.hp > 0);
     }
 
     private updateTowers(): void {
         for (const tower of this.towers) {
+            if (tower.type === 'shield') continue;
+            
             if (tower.cooldownTimer > 0) {
                 tower.cooldownTimer -= 16;
                 continue;
             }
             
-            // ✅ Find target
             let closestMonster: Monster | null = null;
             let closestDistance = Infinity;
             
@@ -592,15 +973,12 @@ export class NightScene extends Scene {
                 this.showAttackEffect(tower.x, tower.y, closestMonster.x, closestMonster.y);
                 
                 if (closestMonster.hp <= 0) {
-                    // ✅ ถูกฆ่า! → completeEnemy++
                     const reward = closestMonster.reward || 5;
                     this.resourceManager?.addResource('wood', reward);
                     this.updateResourceUI();
                     this.completeEnemies++;
                     this.updateEnemyCounter();
                     this.notificationSystem?.showInfo(`💰 +${reward} wood! (${this.completeEnemies}/${this.totalEnemies})`, 1000);
-                    
-                    // ✅ ตรวจสอบว่าจบคืนหรือยัง
                     this.checkNightComplete();
                 }
             }
@@ -633,55 +1011,49 @@ export class NightScene extends Scene {
         if (!this.resourceManager) return;
         this.resourceTexts.forEach((text, type) => {
             const amount = this.resourceManager?.getResource(type) || 0;
-            text.setText(`${this.getIcon(type)} ${Math.floor(amount)}`);
+            const icon = RESOURCE_DATA[type]?.icon || '📦';
+            text.setText(`${icon} ${Math.floor(amount)}`);
         });
     }
 
+    // ============================================================
+    // CHECK NIGHT COMPLETE
+    // ============================================================
     private checkNightComplete(): void {
-        // ✅ ป้องกันการเรียกซ้ำ
         if (this.isNightComplete || this.isPopupShowing) {
-            console.log('⚠️ Night already complete or popup showing');
             return;
         }
         
-        // ✅ ตรวจสอบว่ามอนสเตอร์ครบทุกตัว และไม่มีมอนสเตอร์เหลือบนแผนที่
         const allSpawned = this.enemiesSpawned >= this.totalEnemies;
         const allProcessed = this.completeEnemies >= this.totalEnemies;
         const noMonstersLeft = this.monsters.length === 0;
         
-        // ✅ Debug log
-        console.log(`🔍 checkNightComplete: allSpawned=${allSpawned} (${this.enemiesSpawned}/${this.totalEnemies}), allProcessed=${allProcessed} (${this.completeEnemies}/${this.totalEnemies}), noMonstersLeft=${noMonstersLeft} (${this.monsters.length})`);
-        
-        // ✅ ใช้เงื่อนไขที่แน่นขึ้น: completeEnemies ต้องเท่ากับ totalEnemies
         if (allSpawned && this.completeEnemies === this.totalEnemies && noMonstersLeft) {
-            console.log('✅ Night complete! Showing popup...');
             this.isNightComplete = true;
             if (this.spawnTimer) {
                 this.spawnTimer.remove();
                 this.spawnTimer = null;
             }
             this.showNightComplete();
-        } else if (allSpawned && this.completeEnemies === this.totalEnemies && this.monsters.length > 0) {
-            console.log(`⏳ Waiting for ${this.monsters.length} monsters to be processed...`);
         }
     }
 
+    // ============================================================
+    // NIGHT COMPLETE POPUP
+    // ============================================================
     private showNightComplete(): void {
         if (this.isPopupShowing) return;
         this.isPopupShowing = true;
         
-        // ✅ สร้าง Popup แสดงผล
         const centerX = this.cameras.main.width / 2;
         const centerY = this.cameras.main.height / 2;
         
-        // Overlay
         const overlay = this.add.graphics();
         overlay.fillStyle(0x000000, 0.7);
         overlay.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
         overlay.setDepth(500);
         this.popupElements.push(overlay);
         
-        // Popup background
         const popupBg = this.add.graphics();
         popupBg.fillStyle(0x1a1a2e, 0.95);
         popupBg.fillRoundedRect(centerX - 300, centerY - 200, 600, 400, 16);
@@ -690,18 +1062,17 @@ export class NightScene extends Scene {
         popupBg.setDepth(501);
         this.popupElements.push(popupBg);
         
-        // Title
         const title = this.add.text(centerX, centerY - 160, `🌅 Night ${this.day} Complete!`, {
             fontSize: '32px', color: '#4ecdc4', fontFamily: 'monospace', stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5).setDepth(502);
         this.popupElements.push(title);
         
-        // Stats
         const stats = [
             `👾 Total Enemies: ${this.totalEnemies}`,
             `✅ Enemies Completed: ${this.completeEnemies}/${this.totalEnemies}`,
             `🏠 Base HP Lost: ${Math.floor(100 - this.baseHP)} HP`,
-            `💰 Resources Gained: ${this.completeEnemies * 5} wood`
+            `💰 Resources Gained: ${this.completeEnemies * 5} wood`,
+            `🗼 Towers Built: ${this.placedTowerCount}`
         ];
         
         stats.forEach((stat, index) => {
@@ -711,7 +1082,6 @@ export class NightScene extends Scene {
             this.popupElements.push(text);
         });
         
-        // Continue button
         const continueBtn = this.add.text(centerX, centerY + 160, '▶ CONTINUE', {
             fontSize: '24px', color: '#00b894', fontFamily: 'monospace',
             backgroundColor: '#2d3436', padding: { x: 30, y: 15 }
@@ -721,7 +1091,6 @@ export class NightScene extends Scene {
         continueBtn.on('pointerover', () => continueBtn.setStyle({ color: '#ffffff' }));
         continueBtn.on('pointerout', () => continueBtn.setStyle({ color: '#00b894' }));
         continueBtn.on('pointerdown', () => {
-            // Cleanup popup
             this.popupElements.forEach(el => el.destroy());
             this.popupElements = [];
             this.isPopupShowing = false;
@@ -729,6 +1098,47 @@ export class NightScene extends Scene {
         });
     }
 
+    // ============================================================
+    // SPEED CONTROL
+    // ============================================================
+    private setMonsterSpeed(speed: number): void {
+        (this as any).monsterSpeedMultiplier = speed;
+    }
+
+    private skipNight(): void {
+        if (this.isSkipping || this.isNightComplete) return;
+        this.isSkipping = true;
+        
+        this.notificationSystem?.showWarning('⏭️ Skipping night...', 1500);
+        
+        for (const monster of this.monsters) {
+            monster.hp = 0;
+            if (monster.sprite) monster.sprite.destroy();
+            if (monster.icon) monster.icon.destroy();
+            if ((monster as any).hpBarBg) (monster as any).hpBarBg.destroy();
+            if ((monster as any).hpBar) (monster as any).hpBar.destroy();
+            this.completeEnemies++;
+        }
+        this.monsters = [];
+        
+        this.completeEnemies = this.totalEnemies;
+        this.updateEnemyCounter();
+        this.isNightComplete = true;
+        
+        if (this.spawnTimer) {
+            this.spawnTimer.remove();
+            this.spawnTimer = null;
+        }
+        
+        this.time.delayedCall(500, () => {
+            this.isSkipping = false;
+            this.showNightComplete();
+        });
+    }
+
+    // ============================================================
+    // GAME OVER & FINISH
+    // ============================================================
     private showGameOver(message: string): void {
         this.gameOver = true;
         if (this.spawnTimer) {
@@ -756,16 +1166,17 @@ export class NightScene extends Scene {
         });
     }
 
+    // ============================================================
+    // UPDATE
+    // ============================================================
     update(time: number, delta: number): void {
         if (this.gameOver || this.isNightComplete || this.isPopupShowing) return;
         
-        // ✅ Update monsters
-        this.updateMonsters();
+        if (this.isPreparationPhase) return;
         
-        // ✅ Update towers
+        this.updateMonsters();
         this.updateTowers();
         
-        // ✅ Check base HP
         if (this.baseHP <= 0) {
             this.baseHP = 0;
             this.showGameOver('💀 Base Destroyed!');
