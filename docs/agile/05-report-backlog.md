@@ -20,9 +20,18 @@
 
 ---
 
+## 📊 External Planning & Progress Sheets
+
+| เอกสาร | รายละเอียด | ลิงก์ (Google Sheets) |
+|---|---|---|
+| **Prototype 1 - Progress** | แผ่นงานติดตามความคืบหน้ารายละเอียดของงานที่วางแผนไว้ใน Prototype 1 | [Prototype 1 - progress (Google Sheets)](https://docs.google.com/spreadsheets/d/1pk30ay-eOYQDyRr4WvwK9zgK1uGMtaCp0Cl7WxYSMDU/edit?gid=1961642005#gid=1961642005) |
+
+---
+
 ## Related Documents
 - [Sprint 01](./sprint-backlogs/sprint-01.md)
 - [Sprint 02a](./sprint-backlogs/sprint-02a.md)
+- [Sprint Planning & Roadmap](./02-sprint-planning.md)
 - [Product Backlog](./01-product-backlog.md)
 - [Kanban Board](./kanban.md)
 

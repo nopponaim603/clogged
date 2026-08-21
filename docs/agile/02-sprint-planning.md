@@ -1,6 +1,7 @@
 # Sprint Planning & Roadmap — clogged
 
-**Last Updated:** 2026-08-08 | **Version:** 1.1
+**Last Updated:** 2026-08-21 | **Version:** 1.2  
+**External Progress Sheet:** 📊 [Prototype 1 - progress (Google Sheets)](https://docs.google.com/spreadsheets/d/1pk30ay-eOYQDyRr4WvwK9zgK1uGMtaCp0Cl7WxYSMDU/edit?gid=1961642005#gid=1961642005)  
 > Migrated from the original `plan.md` roadmap (4 เดือน, ~18 สัปดาห์, เริ่ม 29 มิ.ย. 2026 → ส่งมอบ ~1 พ.ย. 2026, ทีม 4 คน — ดู [Team Roster](team.md))
 
 ## 📅 Sprint Schedule Overview

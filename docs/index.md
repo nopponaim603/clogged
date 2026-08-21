@@ -30,6 +30,7 @@
 - [Meeting Backlogs](./agile/03-meeting-backlogs.md)
 - [Retrospectives Backlog](./agile/04-retrospectives-backlog.md)
 - [Report Backlog & System Audits](./agile/05-report-backlog.md) ([Latest Weekly Report W34](./agile/reports/weekly/weekly-2026-W34.md))
+- [External Progress Sheet (Google Sheets)](https://docs.google.com/spreadsheets/d/1pk30ay-eOYQDyRr4WvwK9zgK1uGMtaCp0Cl7WxYSMDU/edit?gid=1961642005#gid=1961642005)
 - [Kanban Board](./agile/kanban.md)
 - [Team Roster](./agile/team.md)
 

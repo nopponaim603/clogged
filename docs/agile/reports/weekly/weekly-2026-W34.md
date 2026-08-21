@@ -170,6 +170,7 @@
 ## 🔗 Related Documents
 
 - [สไลด์นำเสนอครั้งที่ 1 (Canva)](https://www.canva.com/design/DAHSC0yfx-w/GwRlzDGOZ8BZYP7UyeZClw/edit)
+- [Prototype 1 - progress (Google Sheets)](https://docs.google.com/spreadsheets/d/1pk30ay-eOYQDyRr4WvwK9zgK1uGMtaCp0Cl7WxYSMDU/edit?gid=1961642005#gid=1961642005)
 - [Product Backlog](../../01-product-backlog.md)
 - [Sprint Planning Overview](../../02-sprint-planning.md)
 - [Sprint 02a Backlog](../../sprint-backlogs/sprint-02a.md)
