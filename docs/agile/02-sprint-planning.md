@@ -18,7 +18,7 @@
 
 | # | Date | Milestone | Deliverable | ความก้าวหน้า |
 |:---|:---|:---|:---|:---|
-| M1 | 2026-08-09 | Sprint 01 Decision Gate | Core loop vertical slice เสร็จ | ✅ ใกล้เสร็จ |
+| M1 | 2026-08-09 | Sprint 01 Decision Gate | Core loop vertical slice เสร็จ ([สไลด์นำเสนอครั้งที่ 1](https://www.canva.com/design/DAHSC0yfx-w/GwRlzDGOZ8BZYP7UyeZClw/edit)) | 🟢 เสร็จสิ้น |
 | **M2** | **~2026-09-01** | **Presentable Playable Loop** | **Playable demo — ทีมเล่นครบ loop ได้, มีระบบหลักครบทุกอย่าง** | **⬜** |
 | M3 | 2026-09-20 | Feature-complete (Alpha) | Must Have ครบทั้งหมด + เริ่ม Should Have | ⬜ |
 | M4 | 2026-10-18 | Content-complete (Beta) | Should Have ครบ,  balance, polish แล้ว | ⬜ |
