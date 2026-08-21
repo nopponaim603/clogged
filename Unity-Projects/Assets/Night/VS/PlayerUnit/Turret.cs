@@ -15,6 +15,9 @@ public class Turret : MonoBehaviour
 
     void Update()
     {
+        if (!WaveManager.Instance.gameStarted)
+            return;
+
         FindTarget();
 
         if (target == null)

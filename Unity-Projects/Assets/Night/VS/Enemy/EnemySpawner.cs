@@ -21,9 +21,12 @@ public class EnemySpawner : MonoBehaviour
 
     void Start()
     {
+        //StartCoroutine(SpawnEnemies());
+    }
+    public void StartWave()
+    {
         StartCoroutine(SpawnEnemies());
     }
-
     IEnumerator SpawnEnemies()
     {
         // สุ่มจำนวนมอนที่จะเกิด
