@@ -1,5 +1,12 @@
 # Documentation Changelog — clogged
 
+## 2026-08-21
+
+- **Task & Progress Tracker Weekly Report (W34)**:
+  - Generated [weekly-2026-W34.md](./agile/reports/weekly/weekly-2026-W34.md) under `docs/agile/reports/weekly/` documenting individual contributions and technical milestones in Sprint 02a.
+  - Documented Unity 2D Day Scene Navigation (`ShipNavigatorUI.cs`, `DayEndSummaryUI.cs`, `RecruitEventUI.cs`), Phaser State Persistence (`TravelScene.ts`, `NightScene.ts`), and Software Class Design updates.
+  - Updated [05-report-backlog.md](./agile/05-report-backlog.md).
+
 ## 2026-08-08
 
 - **Task & Progress Tracker Weekly Report (W32)**:

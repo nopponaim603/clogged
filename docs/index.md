@@ -1,8 +1,8 @@
 # 🎮 clogged — Project Index
 
 **Project:** clogged
-**Status:** Active | **Current Sprint:** [Sprint 01 — Prototype](./agile/sprint-backlogs/sprint-01.md)
-**Last Updated:** 2026-08-08 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+**Status:** Active | **Current Sprint:** [Sprint 02a — Production Sprint 1](./agile/sprint-backlogs/sprint-02a.md)
+**Last Updated:** 2026-08-21 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
 
 > ⚠️ GDD ได้อัปเดต **v1.0 (Prototype Reverse-Engineered)** — เอกสาร GDD ฉบับใหม่Reverse Engineering จาก source code `prototype_resource_game/` — ดู [Design Evolution](./gdd/00-concept.md#6-design-evolution)
 
@@ -20,6 +20,7 @@
 ## 💻 Software Design
 - [System Design](./software/01-system-design.md)
 - [Class Diagram](./software/02-class-diagram.md)
+- [Class Design (Comprehensive)](./software/03-class-design.md)
 
 ---
 
@@ -28,7 +29,7 @@
 - [Sprint Planning & Roadmap](./agile/02-sprint-planning.md)
 - [Meeting Backlogs](./agile/03-meeting-backlogs.md)
 - [Retrospectives Backlog](./agile/04-retrospectives-backlog.md)
-- [Report Backlog & System Audits](./agile/05-report-backlog.md) ([Latest Weekly Report W32](./agile/reports/weekly/weekly-2026-W32.md))
+- [Report Backlog & System Audits](./agile/05-report-backlog.md) ([Latest Weekly Report W34](./agile/reports/weekly/weekly-2026-W34.md))
 - [Kanban Board](./agile/kanban.md)
 - [Team Roster](./agile/team.md)
 
