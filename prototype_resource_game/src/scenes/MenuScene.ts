@@ -1,19 +1,22 @@
 // src/scenes/MenuScene.ts
 import { Scene } from 'phaser';
+import { GAME_CONFIG } from '../config';
+import { GameState } from '../state/GameState';  // ✅ import
+import { Systems } from '../main';
 
 export class MenuScene extends Scene {
     constructor() {
         super('MenuScene');
     }
-
+    
     create(): void {
-        const centerX = this.cameras.main.width / 2;
-        const centerY = this.cameras.main.height / 2;
-
-        // Background
-        this.cameras.main.setBackgroundColor('#1a1a2e');
-
-        // Decorative arcs
+        const centerX = GAME_CONFIG.WIDTH / 2;
+        const centerY = GAME_CONFIG.HEIGHT / 2;
+        
+        // ✅ Background (สว่างขึ้น)
+        this.cameras.main.setBackgroundColor(GAME_CONFIG.COLORS.BG_DARK);
+        
+        // ✅ Decorative Arcs
         for (let i = 0; i < 3; i++) {
             const arc = this.add.arc(
                 centerX + (i - 1) * 200,
@@ -22,87 +25,141 @@ export class MenuScene extends Scene {
                 0,
                 360,
                 false,
-                0x4ecdc4,
+                0x00e5cc,
                 0.05
             );
-            arc.setStrokeStyle(2, 0x4ecdc4, 0.3);
+            arc.setStrokeStyle(2, 0x00e5cc, 0.3);
         }
-
-        // Title
-        this.add.text(centerX, centerY - 120, '🏚️ SURVIVAL BASE', {
-            fontSize: '52px',
-            color: '#4ecdc4',
+        
+        // ✅ Title (ชื่อใหม่ CLOGGED)
+        this.add.text(centerX, centerY - 200, `🚂 ${GAME_CONFIG.GAME_NAME}`, {
+            fontSize: '72px',
+            color: '#00e5cc',
             fontFamily: 'monospace',
+            fontStyle: 'bold',
             stroke: '#000000',
-            strokeThickness: 8
+            strokeThickness: 10,
         }).setOrigin(0.5);
-
-        this.add.text(centerX, centerY - 50, 'Survive 30 Days in the Wasteland', {
+        
+        this.add.text(centerX, centerY - 120, GAME_CONFIG.GAME_TAGLINE, {
             fontSize: '20px',
-            color: '#b2bec3',
-            fontFamily: 'monospace'
-        }).setOrigin(0.5);
-
-        // Decorative line
-        const line = this.add.graphics();
-        line.lineStyle(2, 0x4ecdc4, 0.5);
-        line.beginPath();
-        line.moveTo(centerX - 200, centerY - 10);
-        line.lineTo(centerX + 200, centerY - 10);
-        line.strokePath();
-
-        // Features
-        const features = [
-            '🎯 Send crew to gather resources',
-            '🏛️ Search for ancient relics',
-            '⚔️ Hunt dangerous monsters',
-            '🌙 Defend your base at night'
-        ];
-
-        features.forEach((text, index) => {
-            this.add.text(centerX - 150, centerY + 30 + index * 30, text, {
-                fontSize: '16px',
-                color: '#b2bec3',
-                fontFamily: 'monospace'
-            });
-        });
-
-        // Start button
-        const startBtn = this.add.text(centerX, centerY + 200, '▶ START GAME', {
-            fontSize: '28px',
-            color: '#00b894',
+            color: '#b0c4de',  // ✅ สว่างขึ้น
             fontFamily: 'monospace',
-            backgroundColor: '#2d3436',
-            padding: { x: 30, y: 15 }
-        }).setOrigin(0.5).setInteractive();
-
-        // Button hover effects
-        startBtn.on('pointerover', () => {
-            startBtn.setStyle({ color: '#ffffff' });
-            startBtn.setScale(1.05);
-        });
-
-        startBtn.on('pointerout', () => {
-            startBtn.setStyle({ color: '#00b894' });
-            startBtn.setScale(1);
-        });
-
-        startBtn.on('pointerdown', () => {
-        this.cameras.main.fadeOut(500, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-            // ✅ ไปที่ TravelScene แทน GameScene
-            this.scene.start('TravelScene', { 
-                day: 1,
-                isFirstTime: true 
-            });
-        });
-    });
-
-        // Version
-        this.add.text(centerX, centerY + 280, 'v1.0 - Prototype', {
-            fontSize: '12px',
-            color: '#2d3436',
-            fontFamily: 'monospace'
+            fontStyle: 'italic',
         }).setOrigin(0.5);
+        
+        // ✅ Prestige Points
+        const prestigePoints = Systems.prestige.getAvailablePoints();
+        if (prestigePoints > 0) {
+            this.add.text(centerX, centerY - 80, 
+                `⭐ ${prestigePoints} Prestige Points Available`, {
+                fontSize: '16px',
+                color: '#ffd93d',
+                fontFamily: 'monospace',
+            }).setOrigin(0.5);
+        }
+        
+        // ✅ Buttons
+        let btnY = centerY - 10;
+        
+        this.createButton(centerX, btnY, '▶ NEW GAME', () => this.newGame());
+        btnY += 70;
+        
+        if (Systems.save.hasSave()) {
+            const info = Systems.save.getSaveInfo();
+            const label = info 
+                ? `💾 CONTINUE (Day ${info.day})`
+                : '💾 CONTINUE';
+            this.createButton(centerX, btnY, label, () => this.continueGame());
+            btnY += 70;
+        }
+        
+        this.createButton(centerX, btnY, '⭐ PRESTIGE TREE', () => this.showPrestige());
+        btnY += 70;
+        
+        // ✅ Stats
+        const stats = Systems.prestige.getStats();
+        if (stats.totalRuns > 0) {
+            this.add.text(centerX, GAME_CONFIG.HEIGHT - 80, 
+                `📊 Runs: ${stats.totalRuns} | Best: Day ${stats.bestDay} | Wins: ${stats.totalWins}`, {
+                fontSize: '14px',
+                color: '#8a9aab',  // ✅ สว่างขึ้น
+                fontFamily: 'monospace',
+            }).setOrigin(0.5);
+        }
+        
+        // ✅ Version
+        this.add.text(centerX, GAME_CONFIG.HEIGHT - 40, 'CLOGGED v1.0 - Prototype', {
+            fontSize: '12px',
+            color: '#5a6a7a',
+            fontFamily: 'monospace',
+        }).setOrigin(0.5);
+        
+        // ✅ Input
+        this.input.keyboard?.on('keydown-ENTER', () => this.newGame());
+    }
+    
+    private createButton(x: number, y: number, label: string, callback: () => void): void {
+        const btn = this.add.text(x, y, label, {
+            fontSize: '24px',
+            color: '#00e5cc',  // ✅
+            fontFamily: 'monospace',
+            fontStyle: 'bold',
+            backgroundColor: '#243040',  // ✅ สว่างขึ้น
+            padding: { x: 30, y: 15 },
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        
+        btn.on('pointerover', () => {
+            btn.setStyle({ 
+                color: '#ffffff',
+                backgroundColor: '#2f3d4f',  // ✅
+            });
+            btn.setScale(1.05);
+        });
+        
+        btn.on('pointerout', () => {
+            btn.setStyle({ 
+                color: '#00e5cc',
+                backgroundColor: '#243040',
+            });
+            btn.setScale(1);
+        });
+        
+        btn.on('pointerdown', callback);
+    }
+    
+    private newGame(): void {
+        // ✅ Reset GameState
+        GameState.reset();  // ✅ ใช้ได้แล้ว
+        
+        // ✅ Apply Prestige Effects
+        Systems.prestige.applyEffects();
+        
+        // ✅ Re-init systems
+        const seed = GameState.getData().seed;  // ✅ ใช้ได้แล้ว
+        Systems.map.init(seed);
+        Systems.baseMovement.init(this);
+        Systems.crew.init();
+        Systems.vehicle.init();
+        Systems.raid.init();
+        Systems.base.init();
+        Systems.economy.init();
+        
+        // ✅ Start Game
+        this.scene.start('WorldScene');
+    }
+    
+    private continueGame(): void {
+        const success = Systems.save.load();
+        
+        if (success) {
+            this.scene.start('WorldScene');
+        } else {
+            console.error('❌ Load failed');
+        }
+    }
+    
+    private showPrestige(): void {
+        this.scene.start('PrestigeScene');
     }
 }

@@ -1,172 +1,309 @@
 // src/systems/TimeSystem.ts
 import { GAME_CONFIG } from '../config';
+import { GameState } from '../state/GameState';
+import { EventBus, EVENTS } from '../state/EventBus';
+import { GamePhase } from '../state/types';
 
 export class TimeSystem {
-    public day: number;
-    public dayTimeLimit: number;
-    public isPlanningPhase: boolean;
-    public isExecuting: boolean;
-    public isNightPhase: boolean;
-    public executionTimer: Phaser.Time.TimerEvent | null;
-    public onDayEnd: () => void;
-    public onNightEnd: () => void;
-    public elapsedTime: number = 0;
-    public onSimulateStep: (() => void) | null = null;
-    private isEndingDay: boolean = false;
-    public worldTime: number = 0;
-    public speed: number = 1;
-    private updateInterval: number = 1000;
+    private scene: Phaser.Scene | null = null;
+    private timerEvent: Phaser.Time.TimerEvent | null = null;
+    private lastUpdateTime: number = 0;
+    private accumulatedMinutes: number = 0;
     
-    // ✅ เก็บ Scene ไว้ใช้ใน setSpeed
-    private currentScene: Phaser.Scene | null = null;
-
-    constructor() {
-        this.day = 1;
-        this.dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-        this.isPlanningPhase = true;
-        this.isExecuting = false;
-        this.isNightPhase = false;
-        this.executionTimer = null;
-        this.onDayEnd = () => {};
-        this.onNightEnd = () => {};
-        this.onSimulateStep = null;
-        this.speed = GAME_CONFIG.DEFAULT_SPEED || 1;
-        this.currentScene = null;
+    // ============================================================
+    // INITIALIZE
+    // ============================================================
+    init(scene: Phaser.Scene): void {
+        this.scene = scene;
+        this.lastUpdateTime = Date.now();
+        this.startTimer();
     }
 
-    startDay(scene: Phaser.Scene): void {
-        this.isPlanningPhase = true;
-        this.isNightPhase = false;
-        this.worldTime = 0;
-        this.dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-        this.isEndingDay = false;
-        this.currentScene = scene;
+    getScene(): Phaser.Scene | null {
+        return this.scene;
     }
-
-    startExecution(scene: Phaser.Scene): void {
-        this.isExecuting = true;
-        this.isPlanningPhase = false;
-        this.worldTime = 0;
-        this.isEndingDay = false;
-        this.currentScene = scene;
-        
-        if (this.executionTimer) {
-            this.executionTimer.remove();
+    
+    private startTimer(): void {
+        if (this.timerEvent) {
+            this.timerEvent.remove();
         }
         
-        // ✅ ใช้ interval ตาม speed
-        const interval = this.updateInterval / this.speed;
-        this.executionTimer = scene.time.addEvent({
-            delay: interval,
-            callback: this.updateTime,
+        this.timerEvent = this.scene!.time.addEvent({
+            delay: 100,
+            callback: this.update,
             callbackScope: this,
             loop: true
         });
-        
-        this.simulateStep();
     }
-
-    // ✅ เปลี่ยน Speed
-    setSpeed(newSpeed: number): void {
-        this.speed = Math.max(1, newSpeed);
-        // ✅ ถ้ากำลัง execute อยู่ ให้ restart timer
-        if (this.isExecuting && this.executionTimer && this.currentScene) {
-            this.executionTimer.remove();
-            const interval = this.updateInterval / this.speed;
-            this.executionTimer = this.currentScene.time.addEvent({
-                delay: interval,
-                callback: this.updateTime,
-                callbackScope: this,
-                loop: true
+    
+    // ============================================================
+    // UPDATE (Called every 100ms)
+    // ============================================================
+    private update(): void {
+        const state = GameState;  // ✅ ลบ .getInstance()
+        const time = state.getTime();
+        
+        if (time.isPaused) return;
+        if (state.isGameOver()) return;
+        
+        const now = Date.now();
+        const deltaMs = now - this.lastUpdateTime;
+        this.lastUpdateTime = now;
+        
+        const gameMinutesToAdd = (deltaMs / 1000) 
+            * (60 / GAME_CONFIG.REAL_SECONDS_PER_GAME_HOUR) 
+            * time.timeScale;
+        
+        this.accumulateGameMinutes(gameMinutesToAdd);
+    }
+    
+    // ============================================================
+    // ACCUMULATE
+    // ============================================================
+    private accumulateGameMinutes(minutes: number): void {
+        this.accumulatedMinutes += minutes;
+        
+        while (this.accumulatedMinutes >= 1) {
+            this.accumulatedMinutes -= 1;
+            this.tickOneGameMinute();
+        }
+    }
+    
+    private tickOneGameMinute(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        time.gameMinute++;
+        
+        // ✅ Emit event ทุกนาทีเกม
+        EventBus.emit('time:minuteTick', 1);
+        
+        if (time.gameMinute >= 60) {
+            time.gameMinute = 0;
+            this.tickOneGameHour();
+        }
+    }
+    
+    private tickOneGameHour(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        time.gameHour++;
+        
+        this.checkPhaseChange();
+        
+        if (time.gameHour >= 24) {
+            time.gameHour = 0;
+            this.tickNewDay();
+        }
+        
+        if (time.gameDay > GAME_CONFIG.ESCALATION_START_DAY) {
+            time.escalationLevel++;
+        }
+        
+        EventBus.emit(EVENTS.TIME_HOUR_TICK, {
+            hour: time.gameHour,
+            day: time.gameDay,
+            escalationLevel: time.escalationLevel,
+        });
+    }
+    
+    private tickNewDay(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        time.gameDay++;
+        
+        EventBus.emit(EVENTS.TIME_NEW_DAY, {
+            day: time.gameDay,
+        });
+    }
+    
+    // ============================================================
+    // PHASE CHANGE
+    // ============================================================
+    private checkPhaseChange(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        let newPhase: GamePhase = time.phase;
+        
+        if (time.gameHour >= GAME_CONFIG.DAY_START_HOUR 
+            && time.gameHour < GAME_CONFIG.NIGHT_START_HOUR) {
+            newPhase = 'day';
+        } else {
+            newPhase = 'night';
+        }
+        
+        if (newPhase !== time.phase) {
+            time.phase = newPhase;
+            
+            EventBus.emit(EVENTS.TIME_PHASE_CHANGE, {
+                phase: newPhase,
+                hour: time.gameHour,
+                day: time.gameDay,
             });
         }
     }
-
-    // ✅ Skip - ให้ไปจบวันทันที
-    skipDay(): void {
-        if (this.isExecuting || this.isPlanningPhase) {
-            this.worldTime = this.dayTimeLimit;
-            this.simulateStep();
-            this.endDay();
-        }
-    }
-
-    updateTime(): void {
-        if (this.isEndingDay || this.isNightPhase) return;
+    
+    // ============================================================
+    // TIME SCALE CONTROL
+    // ============================================================
+    setTimeScale(scale: number): void {
+        const state = GameState;
+        const time = state.getTime();
         
-        // ✅ เพิ่มเวลาตาม speed
-        this.worldTime += GAME_CONFIG.TIME_UNIT_PER_SECOND * this.speed;
-        
-        if (this.worldTime >= this.dayTimeLimit) {
-            this.worldTime = this.dayTimeLimit;
-            this.simulateStep();
-            this.endDay();
+        if (!GAME_CONFIG.TIME_SCALES.includes(scale)) {
+            console.warn(`Invalid time scale: ${scale}`);
             return;
         }
         
-        this.simulateStep();
+        time.timeScale = scale;
+        EventBus.emit(EVENTS.TIME_SCALE_CHANGE, scale);
     }
-
-    private simulateStep(): void {
-        if (this.isEndingDay) return;
-        if (this.onSimulateStep) {
-            this.onSimulateStep();
+    
+    cycleTimeScale(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        const currentIndex = GAME_CONFIG.TIME_SCALES.indexOf(time.timeScale);
+        const nextIndex = (currentIndex + 1) % GAME_CONFIG.TIME_SCALES.length;
+        const nextScale = GAME_CONFIG.TIME_SCALES[nextIndex];
+        
+        this.setTimeScale(nextScale);
+    }
+    
+    // ============================================================
+    // PAUSE CONTROL
+    // ============================================================
+    pause(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        if (time.isPaused) return;
+        
+        time.isPaused = true;
+        EventBus.emit(EVENTS.TIME_PAUSE);
+    }
+    
+    resume(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        if (!time.isPaused) return;
+        
+        time.isPaused = false;
+        this.lastUpdateTime = Date.now();
+        EventBus.emit(EVENTS.TIME_RESUME);
+    }
+    
+    togglePause(): void {
+        const state = GameState;
+        const time = state.getTime();
+        
+        if (time.isPaused) {
+            this.resume();
+        } else {
+            this.pause();
         }
     }
-
-    getRemainingTime(): number {
-        return Math.max(0, this.dayTimeLimit - this.worldTime);
+    
+    // ============================================================
+    // GETTERS
+    // ============================================================
+    getCurrentHour(): number {
+        return GameState.getTime().gameHour;
     }
-
-    endExecution(): void {
-        this.isExecuting = false;
-        this.isPlanningPhase = true;
-        if (this.executionTimer) {
-            this.executionTimer.remove();
-            this.executionTimer = null;
-        }
+    
+    getCurrentMinute(): number {
+        return GameState.getTime().gameMinute;
     }
-
-    endDay(): void {
-        if (this.isEndingDay || this.isNightPhase) return;
-        
-        this.isEndingDay = true;
-        this.isPlanningPhase = false;
-        this.isNightPhase = true;
-        
-        if (this.executionTimer) {
-            this.executionTimer.remove();
-            this.executionTimer = null;
-        }
-        
-        this.onDayEnd();
+    
+    getCurrentDay(): number {
+        return GameState.getTime().gameDay;
     }
-
-    startNight(scene: Phaser.Scene): void {
-        this.isNightPhase = true;
-        this.currentScene = scene;
-        scene.time.delayedCall(GAME_CONFIG.NIGHT_DURATION, () => {
-            this.endNight();
-        });
+    
+    getCurrentPhase(): GamePhase {
+        return GameState.getTime().phase;
     }
-
-    endNight(): void {
-        this.isNightPhase = false;
-        this.day++;
-        this.isEndingDay = false;
-        this.onNightEnd();
+    
+    getTimeScale(): number {
+        return GameState.getTime().timeScale;
     }
-
+    
     getTimeString(): string {
-        return `${Math.floor(this.dayTimeLimit - this.worldTime)}`;
+        const time = GameState.getTime();
+        const hh = String(time.gameHour).padStart(2, '0');
+        const mm = String(time.gameMinute).padStart(2, '0');
+        return `${hh}:${mm}`;
     }
-
-    getElapsedTime(): string {
-        return `${Math.floor(this.worldTime)}`;
+    
+    getDayString(): string {
+        return `Day ${GameState.getTime().gameDay}`;
     }
-
-    getFormattedTime(): string {
-        const remaining = this.dayTimeLimit - this.worldTime;
-        return `${Math.floor(remaining)}`;
+    
+    isDay(): boolean {
+        return this.getCurrentPhase() === 'day';
+    }
+    
+    isNight(): boolean {
+        return this.getCurrentPhase() === 'night';
+    }
+    
+    // ============================================================
+    // TIME CALCULATIONS
+    // ============================================================
+    gameHoursToRealMs(hours: number): number {
+        return hours * GAME_CONFIG.REAL_SECONDS_PER_GAME_HOUR * 1000;
+    }
+    
+    getHoursUntilNight(): number {
+        const time = GameState.getTime();
+        if (time.gameHour < GAME_CONFIG.NIGHT_START_HOUR) {
+            return GAME_CONFIG.NIGHT_START_HOUR - time.gameHour 
+                - time.gameMinute / 60;
+        }
+        return 0;
+    }
+    
+    getHoursUntilDay(): number {
+        const time = GameState.getTime();
+        if (time.gameHour >= GAME_CONFIG.NIGHT_START_HOUR) {
+            return 24 - time.gameHour - time.gameMinute / 60 
+                + GAME_CONFIG.DAY_START_HOUR;
+        }
+        if (time.gameHour < GAME_CONFIG.DAY_START_HOUR) {
+            return GAME_CONFIG.DAY_START_HOUR - time.gameHour 
+                - time.gameMinute / 60;
+        }
+        return 0;
+    }
+    
+    getTotalGameHours(): number {
+        const time = GameState.getTime();
+        return (time.gameDay - 1) * 24 + time.gameHour + time.gameMinute / 60;
+    }
+    
+    // ============================================================
+    // ESCALATION
+    // ============================================================
+    getEscalationMultiplier(): number {
+        const time = GameState.getTime();
+        return Math.pow(GAME_CONFIG.ESCALATION_MULTIPLIER, time.escalationLevel);
+    }
+    
+    isEscalationActive(): boolean {
+        return this.getCurrentDay() > GAME_CONFIG.ESCALATION_START_DAY;
+    }
+    
+    // ============================================================
+    // DESTROY
+    // ============================================================
+    destroy(): void {
+        if (this.timerEvent) {
+            this.timerEvent.remove();
+            this.timerEvent = null;
+        }
+        this.scene = null;
     }
 }
