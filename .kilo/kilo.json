@@ -18,15 +18,5 @@
         }
       }
     }
-  },
-  "mcp": {
-    "mcp-unity": {
-      "type": "local",
-      "command": [
-        "node",
-        "${workspaceFolder}/mcp-unity/cloned/Server~/build/index.js"
-      ],
-      "enabled": true
-    }
   }
 }
