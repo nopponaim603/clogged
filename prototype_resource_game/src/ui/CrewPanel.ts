@@ -1,257 +1,138 @@
 // src/ui/CrewPanel.ts
 import { Scene } from 'phaser';
+import { GameState } from '../state/GameState';
+import { EventBus, EVENTS } from '../state/EventBus';
 import { Crew } from '../entities/Crew';
-import { CrewManager } from '../systems/CrewManager';
 
 export class CrewPanel {
     private scene: Scene;
-    private crewManager: CrewManager;
+    private container: Phaser.GameObjects.Container;
     private crewTexts: Phaser.GameObjects.Text[] = [];
-    private onCrewSelect: (crew: Crew) => void;
-    private panelX: number;
-    private panelY: number;
-    private panelWidth: number;
-    private panelHeight: number;
     
-    // Pagination
-    private currentPage: number = 0;
-    private crewsPerPage: number = 3;
-    private totalPages: number = 1;
-    private pageText!: Phaser.GameObjects.Text;
-    private prevBtn!: Phaser.GameObjects.Text;
-    private nextBtn!: Phaser.GameObjects.Text;
-    private allCrews: Crew[] = [];
-    private isInitialized: boolean = false; // ✅ เพิ่มตัวแปรนี้
-
-    constructor(
-        scene: Scene, 
-        crewManager: CrewManager, 
-        onCrewSelect: (crew: Crew) => void,
-        x: number = 30,
-        y: number = 520
-    ) {
+    private readonly PANEL_X = 20;
+    private readonly PANEL_Y = 80;
+    private readonly PANEL_WIDTH = 280;
+    private readonly PANEL_HEIGHT = 400;
+    
+    constructor(scene: Scene) {
         this.scene = scene;
-        this.crewManager = crewManager;
-        this.onCrewSelect = onCrewSelect;
-        this.panelX = x;
-        this.panelY = y;
-        this.panelWidth = 1240;
-        this.panelHeight = 130;
+        
+        this.container = scene.add.container(0, 0);
+        this.container.setDepth(1000);
+        this.container.setScrollFactor(0);
+        
         this.createPanel();
+        this.update();
+        
+        EventBus.on('crew:hired', this.update, this);
+        EventBus.on('crew:fired', this.update, this);
+        EventBus.on(EVENTS.CREW_DIED, this.update, this);
     }
-
+    
     private createPanel(): void {
-        // Panel background
         const bg = this.scene.add.graphics();
         bg.fillStyle(0x1a1a2e, 0.9);
-        bg.fillRect(this.panelX - 10, this.panelY - 10, this.panelWidth, this.panelHeight);
-        bg.lineStyle(1, 0x4a4a5a);
-        bg.strokeRect(this.panelX - 10, this.panelY - 10, this.panelWidth, this.panelHeight);
-
-        // Title
-        this.scene.add.text(this.panelX, this.panelY, '👥 CREW STATUS', {
-            fontSize: '14px',
-            color: '#ffffff',
-            fontFamily: 'monospace'
-        });
-
-        // Pagination controls
-        this.prevBtn = this.scene.add.text(this.panelX + 1100, this.panelY, '◀', {
-            fontSize: '18px',
-            color: '#4ecdc4',
-            fontFamily: 'monospace',
-            backgroundColor: '#2d3436',
-            padding: { x: 8, y: 2 }
-        });
-        this.prevBtn.setInteractive();
-        this.prevBtn.on('pointerdown', () => this.prevPage());
-        this.prevBtn.on('pointerover', () => {
-            this.prevBtn.setStyle({ color: '#ffffff' });
-        });
-        this.prevBtn.on('pointerout', () => {
-            this.prevBtn.setStyle({ color: '#4ecdc4' });
-        });
-
-        this.pageText = this.scene.add.text(this.panelX + 1160, this.panelY, '1/1', {
-            fontSize: '14px',
-            color: '#b2bec3',
-            fontFamily: 'monospace'
-        });
-
-        this.nextBtn = this.scene.add.text(this.panelX + 1200, this.panelY, '▶', {
-            fontSize: '18px',
-            color: '#4ecdc4',
-            fontFamily: 'monospace',
-            backgroundColor: '#2d3436',
-            padding: { x: 8, y: 2 }
-        });
-        this.nextBtn.setInteractive();
-        this.nextBtn.on('pointerdown', () => this.nextPage());
-        this.nextBtn.on('pointerover', () => {
-            this.nextBtn.setStyle({ color: '#ffffff' });
-        });
-        this.nextBtn.on('pointerout', () => {
-            this.nextBtn.setStyle({ color: '#4ecdc4' });
-        });
-
-        this.isInitialized = true;
-        this.update();
+        bg.fillRect(this.PANEL_X, this.PANEL_Y, this.PANEL_WIDTH, this.PANEL_HEIGHT);
+        bg.lineStyle(2, 0x4a4a5a);
+        bg.strokeRect(this.PANEL_X, this.PANEL_Y, this.PANEL_WIDTH, this.PANEL_HEIGHT);
+        this.container.add(bg);
+        
+        const title = this.scene.add.text(
+            this.PANEL_X + 10,
+            this.PANEL_Y + 10,
+            '👥 CREW',
+            {
+                fontSize: '16px',
+                color: '#ffffff',
+                fontFamily: 'monospace',
+                fontStyle: 'bold',
+            }
+        );
+        this.container.add(title);
     }
-
+    
     update(): void {
-        if (!this.isInitialized) return; // ✅ ป้องกันการเรียกก่อนสร้าง
-        
-        this.crewTexts.forEach(text => text.destroy());
+        // ✅ Clear
+        this.crewTexts.forEach(t => t.destroy());
         this.crewTexts = [];
-
-        this.allCrews = this.crewManager.getAllAlive();
-        this.totalPages = Math.max(1, Math.ceil(this.allCrews.length / this.crewsPerPage));
         
-        if (this.currentPage >= this.totalPages) {
-            this.currentPage = Math.max(0, this.totalPages - 1);
-        }
-
-        // ✅ อัพเดท Pagination
-        this.updatePaginationVisibility();
-
-        const start = this.currentPage * this.crewsPerPage;
-        const end = Math.min(start + this.crewsPerPage, this.allCrews.length);
-        const pageCrews = this.allCrews.slice(start, end);
-
-        // ✅ ถ้าไม่มี Crew ให้แสดงข้อความ
-        if (this.allCrews.length === 0) {
-            const text = this.scene.add.text(this.panelX + 10, this.panelY + 50,
-                'No crew available',
-                {
-                    fontSize: '16px',
-                    color: '#b2bec3',
-                    fontFamily: 'monospace'
-                }
-            );
-            this.crewTexts.push(text);
+        const state = GameState;
+        const crew = state.getCrew();
+        
+        // ✅ Defensive check
+        if (!crew || !Array.isArray(crew)) {
+            console.warn('⚠️ CrewPanel: crew is not an array');
             return;
         }
-
-        const startX = this.panelX + 10;
-        const y = this.panelY + 30;
-        const spacing = 380;
-
-        const gameScene = this.scene.scene.get('GameScene') as any;
-        let chainCounts = new Map<number, number>();
-        if (gameScene && gameScene.missionQueue) {
-            for (const mission of gameScene.missionQueue) {
-                if (!mission.completed) {
-                    const count = chainCounts.get(mission.crew.id) || 0;
-                    chainCounts.set(mission.crew.id, count + 1);
-                }
+        
+        let y = this.PANEL_Y + 40;
+        let displayedCount = 0;
+        
+        crew.forEach(c => {
+            if (!c || !c.isAlive()) return;
+            
+            // ✅ เช็ค bounds ก่อนสร้าง text
+            if (y > this.PANEL_Y + this.PANEL_HEIGHT - 20) {
+                const more = this.scene.add.text(
+                    this.PANEL_X + 10,
+                    y,
+                    `... +${crew.filter(x => x.isAlive()).length - displayedCount} more`,
+                    {
+                        fontSize: '12px',
+                        color: '#636e72',
+                        fontFamily: 'monospace',
+                    }
+                );
+                this.container.add(more);
+                this.crewTexts.push(more);
+                return;
             }
-        }
-
-        pageCrews.forEach((crew, index) => {
-            const status = crew.isBusy ? '🔴 Busy' : '🟢 Ready';
-            const color = crew.isBusy ? '#ff6b6b' : '#4ecdc4';
             
-            const perkText = crew.perks.length > 0 ? ` [${crew.perks.join(', ')}]` : '';
-            const chainCount = chainCounts.get(crew.id) || 0;
-            const chainText = chainCount > 0 ? ` 📋x${chainCount}` : '';
-            
-            const x = startX + index * spacing;
-            
-            // ✅ ชื่อและสถานะ
-            const text = this.scene.add.text(x, y,
-                `${crew.name} (❤️${Math.floor(crew.hp)}/${crew.maxHp}) ${status}${chainText}`,
-                {
-                    fontSize: '16px',
-                    color: color,
-                    fontFamily: 'monospace'
-                }
-            );
-
-            // ✅ Perk
-            this.scene.add.text(x, y + 25,
-                `⚡ ${perkText || 'No perk'}`,
+            const stateIcon = this.getStateIcon(c.state);
+            const text = this.scene.add.text(
+                this.PANEL_X + 10,
+                y,
+                `${stateIcon} ${c.name} (${c.hp}/${c.maxHp})`,
                 {
                     fontSize: '12px',
-                    color: '#b2bec3',
-                    fontFamily: 'monospace'
+                    color: this.getStateColor(c.state),
+                    fontFamily: 'monospace',
                 }
             );
-
-            // ✅ Stats พร้อม Rank (ใช้ getEffective)
-            const effSpeed = crew.getEffectiveSpeed();
-            const effGather = crew.getEffectiveGathering();
-            const effSearch = crew.getEffectiveSearching();
-            const effHunt = crew.getEffectiveHunting();
-            
-            const speedRank = crew.getRankDisplay(effSpeed);
-            const gatherRank = crew.getRankDisplay(effGather);
-            const searchRank = crew.getRankDisplay(effSearch);
-            const huntRank = crew.getRankDisplay(effHunt);
-            
-            this.scene.add.text(x, y + 45,
-                `🏃 ${effSpeed.toFixed(0)} [${speedRank.rank}] | ⛏️ ${effGather.toFixed(0)} [${gatherRank.rank}] | 🔍 ${effSearch.toFixed(0)} [${searchRank.rank}] | ⚔️ ${effHunt.toFixed(0)} [${huntRank.rank}]`,
-                {
-                    fontSize: '11px',
-                    color: '#636e72',
-                    fontFamily: 'monospace'
-                }
-            );
-
-            // ✅ Make clickable
-            if (!crew.isBusy && crew.isAlive) {
-                text.setInteractive();
-                text.on('pointerdown', () => {
-                    this.onCrewSelect(crew);
-                });
-                text.on('pointerover', () => {
-                    text.setStyle({ color: '#f9ca24' });
-                });
-                text.on('pointerout', () => {
-                    text.setStyle({ color: color });
-                });
-            }
-
+            this.container.add(text);
             this.crewTexts.push(text);
+            
+            y += 20;
+            displayedCount++;
         });
-
-        this.updatePaginationVisibility();
     }
-
-    // ✅ Method สำหรับอัพเดท Pagination Visibility
-    private updatePaginationVisibility(): void {
-        const show = this.totalPages > 1;
-        this.prevBtn.setVisible(show);
-        this.nextBtn.setVisible(show);
-        this.pageText.setVisible(show);
-    }
-
-    // ✅ Method สำหรับเปลี่ยนหน้า
-    private prevPage(): void {
-        if (this.currentPage > 0) {
-            this.currentPage--;
-            this.update();
+    
+    private getStateIcon(state: string): string {
+        switch (state) {
+            case 'idle': return '🟢';
+            case 'dispatched': return '🚗';
+            case 'assigned': return '🏭';
+            case 'stranded': return '🌙';
+            case 'dead': return '💀';
+            default: return '❓';
         }
     }
-
-    // ✅ Method สำหรับเปลี่ยนหน้า
-    private nextPage(): void {
-        if (this.currentPage < this.totalPages - 1) {
-            this.currentPage++;
-            this.update();
+    
+    private getStateColor(state: string): string {
+        switch (state) {
+            case 'idle': return '#4ecdc4';
+            case 'dispatched': return '#f9ca24';
+            case 'assigned': return '#6c5ce7';
+            case 'stranded': return '#ff6b6b';
+            case 'dead': return '#636e72';
+            default: return '#ffffff';
         }
     }
-
-    show(): void {
-        this.crewTexts.forEach(text => text.setVisible(true));
-        this.prevBtn.setVisible(true);
-        this.nextBtn.setVisible(true);
-        this.pageText.setVisible(true);
-    }
-
-    hide(): void {
-        this.crewTexts.forEach(text => text.setVisible(false));
-        this.prevBtn.setVisible(false);
-        this.nextBtn.setVisible(false);
-        this.pageText.setVisible(false);
+    
+    destroy(): void {
+        this.container.destroy();
+        EventBus.off('crew:hired', this.update, this);
+        EventBus.off('crew:fired', this.update, this);
+        EventBus.off(EVENTS.CREW_DIED, this.update, this);
     }
 }

@@ -1,249 +1,261 @@
 // src/entities/Crew.ts
+import { Crew as ICrew, CrewState } from '../state/types';
 import { GAME_CONFIG } from '../config';
+import { RandomGenerator } from '../utils/RandomGenerator';
 
-// ✅ Rank System
-export enum Rank {
-    F = 'F',
-    E = 'E',
-    D = 'D',
-    C = 'C',
-    B = 'B',
-    A = 'A',
-    AA = 'AA',
-    AAA = 'AAA',
-    S = 'S',
-    SS = 'SS',
-    SSS = 'SSS',
-    EX = 'EX',
-}
-
-export interface RankThreshold {
-    min: number;
-    max: number;
-    rank: Rank;
-}
-
-export const RANK_THRESHOLDS: RankThreshold[] = [
-    { min: 0, max: 14, rank: Rank.F },
-    { min: 15, max: 29, rank: Rank.E },
-    { min: 30, max: 44, rank: Rank.D },
-    { min: 45, max: 59, rank: Rank.C },
-    { min: 60, max: 79, rank: Rank.B },
-    { min: 80, max: 89, rank: Rank.A },
-    { min: 90, max: 94, rank: Rank.AA },
-    { min: 95, max: 99, rank: Rank.AAA },
-    { min: 100, max: 129, rank: Rank.S },
-    { min: 130, max: 144, rank: Rank.SS },
-    { min: 145, max: 150, rank: Rank.SSS },
-    { min: 151, max: Infinity, rank: Rank.EX },
-];
-
-export interface Equipment {
-    weapon: {
-        name: string;
-        type: 'gun' | 'melee' | 'ranged';
-        huntingBonus: number;    // flat bonus
-        gatheringBonus: number;  // flat bonus
-    } | null;
-    armor: {
-        name: string;
-        defenseBonus: number;    // flat bonus
-        hpBonus: number;         // flat bonus
-    } | null;
-    accessory: {
-        name: string;
-        searchBonus: number;     // flat bonus
-        speedBonus: number;      // flat bonus
-    } | null;
-}
-
-export class Crew {
+export class Crew implements ICrew {
     public id: number;
     public name: string;
-    public isAlive: boolean;
-    public isBusy: boolean;
-    
-    // ✅ Base Stats (0-100) - ค่าของแต่ละคน
-    public baseSpeed: number;      // 0-100
-    public baseGathering: number;  // 0-100
-    public baseSearching: number;  // 0-100
-    public baseHunting: number;    // 0-100
-    
-    // ✅ HP
     public hp: number;
     public maxHp: number;
+    public def: number;
+    public gearDef: number;
+    public dodge: number;
     
-    // ✅ Perks (เป็น %)
+    // Stats (0-200)
+    public gathering: number;
+    public exploring: number;
+    public hunting: number;
+    
+    // Gear
+    public gearGathering: number;
+    public gearExploring: number;
+    public gearHunting: number;
+    
+    // Perks
     public perks: string[];
     
-    // ✅ Equipment (flat bonus)
-    public equipment: Equipment;
+    // State
+    public state: CrewState;
+    public assignedFacilityId: string | null;
+    public assignedVehicleId: string | null;
     
-    public hireCost: number;
-    public position: { x: number; y: number };
-    public sprite: Phaser.GameObjects.Text | null;
-
     constructor(data: Partial<Crew>) {
-        this.id = data.id || Date.now();
+        this.id = data.id || 0;
         this.name = data.name || 'Crew';
-        this.isAlive = true;
-        this.isBusy = false;
+        this.maxHp = data.maxHp || 10000;
+        this.hp = data.hp || this.maxHp;
+        this.def = data.def || 50;
+        this.gearDef = data.gearDef || 50;
+        this.dodge = data.dodge || 15;
         
-        // ✅ Base Stats (0-100)
-        this.baseSpeed = data.baseSpeed ?? 50;
-        this.baseGathering = data.baseGathering ?? 50;
-        this.baseSearching = data.baseSearching ?? 50;
-        this.baseHunting = data.baseHunting ?? 50;
+        this.gathering = data.gathering || 50;
+        this.exploring = data.exploring || 50;
+        this.hunting = data.hunting || 50;
         
-        // ✅ HP
-        this.maxHp = data.maxHp ?? 100;
-        this.hp = this.maxHp;
+        this.gearGathering = data.gearGathering || 5;
+        this.gearExploring = data.gearExploring || 5;
+        this.gearHunting = data.gearHunting || 50;
         
-        // ✅ Perks & Equipment
         this.perks = data.perks || [];
-        this.equipment = {
-            weapon: null,
-            armor: null,
-            accessory: null,
+        
+        this.state = data.state || 'idle';
+        this.assignedFacilityId = data.assignedFacilityId || null;
+        this.assignedVehicleId = data.assignedVehicleId || null;
+    }
+    
+    // ============================================================
+    // STATIC FACTORY
+    // ============================================================
+    static create(id: number, name: string, cost: number): Crew {
+        const rng = RandomGenerator.getInstance();
+        
+        const maxHp = rng.randomCrewHp();
+        const def = rng.randomCrewDef();
+        const gearDef = rng.randomGearDef();
+        const dodge = rng.randomCrewDodge();
+        
+        const gathering = rng.randomCrewStat();
+        const exploring = rng.randomCrewStat();
+        const hunting = rng.randomCrewStat();
+        
+        const gearGathering = rng.randomGearGathering();
+        const gearExploring = rng.randomGearExploring();
+        const gearHunting = rng.randomGearHunting();
+        
+        return new Crew({
+            id,
+            name,
+            maxHp,
+            hp: maxHp,
+            def,
+            gearDef,
+            dodge,
+            gathering,
+            exploring,
+            hunting,
+            gearGathering,
+            gearExploring,
+            gearHunting,
+            perks: [],
+        });
+    }
+    
+    // ============================================================
+    // EFFICIENCY CALCULATIONS (ตามชีต)
+    // ============================================================
+    
+    // ✅ Gathering Efficiency: (stat + gear) × perk multiplier
+    getGatheringEfficiency(): number {
+        const base = this.gathering + this.gearGathering;
+        const perkMult = this.getPerkMultiplier('gathering');
+        return base * perkMult;
+    }
+    
+    // ✅ Exploring Efficiency
+    getExploringEfficiency(): number {
+        const base = this.exploring + this.gearExploring;
+        const perkMult = this.getPerkMultiplier('exploring');
+        return base * perkMult;
+    }
+    
+    // ✅ Hunting Efficiency
+    getHuntingEfficiency(): number {
+        const base = this.hunting + this.gearHunting;
+        const perkMult = this.getPerkMultiplier('hunting');
+        return base * perkMult;
+    }
+    
+    // ✅ Total DEF
+    getTotalDef(): number {
+        return this.def + this.gearDef;
+    }
+    
+    // ============================================================
+    // PERK MULTIPLIER
+    // ============================================================
+    private getPerkMultiplier(statType: 'gathering' | 'exploring' | 'hunting'): number {
+        let multiplier = 1.0;
+        
+        // ✅ ถ้ามี perk ที่ตรงกับ statType → ×1.5
+        const perkMap: { [key: string]: string[] } = {
+            gathering: ['scout_i', 'scout_ii', 'scout_iii'],
+            exploring: ['scout_i', 'scout_ii', 'scout_iii'],
+            hunting: ['soldier_i', 'soldier_ii', 'soldier_iii'],
         };
         
-        this.hireCost = data.hireCost || 20;
-        this.position = data.position || { x: 0, y: 0 };
-        this.sprite = null;
-    }
-
-    // ✅ คำนวณ Stat จริง: (Base + Equipment Bonus) * (1 + Perk %)
-    getEffectiveSpeed(): number {
-        let flatBonus = 0;
-        if (this.equipment.accessory) {
-            flatBonus += this.equipment.accessory.speedBonus || 0;
+        const relevantPerks = perkMap[statType] || [];
+        if (this.perks.some(p => relevantPerks.includes(p))) {
+            multiplier *= 1.5;
         }
-        const total = this.baseSpeed + flatBonus;
-        return this.applyPerkMultiplier(total, 'speed');
+        
+        return multiplier;
     }
-
-    getEffectiveGathering(): number {
-        let flatBonus = 0;
-        if (this.equipment.weapon) {
-            flatBonus += this.equipment.weapon.gatheringBonus || 0;
+    
+    // ============================================================
+    // COMBAT
+    // ============================================================
+    
+    // ✅ รับดาเมจ
+    takeDamage(amount: number): number {
+        // ✅ Dodge check
+        if (Math.random() * 100 < this.dodge) {
+            return 0;  // หลบได้
         }
-        const total = this.baseGathering + flatBonus;
-        return this.applyPerkMultiplier(total, 'gathering');
+        
+        // ✅ ลดดาเมจด้วย DEF
+        const actualDamage = Math.max(1, amount - this.getTotalDef());
+        this.hp = Math.max(0, this.hp - actualDamage);
+        
+        return actualDamage;
     }
-
-    getEffectiveSearching(): number {
-        let flatBonus = 0;
-        if (this.equipment.accessory) {
-            flatBonus += this.equipment.accessory.searchBonus || 0;
-        }
-        const total = this.baseSearching + flatBonus;
-        return this.applyPerkMultiplier(total, 'searching');
+    
+    isAlive(): boolean {
+        return this.hp > 0;
     }
-
-    getEffectiveHunting(): number {
-        let flatBonus = 0;
-        if (this.equipment.weapon) {
-            flatBonus += this.equipment.weapon.huntingBonus || 0;
-        }
-        if (this.equipment.armor) {
-            flatBonus += this.equipment.armor.defenseBonus || 0;
-        }
-        const total = this.baseHunting + flatBonus;
-        return this.applyPerkMultiplier(total, 'hunting');
+    
+    // ============================================================
+    // HEAL
+    // ============================================================
+    heal(amount: number): void {
+        this.hp = Math.min(this.maxHp, this.hp + amount);
     }
-
-    // ✅ ใช้ Perk เป็น %
-    private applyPerkMultiplier(value: number, statType: 'speed' | 'gathering' | 'searching' | 'hunting'): number {
-        let multiplier = 1;
-        for (const perk of this.perks) {
-            const bonus = this.getPerkBonus(perk, statType);
-            multiplier += bonus / 100;
-        }
-        return Math.round(value * multiplier * 10) / 10;
-    }
-
-    // ✅ ดึงค่า Perk Bonus (เป็น %)
-    private getPerkBonus(perk: string, statType: string): number {
-        const PERK_BONUSES: { [key: string]: { [key: string]: number } } = {
-            'sprinter': { speed: 20 },
-            'fast_hands': { gathering: 25 },
-            'night_vision': { searching: 20 },
-            'gunslinger': { hunting: 30 },
-            'blacksmith': { gathering: 15 },
-            'quick_reflex': { speed: 15 },
-            'tough': { hp: 30 },
-            'lucky': { gathering: 10, searching: 10 },
-            'strong': { hunting: 20 },
-            'scout': { speed: 10, searching: 10 },
-            'medic': { hp: 20 },
-        };
-        return PERK_BONUSES[perk]?.[statType] || 0;
-    }
-
-    // ✅ ดึง Rank จากค่า Stat
-    getRank(value: number): Rank {
-        for (const threshold of RANK_THRESHOLDS) {
-            if (value >= threshold.min && value <= threshold.max) {
-                return threshold.rank;
-            }
-        }
-        return Rank.F;
-    }
-
-    // ✅ ดึง Rank Color
-    getRankColor(rank: Rank): string {
-        const colors: { [key: string]: string } = {
-            'F': '#808080',
-            'E': '#4a90d9',
-            'D': '#50c878',
-            'C': '#f9ca24',
-            'B': '#ff8c00',
-            'A': '#ff6b6b',
-            'AA': '#e74c3c',
-            'AAA': '#8e44ad',
-            'S': '#ff00ff',
-            'SS': '#ffd700',
-            'SSS': '#ff4500',
-            'EX': '#ff0000',
-        };
-        return colors[rank] || '#ffffff';
-    }
-
-    // ✅ ฟังก์ชันสำหรับ UI
-    getRankDisplay(value: number): { rank: Rank; color: string } {
-        const rank = this.getRank(value);
-        return { rank, color: this.getRankColor(rank) };
-    }
-
+    
+    // ============================================================
+    // PERK MANAGEMENT
+    // ============================================================
     hasPerk(perkId: string): boolean {
         return this.perks.includes(perkId);
     }
-
-    // ✅ คำนวณเวลาเดินทางเป็นหน่วยเวลา (ใช้ระยะทางจริง)
-    calculateTravelTime(distance: number): number {
-        // ✅ ใช้ระยะทางจริง (pixel) คูณด้วย factor
-        const baseTime = GAME_CONFIG.BASE_TRAVEL_TIME || 200;
-        const distanceFactor = distance * GAME_CONFIG.TRAVEL_DISTANCE_FACTOR;
-        const speed = this.getEffectiveSpeed();
-        
-        // ✅ speed 0-100 → ใช้ 100 เป็น speed สูงสุด
-        const speedFactor = Math.max(0.1, speed / 100);
-        
-        const travelTime = (baseTime + distanceFactor) / speedFactor;
-        return travelTime;
-    }
-
-    takeDamage(damage: number): boolean {
-        this.hp -= damage;
-        if (this.hp <= 0) {
-            this.hp = 0;
-            this.isAlive = false;
-            return true;
+    
+    addPerk(perkId: string): void {
+        if (!this.perks.includes(perkId)) {
+            this.perks.push(perkId);
         }
-        return false;
     }
-
-    heal(amount: number): void {
-        this.hp = Math.min(this.maxHp, this.hp + amount);
+    
+    // ============================================================
+    // FACILITY PERK
+    // ============================================================
+    
+    // ✅ ตรวจสอบ perk ที่เกี่ยวกับ facility
+    getFacilityPerkBonus(facilityType: string): number {
+        const perkMap: { [key: string]: { [key: string]: number } } = {
+            engine: {
+                mechanist_i: 0.1,
+                mechanist_ii: 0.3,
+                mechanist_iii: 0.5,
+            },
+            kitchen: {
+                cook_i: 0.2,
+                cook_ii: 0.4,
+                cook_iii: 0.6,
+            },
+            factory: {
+                engineer_i: 0.2,
+                engineer_ii: 0.4,
+                engineer_iii: 0.6,
+            },
+            workshop: {
+                blacksmith_i: 0.3,
+                blacksmith_ii: 0.5,
+                blacksmith_iii: 0.7,
+            },
+            turret: {
+                gunslinger_i: 0.2,
+                gunslinger_ii: 0.4,
+                gunslinger_iii: 0.6,
+            },
+        };
+        
+        const bonuses = perkMap[facilityType] || {};
+        
+        // ✅ หา perk สูงสุด
+        for (const perk of this.perks) {
+            if (bonuses[perk] !== undefined) {
+                return bonuses[perk];
+            }
+        }
+        
+        return 0;
+    }
+    
+    // ============================================================
+    // SERIALIZATION
+    // ============================================================
+    toJSON(): object {
+        return {
+            id: this.id,
+            name: this.name,
+            hp: this.hp,
+            maxHp: this.maxHp,
+            def: this.def,
+            gearDef: this.gearDef,
+            dodge: this.dodge,
+            gathering: this.gathering,
+            exploring: this.exploring,
+            hunting: this.hunting,
+            gearGathering: this.gearGathering,
+            gearExploring: this.gearExploring,
+            gearHunting: this.gearHunting,
+            perks: [...this.perks],
+            state: this.state,
+            assignedFacilityId: this.assignedFacilityId,
+            assignedVehicleId: this.assignedVehicleId,
+        };
+    }
+    
+    static fromJSON(data: any): Crew {
+        return new Crew(data);
     }
 }

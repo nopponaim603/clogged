@@ -1,592 +1,415 @@
 // src/systems/MissionSystem.ts
-import { Crew } from '../entities/Crew';
-import { ResourceNode } from '../entities/ResourceNode';
-import { ResourceManager } from './ResourceManager';
-import { GAME_CONFIG } from '../config';
+import { GAME_CONFIG, RESOURCE_ICONS } from '../config';
+import { GameState } from '../state/GameState';
+import { EventBus, EVENTS } from '../state/EventBus';
+import { Crew } from '../entities/Crew';        // ✅ ใช้ entities
+import { Vehicle } from '../entities/Vehicle';  // ✅ ใช้ entities
+import { MapNode } from '../entities/MapNode';
+import { MissionState, MissionPhase } from '../state/types';
+import { RandomGenerator } from '../utils/RandomGenerator';  // ✅ import
+import { Helpers } from '../utils/Helpers';  // ✅ import
 
 export interface MissionResult {
     success: boolean;
+    resourcesGained: { [key: string]: number };
+    crewLost: number[];
     message: string;
-    resources?: Record<string, number>;
-    relic?: string;
-    monsterPart?: string;
 }
 
 export class MissionSystem {
-    private resourceManager: ResourceManager;
-
-    constructor(resourceManager: ResourceManager) {
-        this.resourceManager = resourceManager;
-    }
-
-    executeMission(crew: Crew, target: ResourceNode): MissionResult {
-        // ✅ คำนวณระยะทางจริง
-        const distance = this.getDistance(crew.position, target.position);
-        const travelTime = crew.calculateTravelTime(distance);
+    
+    // ============================================================
+    // START MISSION
+    // ============================================================
+    startMission(vehicle: Vehicle, targetNode: MapNode): MissionState {
+        const state = GameState;
+        const time = state.getTime();
+        const basePos = state.getBasePosition();
         
-        // ✅ คำนวณเวลาปฏิบัติการจาก HP / Proficiency
-        const actionTime = target.getActionTime(crew.getEffectiveGathering());
-        const totalTime = travelTime * 2 + actionTime;
-
-        if (target.isRelic) {
-            return this.executeRelicSearch(crew, target, travelTime, actionTime);
-        } else if (target.isMonster) {
-            return this.executeMonsterHunt(crew, target, travelTime, actionTime);
-        } else {
-            return this.executeGathering(crew, target, travelTime, actionTime);
+        // ✅ คำนวณระยะทาง (ชั่วโมง)
+        const distance = Math.sqrt(
+            Math.pow(targetNode.position.x - basePos.x, 2) +
+            Math.pow(targetNode.position.y - basePos.y, 2)
+        );
+        const distanceHours = distance / 1000;  // 1000 px = 1 ชม.
+        
+        // ✅ คำนวณเวลา
+        const vehicleSpeed = vehicle.getSpeed();  // km/h
+        const baseSpeed = GAME_CONFIG.BASE_SPEED_KM_PER_HOUR;
+        const speedRatio = vehicleSpeed / baseSpeed;
+        
+        const travelOutTime = distanceHours / speedRatio;
+        const actionTime = this.calculateActionTime(targetNode, vehicle);
+        const travelBackTime = travelOutTime;  // ระยะทางกลับเท่ากัน (ประมาณ)
+        
+        // ✅ สร้าง MissionState
+        const mission: MissionState = {
+            vehicleId: vehicle.id,
+            nodeId: targetNode.id,
+            phase: 'travel_out',
+            startHour: time.gameHour,
+            startDay: time.gameDay,
+            travelOutTime,
+            actionTime,
+            travelBackTime,
+            elapsedHours: 0,
+            progress: 0,
+            success: false,
+            resourcesGained: {},
+            crewLost: [],
+        };
+        
+        vehicle.startMission(mission);
+        
+        EventBus.emit(EVENTS.MISSION_STARTED, {
+            vehicleId: vehicle.id,
+            nodeId: targetNode.id,
+            mission,
+        });
+        
+        return mission;
+    }
+    
+    // ============================================================
+    // ACTION TIME CALCULATION
+    // ============================================================
+    private calculateActionTime(targetNode: MapNode, vehicle: Vehicle): number {
+        const rng = RandomGenerator.getInstance();  // ✅ ใช้ import
+        const state = GameState;
+        const crewInVehicle = state.getCrew().filter(c => 
+            vehicle.assignedCrewIds.includes(c.id)
+        );
+        
+        if (crewInVehicle.length === 0) return 1;
+        
+        switch (targetNode.type) {
+            case 'resource':
+                return this.calculateGatherTime(targetNode, crewInVehicle);
+            case 'relic':
+                return this.calculateExploreTime(targetNode, crewInVehicle);
+            case 'monster':
+                return this.calculateHuntTime(targetNode, crewInVehicle);
+            default:
+                return 0.5;  // 30 นาที default
         }
     }
-
-    // ✅ Gathering - ใช้ระบบ HP
-    private executeGathering(crew: Crew, target: ResourceNode, travelTime: number, actionTime: number): MissionResult {
-        const totalTime = travelTime * 2 + actionTime;
-        const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-
-        // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
-        if (totalTime > dayTimeLimit) {
-            const remainingTime = dayTimeLimit - travelTime * 2;
-            if (remainingTime <= 0) {
-                return {
-                    success: false,
-                    message: `❌ ${crew.name} had no time to travel to ${target.type}!`
-                };
-            }
-            
-            // ✅ คำนวณ damage ที่ทำได้ในช่วงเวลาที่เหลือ
-            const proficiency = crew.getEffectiveGathering();
-            const damageDone = Math.floor(remainingTime * proficiency);
-            const remainingHp = target.hp - damageDone;
-            
-            if (damageDone > 0) {
-                // ✅ ได้ทรัพยากรตามสัดส่วน damage ที่ทำได้
-                const gatheredAmount = Math.floor((damageDone / target.maxHp) * target.amount);
-                const actualGathered = Math.min(gatheredAmount, target.amount);
-                
-                if (actualGathered > 0) {
-                    this.resourceManager.addResource(target.type as any, actualGathered);
-                    return {
-                        success: true,
-                        message: `⚠️ ${crew.name} gathered ${actualGathered} ${target.type} (time ran out! Did ${Math.floor(damageDone)} damage)`,
-                        resources: { [target.type]: actualGathered }
-                    };
-                }
-            }
-            return {
-                success: false,
-                message: `❌ ${crew.name} couldn't gather anything (time ran out before gathering)!`
-            };
+    
+    // ✅ Gathering Time (ตามชีต)
+    private calculateGatherTime(node: MapNode, crew: Crew[]): number {
+        const rng = RandomGenerator.getInstance();        
+        // ✅ ดึงค่า
+        const resourceType = node.resourceType || 'wood';
+        const baseValue = GAME_CONFIG.RESOURCE_TYPE_VALUE[resourceType as keyof typeof GAME_CONFIG.RESOURCE_TYPE_VALUE] || 100;
+        
+        const range = node.resourceAmount || { min: 10, max: 20 };
+        const amount = rng.randomInt(range.min, range.max);
+        
+        const rarityMult = GAME_CONFIG.RESOURCE_NODE_RARITY[node.rarity || 'common'];
+        
+        // ✅ Node HP = value × amount × rarity
+        const nodeHP = baseValue * amount * rarityMult;
+        
+        // ✅ Total Efficiency (ต่อนาที)
+        let totalEfficiency = 0;
+        crew.forEach(c => {
+            totalEfficiency += c.getGatheringEfficiency();
+        });
+        
+        // ✅ เวลา (นาทีเกม)
+        const timeMinutes = nodeHP / Math.max(1, totalEfficiency);
+        
+        // ✅ แปลงเป็นชั่วโมง
+        return timeMinutes / 60;
+    }
+    
+    // ✅ Exploring Time (ตามชีต)
+    private calculateExploreTime(node: MapNode, crew: Crew[]): number {
+        const rng = RandomGenerator.getInstance();        
+        // ✅ Relic Value
+        const relicValue = rng.pick([
+            GAME_CONFIG.RELIC_RARITY_VALUE.common,
+            GAME_CONFIG.RELIC_RARITY_VALUE.uncommon,
+            GAME_CONFIG.RELIC_RARITY_VALUE.rare,
+        ]);
+        
+        // ✅ Size Multiplier
+        const sizeMult = GAME_CONFIG.RELIC_SIZE_MULTIPLIER[node.relicSize || 'small'];
+        
+        // ✅ Threat
+        const baseThreat = node.threat || rng.randomRange(0, 10);
+        
+        // ✅ Average Efficiency
+        let avgEfficiency = 0;
+        crew.forEach(c => {
+            avgEfficiency += c.getExploringEfficiency();
+        });
+        avgEfficiency /= crew.length;
+        
+        // ✅ Threat after efficiency
+        const threatReduction = (avgEfficiency / GAME_CONFIG.EFFICIENCY_MAX_PER_CREW) 
+            * GAME_CONFIG.RELIC_THREAT_EFFICIENCY_REDUCTION;
+        const threatAfter = baseThreat * (1 - threatReduction);
+        
+        // ✅ Node HP = value × (threat + threatAfter) × size
+        const nodeHP = relicValue * (baseThreat + threatAfter) * sizeMult;
+        
+        // ✅ Total Efficiency
+        let totalEfficiency = 0;
+        crew.forEach(c => {
+            totalEfficiency += c.getExploringEfficiency();
+        });
+        
+        // ✅ เวลา (นาทีเกม)
+        const timeMinutes = nodeHP / Math.max(1, totalEfficiency);
+        
+        return timeMinutes / 60;
+    }
+    
+    // ✅ Hunting Time (ตามชีต)
+    private calculateHuntTime(node: MapNode, crew: Crew[]): number {
+        const rng = RandomGenerator.getInstance();        
+        // ✅ Monster Data
+        const monsterType = node.monsterType || 'A';
+        const monsterData = GAME_CONFIG.MONSTER_TYPES[monsterType as keyof typeof GAME_CONFIG.MONSTER_TYPES];
+        
+        if (!monsterData) return 1;
+        
+        // ✅ Monster Amount
+        const amountRange = GAME_CONFIG.MONSTER_AMOUNT_BY_RANK[monsterData.rank as keyof typeof GAME_CONFIG.MONSTER_AMOUNT_BY_RANK];
+        const amount = rng.randomInt(amountRange.min, amountRange.max);
+        
+        // ✅ Total Monster HP
+        const totalHP = monsterData.hp * amount;
+        
+        // ✅ Total Efficiency
+        let totalEfficiency = 0;
+        crew.forEach(c => {
+            totalEfficiency += c.getHuntingEfficiency();
+        });
+        
+        // ✅ เวลา (นาทีเกม)
+        const timeMinutes = totalHP / Math.max(1, totalEfficiency);
+        
+        return timeMinutes / 60;
+    }
+    
+    // ============================================================
+    // UPDATE MISSION
+    // ============================================================
+    updateMission(mission: MissionState, deltaHours: number): void {
+        mission.elapsedHours += deltaHours;
+        
+        const totalTime = mission.travelOutTime + mission.actionTime + mission.travelBackTime;
+        mission.progress = Math.min(1, mission.elapsedHours / totalTime);
+        
+        // ✅ อัพเดท Phase
+        if (mission.elapsedHours < mission.travelOutTime) {
+            mission.phase = 'travel_out';
+        } else if (mission.elapsedHours < mission.travelOutTime + mission.actionTime) {
+            mission.phase = 'action';
+        } else if (mission.elapsedHours < totalTime) {
+            mission.phase = 'travel_back';
+        } else {
+            mission.phase = 'complete';
         }
-
-        // ✅ เวลาพอ → ได้ทรัพยากรเต็ม
-        const amount = target.amount;
-        this.resourceManager.addResource(target.type as any, amount);
+        
+        EventBus.emit(EVENTS.MISSION_UPDATED, mission);
+    }
+    
+    // ============================================================
+    // COMPLETE MISSION
+    // ============================================================
+    completeMission(vehicle: Vehicle, targetNode: MapNode): MissionResult {
+        const state = GameState;
+        const crew = state.getCrew().filter(c => 
+            vehicle.assignedCrewIds.includes(c.id)
+        );
+        
+        const result: MissionResult = {
+            success: false,
+            resourcesGained: {},
+            crewLost: [],
+            message: '',
+        };
+        
+        switch (targetNode.type) {
+            case 'resource':
+                result.resourcesGained = this.completeGathering(targetNode, crew);
+                result.success = true;
+                result.message = `✅ Gathered resources!`;
+                break;
+            case 'relic':
+                const relicResult = this.completeExploring(targetNode, crew);
+                result.resourcesGained = relicResult.resources;
+                result.crewLost = relicResult.crewLost;
+                result.success = relicResult.success;
+                result.message = relicResult.message;
+                break;
+            case 'monster':
+                const huntResult = this.completeHunting(targetNode, crew);
+                result.resourcesGained = huntResult.resources;
+                result.crewLost = huntResult.crewLost;
+                result.success = huntResult.success;
+                result.message = huntResult.message;
+                break;
+        }
+        
+        // ✅ เพิ่มทรัพยากรให้ state
+        for (const [type, amount] of Object.entries(result.resourcesGained)) {
+            state.addResource(type, amount);
+        }
+        
+        vehicle.completeMission();
+        
+        // ✅ คืน crew
+        crew.forEach(c => {
+            c.state = 'idle';
+            c.assignedVehicleId = null;
+        });
+        
+        EventBus.emit(EVENTS.MISSION_COMPLETED, result);
+        
+        return result;
+    }
+    
+    private completeGathering(node: MapNode, crew: Crew[]): { [key: string]: number } {
+        const rng = RandomGenerator.getInstance();        const resourceType = node.resourceType || 'wood';
+        
+        // ✅ คำนวณ yield
+        let totalEfficiency = 0;
+        crew.forEach(c => totalEfficiency += c.getGatheringEfficiency());
+        
+        const range = node.resourceAmount || { min: 10, max: 20 };
+        const baseAmount = rng.randomInt(range.min, range.max);
+        
+        const rarityMult = GAME_CONFIG.RESOURCE_NODE_RARITY[node.rarity || 'common'];
+        
+        // ✅ Yield = base × efficiency multiplier × rarity
+        const efficiencyMult = 1 + (totalEfficiency / GAME_CONFIG.EFFICIENCY_MAX_PER_CREW) * 0.5;
+        const finalAmount = Math.floor(baseAmount * efficiencyMult * rarityMult);
+        
+        return { [resourceType]: finalAmount };
+    }
+    
+    private completeExploring(node: MapNode, crew: Crew[]): {
+        success: boolean;
+        resources: { [key: string]: number };
+        crewLost: number[];
+        message: string;
+    } {
+        const rng = RandomGenerator.getInstance();        
+        const threat = node.threat || 5;
+        const threatReduction = 0.5;
+        const threatAfter = threat * (1 - threatReduction);
+        
+        // ✅ Success Rate
+        const successRate = Math.max(0, 100 - threatAfter * 10);
+        const success = rng.random() * 100 < successRate;
+        
+        // ✅ Resources
+        const resources: { [key: string]: number } = {};
+        if (success) {
+            resources['wood'] = rng.randomInt(10, 30);
+            resources['stone'] = rng.randomInt(5, 15);
+        } else {
+            resources['wood'] = rng.randomInt(2, 5);
+        }
+        
+        // ✅ Crew Lost
+        const crewLost: number[] = [];
+        if (threatAfter > 5) {
+            const casualtyChance = (threatAfter - 5) * 10;  // 10% ต่อ threat 1 หน่วย
+            crew.forEach(c => {
+                if (rng.random() * 100 < casualtyChance) {
+                    c.hp = 0;
+                    crewLost.push(c.id);
+                }
+            });
+        }
+        
         return {
-            success: true,
-            message: `✅ ${crew.name} gathered ${amount} ${target.type}! (${Math.floor(totalTime)} units, ${target.rankName} rank)`,
-            resources: { [target.type]: amount }
+            success,
+            resources,
+            crewLost,
+            message: success 
+                ? `🏛️ Found relic resources!` 
+                : `⏰ Didn't find relic...`,
         };
     }
-
-    // ✅ Relic Search - ใช้ระบบ HP
-    private executeRelicSearch(crew: Crew, target: ResourceNode, travelTime: number, actionTime: number): MissionResult {
-        const totalTime = travelTime * 2 + actionTime;
-        const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-
-        if (totalTime > dayTimeLimit) {
-            const remainingTime = dayTimeLimit - travelTime * 2;
-            if (remainingTime <= 0) {
-                return {
-                    success: false,
-                    message: `❌ ${crew.name} had no time to travel to the relic site!`
-                };
-            }
-            
-            // ✅ คำนวณ damage ที่ทำได้
-            const proficiency = crew.getEffectiveSearching();
-            const damageDone = Math.floor(remainingTime * proficiency);
-            const remainingHp = target.hp - damageDone;
-            
-            if (damageDone > 0 && remainingHp <= 0) {
-                // ✅ ค้นพบ relic (แม้เวลาจะเหลือน้อย)
-                const successRate = 0.3 + (damageDone / target.maxHp) * 0.5;
-                if (Math.random() < successRate) {
-                    this.resourceManager.addResource('food', 10);
-                    this.resourceManager.addResource('wood', 15);
-                    return {
-                        success: true,
-                        message: `🎉 ${crew.name} found a ${target.rankName} Relic! (Time was running out!)`,
-                        relic: `🌟 ${target.rankName} Relic`,
-                        resources: { food: 10, wood: 15 }
-                    };
-                }
-            }
-            
-            return {
-                success: false,
-                message: `⏰ ${crew.name} ran out of time searching for relic!`,
-            };
-        }
-
-        // ✅ เวลาพอ
-        const successRate = 0.3 + crew.getEffectiveSearching() / 200;
-        if (Math.random() < successRate) {
-            this.resourceManager.addResource('food', 10);
-            this.resourceManager.addResource('wood', 15);
-            return {
-                success: true,
-                message: `🎉 ${crew.name} found a ${target.rankName} Relic! (${Math.floor(totalTime)} units)`,
-                relic: `🌟 ${target.rankName} Relic`,
-                resources: { food: 10, wood: 15 }
-            };
-        } else {
-            this.resourceManager.addResource('food', 5);
-            this.resourceManager.addResource('stone', 5);
-            return {
-                success: true,
-                message: `🔍 ${crew.name} didn't find relic but found resources! (${Math.floor(totalTime)} units)`,
-                resources: { food: 5, stone: 5 }
-            };
-        }
-    }
-
-    // ✅ Monster Hunt - ใช้ระบบ HP
-    private executeMonsterHunt(crew: Crew, target: ResourceNode, travelTime: number, actionTime: number): MissionResult {
-        const totalTime = travelTime * 2 + actionTime;
-        const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-
-        if (totalTime > dayTimeLimit) {
-            const remainingTime = dayTimeLimit - travelTime * 2;
-            if (remainingTime <= 0) {
-                return {
-                    success: false,
-                    message: `❌ ${crew.name} had no time to travel to ${target.monsterName}!`
-                };
-            }
-            
-            // ✅ คำนวณ damage ที่ทำได้
-            const proficiency = crew.getEffectiveHunting();
-            const damageDone = Math.floor(remainingTime * proficiency);
-            const remainingHp = target.hp - damageDone;
-            
-            if (damageDone > 0 && remainingHp <= 0) {
-                // ✅ ล่าสำเร็จ (แม้เวลาจะเหลือน้อย)
-                const parts = ['Fangs', 'Hides', 'Claws'];
-                const part = parts[Math.floor(Math.random() * parts.length)];
-                this.resourceManager.addResource('food', 10);
-                this.resourceManager.addMonsterPart(
-                    part.toLowerCase() as 'fangs' | 'hides' | 'claws',
-                    1
-                );
-                return {
-                    success: true,
-                    message: `🎉 ${crew.name} defeated ${target.monsterName}! Got ${part}! (Time was running out!)`,
-                    monsterPart: part,
-                    resources: { food: 10 }
-                };
-            } else {
-                // ✅ ได้รับความเสียหาย (แต่ไม่ตาย เพราะมีเวลาสู้บ้าง)
-                const damage = Math.floor(5 + Math.random() * 10);
-                const dead = crew.takeDamage(damage);
-                return {
-                    success: false,
-                    message: dead 
-                        ? `💀 ${crew.name} died fighting ${target.monsterName}!`
-                        : `💢 ${crew.name} failed to hunt ${target.monsterName} (took ${damage} damage, time ran out)!`
-                };
-            }
-        }
-
-        // ✅ เวลาพอ
-        const successRate = 0.2 + crew.getEffectiveHunting() / 300 - (target.difficulty || 1) * 0.05;
-        if (Math.random() < successRate) {
-            const parts = ['Fangs', 'Hides', 'Claws'];
-            const part = parts[Math.floor(Math.random() * parts.length)];
-            const amount = 1 + Math.floor(Math.random() * 3);
-            this.resourceManager.addResource('food', 20);
-            this.resourceManager.addMonsterPart(
-                part.toLowerCase() as 'fangs' | 'hides' | 'claws',
-                amount
-            );
-            return {
-                success: true,
-                message: `🎉 ${crew.name} defeated ${target.monsterName}! Got ${part}x${amount}! (${Math.floor(totalTime)} units, ${target.rankName} rank)`,
-                monsterPart: part,
-                resources: { food: 20 }
-            };
-        } else {
-            const damage = 5 + Math.floor(Math.random() * 15);
-            const dead = crew.takeDamage(damage);
-            return {
-                success: false,
-                message: dead 
-                    ? `💀 ${crew.name} died fighting ${target.monsterName}!`
-                    : `💢 ${crew.name} failed to hunt ${target.monsterName} (took ${damage} damage)!`
-            };
-        }
-    }
-
-    // ✅ Collaborative Gathering - ใช้ระบบ HP
-    private executeCollaborativeGathering(
-        crews: Crew[], 
-        target: ResourceNode, 
-        travelTime: number, 
-        actionTime: number
-    ): MissionResult {
-        const totalTime = travelTime * 2 + actionTime;
-        const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-        const crewNames = crews.map(c => c.name).join(' + ');
+    
+    private completeHunting(node: MapNode, crew: Crew[]): {
+        success: boolean;
+        resources: { [key: string]: number };
+        crewLost: number[];
+        message: string;
+    } {
+        const rng = RandomGenerator.getInstance();        
+        const monsterType = node.monsterType || 'A';
+        const monsterData = GAME_CONFIG.MONSTER_TYPES[monsterType as keyof typeof GAME_CONFIG.MONSTER_TYPES];
         
-        // ✅ คำนวณความสามารถรวม
-        const totalProficiency = crews.reduce((sum, c) => sum + c.getEffectiveGathering(), 0);
-
-        // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
-        if (totalTime > dayTimeLimit) {
-            const remainingTime = dayTimeLimit - travelTime * 2;
-            if (remainingTime <= 0) {
-                return {
-                    success: false,
-                    message: `❌ ${crewNames} had no time to travel to ${target.type}!`
-                };
-            }
+        if (!monsterData) {
+            return { success: false, resources: {}, crewLost: [], message: '❌ No monster data' };
+        }
+        
+        const amountRange = GAME_CONFIG.MONSTER_AMOUNT_BY_RANK[monsterData.rank as keyof typeof GAME_CONFIG.MONSTER_AMOUNT_BY_RANK];
+        const amount = rng.randomInt(amountRange.min, amountRange.max);
+        
+        // ✅ Crew Damage
+        const crewLost: number[] = [];
+        const crewDamage = monsterData.atk * amount;
+        
+        // ✅ กระจาย damage ให้ crew
+        crew.forEach(c => {
+            const damage = Math.floor(crewDamage / crew.length);
+            c.takeDamage(damage);
             
-            // ✅ คำนวณ damage รวมที่ทำได้ในช่วงเวลาที่เหลือ
-            const totalDamage = Math.floor(remainingTime * totalProficiency);
-            const damagePerCrew = Math.floor(totalDamage / crews.length);
-            
-            if (totalDamage > 0 && target.hp > 0) {
-                // ✅ ได้ทรัพยากรตามสัดส่วน damage ที่ทำได้
-                const gatheredAmount = Math.floor((totalDamage / target.maxHp) * target.amount);
-                const actualGathered = Math.min(gatheredAmount, target.amount);
-                
-                if (actualGathered > 0) {
-                    this.resourceManager.addResource(target.type as any, actualGathered);
-                    return {
-                        success: true,
-                        message: `⚠️ ${crewNames} gathered ${actualGathered} ${target.type} (time ran out! Did ${Math.floor(totalDamage)} damage, ${crews.length} crews)`,
-                        resources: { [target.type]: actualGathered }
-                    };
-                }
+            if (!c.isAlive()) {
+                crewLost.push(c.id);
             }
+        });
+        
+        // ✅ ถ้ายังมี crew รอด → ได้ของ
+        const aliveCrew = crew.filter(c => c.isAlive());
+        
+        if (aliveCrew.length === 0) {
             return {
                 success: false,
-                message: `❌ ${crewNames} couldn't gather anything (time ran out before gathering)!`
+                resources: {},
+                crewLost,
+                message: `💀 All crew died fighting monsters!`,
             };
         }
-
-        // ✅ เวลาพอ → ได้ทรัพยากรเต็ม (พร้อมโบนัสจากจำนวนคน)
-        const bonusMultiplier = 1 + (crews.length - 1) * 0.2; // +20% ต่อคนที่เพิ่ม
-        const amount = Math.floor(target.amount * bonusMultiplier);
         
-        this.resourceManager.addResource(target.type as any, amount);
+        // ✅ Resources
+        const resources: { [key: string]: number } = {};
+        resources['food'] = rng.randomInt(20, 50);
+        resources['hides'] = rng.randomInt(5, 15);
+        
         return {
             success: true,
-            message: `✅ ${crewNames} gathered ${amount} ${target.type}! (${Math.floor(totalTime)} units, ${target.rankName} rank, ${crews.length} crews)`,
-            resources: { [target.type]: amount }
+            resources,
+            crewLost,
+            message: `🎉 Hunted ${amount} monsters! Lost ${crewLost.length} crew.`,
         };
     }
-
-    // ✅ Collaborative Relic Search - ใช้ระบบ HP
-    private executeCollaborativeRelicSearch(
-        crews: Crew[], 
-        target: ResourceNode, 
-        travelTime: number, 
-        actionTime: number
-    ): MissionResult {
-        const totalTime = travelTime * 2 + actionTime;
-        const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-        const crewNames = crews.map(c => c.name).join(' + ');
+    
+    // ============================================================
+    // CHECK MISSION
+    // ============================================================
+    isMissionComplete(mission: MissionState): boolean {
+        return mission.phase === 'complete';
+    }
+    
+    checkStranded(mission: MissionState): boolean {
+        // ✅ ต้องกลับก่อน 18:00
+        const state = GameState;
+        const time = state.getTime();
         
-        // ✅ คำนวณความสามารถรวม
-        const totalProficiency = crews.reduce((sum, c) => sum + c.getEffectiveSearching(), 0);
-        const avgProficiency = totalProficiency / crews.length;
-
-        // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
-        if (totalTime > dayTimeLimit) {
-            const remainingTime = dayTimeLimit - travelTime * 2;
-            if (remainingTime <= 0) {
-                return {
-                    success: false,
-                    message: `❌ ${crewNames} had no time to travel to the relic site!`
-                };
-            }
-            
-            // ✅ คำนวณ damage รวมที่ทำได้
-            const totalDamage = Math.floor(remainingTime * totalProficiency);
-            
-            if (totalDamage > 0 && target.hp > 0) {
-                // ✅ ค้นพบ relic ถ้าทำ damage ได้เกินครึ่งของ HP
-                const damageRatio = Math.min(1, totalDamage / target.maxHp);
-                
-                if (damageRatio > 0.5) {
-                    const successRate = 0.3 + damageRatio * 0.4 + (crews.length - 1) * 0.05;
-                    if (Math.random() < successRate) {
-                        const bonusFood = 5 + crews.length * 3;
-                        const bonusWood = 8 + crews.length * 3;
-                        this.resourceManager.addResource('food', bonusFood);
-                        this.resourceManager.addResource('wood', bonusWood);
-                        return {
-                            success: true,
-                            message: `🎉 ${crewNames} found a ${target.rankName} Relic! (Time was running out! ${crews.length} crews)`,
-                            relic: `🌟 ${target.rankName} Relic`,
-                            resources: { food: bonusFood, wood: bonusWood }
-                        };
-                    }
-                }
-                
-                // ✅ ไม่เจอแต่ได้ทรัพยากรบ้าง
-                const woodFound = Math.floor(5 * damageRatio * (1 + (crews.length - 1) * 0.2));
-                if (woodFound > 0) {
-                    this.resourceManager.addResource('wood', woodFound);
-                    return {
-                        success: false,
-                        message: `⏰ ${crewNames} ran out of time... found some wood though! (${woodFound} wood)`,
-                        resources: { wood: woodFound }
-                    };
-                }
-            }
-            
-            return {
-                success: false,
-                message: `⏰ ${crewNames} reached the relic site but had no time to search!`
-            };
-        }
-
-        // ✅ เวลาพอ
-        const successRate = 0.3 + avgProficiency / 200 + (crews.length - 1) * 0.08;
-        if (Math.random() < successRate) {
-            const bonusFood = 10 + crews.length * 5;
-            const bonusWood = 15 + crews.length * 5;
-            this.resourceManager.addResource('food', bonusFood);
-            this.resourceManager.addResource('wood', bonusWood);
-            return {
-                success: true,
-                message: `🎉 ${crewNames} found a ${target.rankName} Relic! (${Math.floor(totalTime)} units, ${crews.length} crews)`,
-                relic: `🌟 ${target.rankName} Relic`,
-                resources: { food: bonusFood, wood: bonusWood }
-            };
-        } else {
-            const bonusFood = 5 + crews.length * 3;
-            const bonusStone = 5 + crews.length * 3;
-            this.resourceManager.addResource('food', bonusFood);
-            this.resourceManager.addResource('stone', bonusStone);
-            return {
-                success: true,
-                message: `🔍 ${crewNames} didn't find relic but found resources! (${Math.floor(totalTime)} units)`,
-                resources: { food: bonusFood, stone: bonusStone }
-            };
-        }
-    }
-
-    // ✅ Collaborative Monster Hunt - ใช้ระบบ HP
-    private executeCollaborativeMonsterHunt(
-        crews: Crew[], 
-        target: ResourceNode, 
-        travelTime: number, 
-        actionTime: number
-    ): MissionResult {
-        const totalTime = travelTime * 2 + actionTime;
-        const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-        const crewNames = crews.map(c => c.name).join(' + ');
-        
-        // ✅ คำนวณความสามารถรวม
-        const totalProficiency = crews.reduce((sum, c) => sum + c.getEffectiveHunting(), 0);
-        const avgProficiency = totalProficiency / crews.length;
-        const avgDefense = crews.reduce((sum, c) => {
-            let defense = 0;
-            if (c.equipment.armor) defense += c.equipment.armor.defenseBonus || 0;
-            return sum + defense;
-        }, 0) / crews.length;
-
-        // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เหลือ
-        if (totalTime > dayTimeLimit) {
-            const remainingTime = dayTimeLimit - travelTime * 2;
-            if (remainingTime <= 0) {
-                return {
-                    success: false,
-                    message: `❌ ${crewNames} had no time to travel to ${target.monsterName}!`
-                };
-            }
-            
-            // ✅ คำนวณ damage รวมที่ทำได้
-            const totalDamage = Math.floor(remainingTime * totalProficiency);
-            const damageRatio = Math.min(1, totalDamage / target.maxHp);
-            
-            if (totalDamage > 0 && target.hp > 0) {
-                // ✅ ถ้าทำ damage เกิน 60% ของ HP → ล่าสำเร็จ
-                if (damageRatio > 0.6) {
-                    const parts = ['Fangs', 'Hides', 'Claws'];
-                    const part = parts[Math.floor(Math.random() * parts.length)];
-                    const amount = 1 + Math.floor(Math.random() * 2) + (crews.length - 1);
-                    this.resourceManager.addResource('food', 10 + crews.length * 5);
-                    this.resourceManager.addMonsterPart(
-                        part.toLowerCase() as 'fangs' | 'hides' | 'claws',
-                        amount
-                    );
-                    return {
-                        success: true,
-                        message: `🎉 ${crewNames} defeated ${target.monsterName}! Got ${part}x${amount}! (Time was running out! ${crews.length} crews)`,
-                        monsterPart: part,
-                        resources: { food: 10 + crews.length * 5 }
-                    };
-                } else {
-                    // ✅ สู้ไม่สำเร็จ แต่ได้รับความเสียหายน้อยลง (因为有队友帮忙)
-                    const damagePerCrew = Math.floor((3 + Math.random() * 8) / crews.length);
-                    let deadCount = 0;
-                    for (const crew of crews) {
-                        const dead = crew.takeDamage(damagePerCrew);
-                        if (dead) deadCount++;
-                    }
-                    return {
-                        success: false,
-                        message: deadCount > 0
-                            ? `💀 ${deadCount} crew(s) died fighting ${target.monsterName} (time ran out)!`
-                            : `💢 ${crewNames} failed to hunt ${target.monsterName} (took ${damagePerCrew} damage each, time ran out)!`
-                    };
-                }
-            }
-            
-            return {
-                success: false,
-                message: `⏰ ${crewNames} reached ${target.monsterName} but had no time to fight!`
-            };
-        }
-
-        // ✅ เวลาพอ
-        const successRate = 0.2 + avgProficiency / 300 + (crews.length - 1) * 0.1 - (target.difficulty || 1) * 0.05;
-        if (Math.random() < successRate) {
-            const parts = ['Fangs', 'Hides', 'Claws'];
-            const part = parts[Math.floor(Math.random() * parts.length)];
-            const amount = 1 + Math.floor(Math.random() * 3) + (crews.length - 1);
-            this.resourceManager.addResource('food', 20 + crews.length * 10);
-            this.resourceManager.addMonsterPart(
-                part.toLowerCase() as 'fangs' | 'hides' | 'claws',
-                amount
-            );
-            return {
-                success: true,
-                message: `🎉 ${crewNames} defeated ${target.monsterName}! Got ${part}x${amount}! (${Math.floor(totalTime)} units, ${target.rankName} rank, ${crews.length} crews)`,
-                monsterPart: part,
-                resources: { food: 20 + crews.length * 10 }
-            };
-        } else {
-            // ✅ ล่าไม่สำเร็จ แต่ได้รับความเสียหายน้อยลง (因为有队友帮忙)
-            const damagePerCrew = Math.floor((5 + Math.random() * 15) / crews.length);
-            let deadCount = 0;
-            for (const crew of crews) {
-                const dead = crew.takeDamage(damagePerCrew);
-                if (dead) deadCount++;
-            }
-            return {
-                success: false,
-                message: deadCount > 0
-                    ? `💀 ${deadCount} crew(s) died fighting ${target.monsterName}!`
-                    : `💢 ${crewNames} failed to hunt ${target.monsterName} (took ${damagePerCrew} damage each)!`
-            };
-        }
-    }
-
-    // ✅ Method สำหรับหลายคนร่วมกัน (ปรับให้ทำงานแม้เวลาไม่พอ)
-    executeCollaborativeMission(
-        crews: Crew[], 
-        target: ResourceNode, 
-        baseTravelTime: number
-    ): MissionResult {
-        // คำนวณความสามารถรวม
-        let totalGathering = 0;
-        let totalSearching = 0;
-        let totalHunting = 0;
-        let totalSpeed = 0;
-
-        for (const crew of crews) {
-            totalGathering += crew.getEffectiveGathering();
-            totalSearching += crew.getEffectiveSearching();
-            totalHunting += crew.getEffectiveHunting();
-            totalSpeed += crew.getEffectiveSpeed();
-        }
-
-        const avgSpeed = totalSpeed / crews.length;
-        const travelTime = baseTravelTime / avgSpeed;
-
-        let actionTime = 0;
-        let actionType = '';
-
-        if (target.isRelic) {
-            actionType = 'searching';
-            actionTime = target.getActionTime(totalSearching);
-        } else if (target.isMonster) {
-            actionType = 'hunting';
-            actionTime = target.getActionTime(totalHunting);
-        } else {
-            actionType = 'gathering';
-            actionTime = target.getActionTime(totalGathering);
-        }
-
-        const totalTime = travelTime * 2 + actionTime;
-        const dayTimeLimit = GAME_CONFIG.DAY_TIME_LIMIT;
-
-        // ✅ ถ้าเวลาไม่พอ → ทำงานให้เท่าที่เวลาเหลือ (ส่งต่อให้ method ข้างในจัดการ)
-        if (totalTime > dayTimeLimit) {
-            const remainingTime = dayTimeLimit - travelTime * 2;
-            if (remainingTime <= 0) {
-                return {
-                    success: false,
-                    message: `❌ ${crews.map(c => c.name).join(' + ')} had no time to travel!`
-                };
-            }
-            
-            // ✅ ปรับ actionTime ให้เหลือเท่าที่เวลาเหลือ
-            const ratio = remainingTime / actionTime;
-            const adjustedActionTime = actionTime * ratio;
-            
-            if (target.isRelic) {
-                return this.executeCollaborativeRelicSearch(crews, target, travelTime, adjustedActionTime);
-            } else if (target.isMonster) {
-                return this.executeCollaborativeMonsterHunt(crews, target, travelTime, adjustedActionTime);
-            } else {
-                return this.executeCollaborativeGathering(crews, target, travelTime, adjustedActionTime);
-            }
-        }
-
-        // ✅ เวลาพอ → ดำเนินการตามปกติ
-        if (target.isRelic) {
-            return this.executeCollaborativeRelicSearch(crews, target, travelTime, actionTime);
-        } else if (target.isMonster) {
-            return this.executeCollaborativeMonsterHunt(crews, target, travelTime, actionTime);
-        } else {
-            return this.executeCollaborativeGathering(crews, target, travelTime, actionTime);
-        }
-    }
-
-    private getDistance(pos1: { x: number; y: number }, pos2: { x: number; y: number }): number {
-        return Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2));
-    }
-
-    // ✅ การคำนวณเวลาเดินทาง (ใช้ speed)
-    private getTravelTime(crew: Crew, distance: number): number {
-        const speed = crew.getEffectiveSpeed();
-        // speed 0-100 → ใช้ 100 เป็น speed สูงสุด
-        const speedFactor = Math.max(0.1, speed / 100);
-        const baseTime = 500; // base time
-        return baseTime / speedFactor;
-    }
-
-    // ✅ การคำนวณเวลาปฏิบัติการ (ใช้ stat เฉพาะ)
-    private getActionTime(crew: Crew, target: ResourceNode): number {
-        let stat = 0;
-        let baseTime = 3000;
-        
-        if (target.isRelic) {
-            stat = crew.getEffectiveSearching();
-            baseTime = 4000;
-        } else if (target.isMonster) {
-            stat = crew.getEffectiveHunting();
-            baseTime = 5000;
-        } else {
-            stat = crew.getEffectiveGathering();
-            baseTime = 3000;
+        if (time.gameHour < GAME_CONFIG.NIGHT_START_HOUR) {
+            return false;
         }
         
-        const statFactor = Math.max(0.1, stat / 100);
-        return baseTime / statFactor;
+        // ✅ ถ้าเป็น night แล้วยังไม่กลับ
+        return mission.phase !== 'complete';
     }
 }

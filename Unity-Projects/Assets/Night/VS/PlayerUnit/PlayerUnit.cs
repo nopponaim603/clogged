@@ -15,8 +15,13 @@ public class PlayerUnit : MonoBehaviour
     private Transform target;
     private bool isAttacking = false;
 
+
     void Update()
     {
+        // ยังไม่เริ่ม Wave ก็ไม่ทำอะไร
+        if (!WaveManager.Instance.gameStarted)
+            return;
+
         FindClosestEnemy();
 
         if (target == null)
@@ -40,7 +45,6 @@ public class PlayerUnit : MonoBehaviour
             }
         }
     }
-
     void FindClosestEnemy()
     {
         if (EnemyManager.Instance == null)

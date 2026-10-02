@@ -33,6 +33,9 @@ public class EnemyMove : MonoBehaviour
 
     void Update()
     {
+        if (WaveManager.Instance == null || !WaveManager.Instance.gameStarted)
+            return;
+
         if (reachedBase)
             return;
 
