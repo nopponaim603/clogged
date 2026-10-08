@@ -16,7 +16,8 @@ public class GatherMapController : MonoBehaviour
     [Header("Map Setup")]
     [SerializeField] private RectTransform mapPanel;
     [SerializeField] private MapNodeView nodeViewPrefab;
-    [SerializeField] private Vector2 basePosition = new Vector2(0f, -350f);
+    [Tooltip("The base sits at the centre of MapPanel, plus this offset. Leave at (0,0) for dead centre.")]
+    [SerializeField] private Vector2 baseOffset = Vector2.zero;
 
     [Header("Scout Walker")]
     [SerializeField] private ScoutWalkerView scoutWalker;
@@ -29,6 +30,9 @@ public class GatherMapController : MonoBehaviour
     public event Action<GatherDispatchResult> OnTripResolved;
 
     public MapNodeView SelectedNode => selectedNode;
+
+    /// <summary>Where the scout rests and trips start/end, in MapPanel-centre-relative anchored coordinates.</summary>
+    private Vector2 BasePosition => baseOffset;
 
     private void Awake()
     {
@@ -47,7 +51,7 @@ public class GatherMapController : MonoBehaviour
 
         if (scoutWalker != null)
         {
-            scoutWalker.SnapTo(basePosition);
+            scoutWalker.SnapTo(BasePosition);
         }
 
         MapNodeView.OnAnyNodeClicked += HandleNodeClicked;
@@ -58,19 +62,101 @@ public class GatherMapController : MonoBehaviour
         MapNodeView.OnAnyNodeClicked -= HandleNodeClicked;
     }
 
+    [Header("Scatter Layout")]
+    [SerializeField] private int nodesPerDifficulty = 2;
+    [Tooltip("Keeps nodes away from the screen edges (anchored units). Bottom is larger because the roster, toggles and buttons live there; top-right holds the message text.")]
+    [SerializeField] private float marginLeft = 120f;
+    [SerializeField] private float marginRight = 120f;
+    [SerializeField] private float marginTop = 120f;
+    [SerializeField] private float marginBottom = 260f;
+    [Tooltip("No node spawns closer than this to the base, so the scout always has a clear walk.")]
+    [SerializeField] private float baseClearRadius = 180f;
+    [Tooltip("How many random spots are tried per node; the one furthest from everything else wins. Higher = more evenly spread.")]
+    [SerializeField] private int candidatesPerNode = 60;
+
     /// <summary>
-    /// Placeholder layout: 2 nodes per zone, arranged in bands by distance
-    /// from the base (Near closest, Far furthest). Reposition freely once
-    /// real map art exists - nothing else depends on these exact coordinates.
+    /// Base in the middle, dungeons spread all around it. Each node is placed
+    /// by "best candidate" sampling: try several random spots and keep the one
+    /// furthest from the base and from every node already placed, so nodes
+    /// end up evenly spread instead of clumping. Difficulty is shown by color,
+    /// not position. Nodes are created round-robin (Easy, Normal, Hard, Easy...)
+    /// so each difficulty is spread out too.
     /// </summary>
     private void SetupDefaultNodes()
     {
-        nodeData.Add(new MapNodeData { nodeId = "near_a", zone = GatherZone.Near, anchoredPosition = new Vector2(-150f, -150f) });
-        nodeData.Add(new MapNodeData { nodeId = "near_b", zone = GatherZone.Near, anchoredPosition = new Vector2(150f, -150f) });
-        nodeData.Add(new MapNodeData { nodeId = "mid_a", zone = GatherZone.Mid, anchoredPosition = new Vector2(-200f, 50f) });
-        nodeData.Add(new MapNodeData { nodeId = "mid_b", zone = GatherZone.Mid, anchoredPosition = new Vector2(200f, 50f) });
-        nodeData.Add(new MapNodeData { nodeId = "far_a", zone = GatherZone.Far, anchoredPosition = new Vector2(-100f, 280f) });
-        nodeData.Add(new MapNodeData { nodeId = "far_b", zone = GatherZone.Far, anchoredPosition = new Vector2(150f, 280f) });
+        GetScatterBounds(out Vector2 min, out Vector2 max);
+
+        var difficulties = new[] { GatherZone.Easy, GatherZone.Normal, GatherZone.Hard };
+        for (int i = 0; i < nodesPerDifficulty; i++)
+        {
+            foreach (var difficulty in difficulties)
+            {
+                nodeData.Add(new MapNodeData
+                {
+                    nodeId = $"{difficulty}_{i}",
+                    zone = difficulty,
+                    anchoredPosition = FindScatterPosition(min, max)
+                });
+            }
+        }
+    }
+
+    /// <summary>Bounds are read from MapPanel's real size, so they follow the canvas/resolution automatically.</summary>
+    private void GetScatterBounds(out Vector2 min, out Vector2 max)
+    {
+        Canvas.ForceUpdateCanvases();
+
+        float halfW = mapPanel.rect.width * 0.5f;
+        float halfH = mapPanel.rect.height * 0.5f;
+
+        min = new Vector2(-halfW + marginLeft, -halfH + marginBottom);
+        max = new Vector2(halfW - marginRight, halfH - marginTop);
+
+        // Panel too small for the margins (or not laid out yet): fall back to the inner 60% so we never get an inverted box.
+        if (max.x <= min.x || max.y <= min.y)
+        {
+            min = new Vector2(-halfW * 0.6f, -halfH * 0.6f);
+            max = new Vector2(halfW * 0.6f, halfH * 0.6f);
+        }
+    }
+
+    private Vector2 FindScatterPosition(Vector2 min, Vector2 max)
+    {
+        Vector2 best = Vector2.zero;
+        float bestScore = -1f;
+
+        for (int i = 0; i < candidatesPerNode; i++)
+        {
+            Vector2 candidate = new Vector2(
+                UnityEngine.Random.Range(min.x, max.x),
+                UnityEngine.Random.Range(min.y, max.y));
+
+            float distToBase = Vector2.Distance(candidate, BasePosition);
+            if (distToBase < baseClearRadius) continue;
+
+            // Score = distance to the nearest neighbour (base or placed node). Biggest wins.
+            float score = distToBase;
+            foreach (var existing in nodeData)
+            {
+                score = Mathf.Min(score, Vector2.Distance(candidate, existing.anchoredPosition));
+            }
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+
+        if (bestScore < 0f)
+        {
+            // Every candidate landed inside the base radius (tiny panel) - just drop one somewhere in bounds.
+            best = new Vector2(
+                UnityEngine.Random.Range(min.x, max.x),
+                UnityEngine.Random.Range(min.y, max.y));
+        }
+
+        return best;
     }
 
     private void SpawnNodeViews()
@@ -125,7 +211,7 @@ public class GatherMapController : MonoBehaviour
         {
             GatherDispatchResult result = GatherDispatchController.Instance.Dispatch(zone, selectedUnits);
 
-            scoutWalker.MoveTo(basePosition, () =>
+            scoutWalker.MoveTo(BasePosition, () =>
             {
                 OnTripResolved?.Invoke(result);
             });

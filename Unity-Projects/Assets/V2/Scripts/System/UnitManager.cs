@@ -43,25 +43,25 @@ public class UnitManager : MonoBehaviour
         units.Add(new UnitCharacter
         {
             unitName = "Ann",
-            aptitudes = new List<AptitudeTag> { AptitudeTag.Speed, AptitudeTag.Near },
-            nonAptitudes = new List<AptitudeTag> { AptitudeTag.Far }
+            aptitudes = new List<AptitudeTag> { AptitudeTag.Speed, AptitudeTag.Easy },
+            nonAptitudes = new List<AptitudeTag> { AptitudeTag.Hard }
         });
         units.Add(new UnitCharacter
         {
             unitName = "Boon",
-            aptitudes = new List<AptitudeTag> { AptitudeTag.Endurance, AptitudeTag.Far },
+            aptitudes = new List<AptitudeTag> { AptitudeTag.Endurance, AptitudeTag.Hard },
             nonAptitudes = new List<AptitudeTag> { AptitudeTag.Cooking }
         });
         units.Add(new UnitCharacter
         {
             unitName = "Cia",
-            aptitudes = new List<AptitudeTag> { AptitudeTag.Gathering, AptitudeTag.Mid, AptitudeTag.Cooking },
+            aptitudes = new List<AptitudeTag> { AptitudeTag.Gathering, AptitudeTag.Normal, AptitudeTag.Cooking },
             nonAptitudes = new List<AptitudeTag> { AptitudeTag.Combat }
         });
         units.Add(new UnitCharacter
         {
             unitName = "Dan",
-            aptitudes = new List<AptitudeTag> { AptitudeTag.Combat, AptitudeTag.Far },
+            aptitudes = new List<AptitudeTag> { AptitudeTag.Combat, AptitudeTag.Hard },
             nonAptitudes = new List<AptitudeTag> { AptitudeTag.Cooking }
         });
     }

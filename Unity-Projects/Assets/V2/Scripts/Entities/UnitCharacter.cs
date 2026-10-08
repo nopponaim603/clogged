@@ -17,9 +17,9 @@ public enum UnitState
 /// </summary>
 public enum AptitudeTag
 {
-    Near,
-    Mid,
-    Far,
+    Easy,
+    Normal,
+    Hard,
     Cooking,
     Combat,
     Gathering,
@@ -72,11 +72,15 @@ public class UnitCharacter
     /// <summary>A unit can only be sent gathering once per day, even though it may return to Idle with AP left over.</summary>
     public bool HasGatheredToday { get; private set; }
 
+    /// <summary>The manual "feed to reduce starvation" button can only be used once per day per unit - separate from the automatic start-of-day feeding.</summary>
+    public bool HasBeenFedManuallyToday { get; private set; }
+
     public bool IsAlive => state != UnitState.Missing;
     public bool CanBeDispatched => state == UnitState.Idle;
     public bool CanBeSentGathering => state == UnitState.Idle && !HasGatheredToday;
 
     public void MarkGatheredToday() => HasGatheredToday = true;
+    public void MarkFedManuallyToday() => HasBeenFedManuallyToday = true;
 
     public bool HasAptitude(AptitudeTag tag) => aptitudes.Contains(tag);
     public bool HasNonAptitude(AptitudeTag tag) => nonAptitudes.Contains(tag);
@@ -112,6 +116,7 @@ public class UnitCharacter
     {
         currentActionPoints = maxActionPoints;
         HasGatheredToday = false;
+        HasBeenFedManuallyToday = false;
         if (state == UnitState.Resting)
         {
             state = UnitState.Idle;

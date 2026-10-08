@@ -14,9 +14,9 @@ public class MapNodeView : MonoBehaviour
     [SerializeField] private Image iconImage;
     [SerializeField] private Image selectedHighlight;
 
-    private static readonly Color NearColor = new Color(0.45f, 0.75f, 0.45f);
-    private static readonly Color MidColor = new Color(0.85f, 0.75f, 0.3f);
-    private static readonly Color FarColor = new Color(0.8f, 0.3f, 0.3f);
+    private static readonly Color EasyColor = new Color(0.45f, 0.75f, 0.45f);
+    private static readonly Color NormalColor = new Color(0.85f, 0.75f, 0.3f);
+    private static readonly Color HardColor = new Color(0.8f, 0.3f, 0.3f);
 
     public MapNodeData Data { get; private set; }
 
@@ -50,9 +50,9 @@ public class MapNodeView : MonoBehaviour
     {
         switch (zone)
         {
-            case GatherZone.Near: return NearColor;
-            case GatherZone.Mid: return MidColor;
-            case GatherZone.Far: return FarColor;
+            case GatherZone.Easy: return EasyColor;
+            case GatherZone.Normal: return NormalColor;
+            case GatherZone.Hard: return HardColor;
             default: return Color.white;
         }
     }

@@ -19,6 +19,8 @@ public class GatherDispatchResult
 
     public bool traitAwarded;
     public TraitPolarity traitPolarity;
+    public string traitName;
+    public UnitCharacter traitRecipient;
 
     public bool unlockedCoreItemMaterial;
     public bool obtainedCoreItem;
@@ -149,7 +151,7 @@ public class GatherDispatchController : MonoBehaviour
                 break;
 
             case GatherResultTier.Fumble:
-                if (zone == GatherZone.Far)
+                if (zone == GatherZone.Hard)
                 {
                     LoseRandomUnit(selectedUnits, result);
                 }
@@ -183,12 +185,11 @@ public class GatherDispatchController : MonoBehaviour
         if (UnityEngine.Random.value > chance) return;
 
         UnitCharacter recipient = selectedUnits[UnityEngine.Random.Range(0, selectedUnits.Count)];
-        recipient.traits.Add(new UnitTrait
-        {
-            traitName = polarity == TraitPolarity.Positive ? "Trait ดี (ยังไม่ตั้งชื่อ)" : "Trait เสีย (ยังไม่ตั้งชื่อ)",
-            polarity = polarity
-        });
+        UnitTrait trait = TraitLibrary.CreateRandom(polarity, recipient);
+        recipient.traits.Add(trait);
 
+        result.traitName = trait.traitName;
+        result.traitRecipient = recipient;
         result.traitAwarded = true;
         result.traitPolarity = polarity;
     }
@@ -211,12 +212,12 @@ public class GatherDispatchController : MonoBehaviour
     {
         if (RunResources.Instance == null) return;
 
-        if (zone == GatherZone.Mid && !RunResources.Instance.HasCoreItemUnlock)
+        if (zone == GatherZone.Normal && !RunResources.Instance.HasCoreItemUnlock)
         {
             RunResources.Instance.UnlockCoreItemMaterial();
             result.unlockedCoreItemMaterial = true;
         }
-        else if (zone == GatherZone.Far && RunResources.Instance.HasCoreItemUnlock && !RunResources.Instance.HasCoreItem)
+        else if (zone == GatherZone.Hard && RunResources.Instance.HasCoreItemUnlock && !RunResources.Instance.HasCoreItem)
         {
             RunResources.Instance.ObtainCoreItem();
             result.obtainedCoreItem = true;
