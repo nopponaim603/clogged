@@ -3,9 +3,9 @@ using UnityEngine;
 
 public enum GatherZone
 {
-    Near,
-    Mid,
-    Far
+    Easy,
+    Normal,
+    Hard
 }
 
 [System.Serializable]
@@ -26,12 +26,12 @@ public class GatherZoneConfig
     [Tooltip("On Hard Success, one of these is picked at random and added on top of the main loot.")]
     public List<LootAmount> hardSuccessBonusPool = new List<LootAmount>();
 
-    /// <summary>Matches this zone against a unit's AptitudeTag lists (AptitudeTag.Near/Mid/Far mirror GatherZone).</summary>
+    /// <summary>Matches this zone against a unit's AptitudeTag lists (AptitudeTag.Easy/Normal/Hard mirror GatherZone).</summary>
     public AptitudeTag ZoneTag => zone switch
     {
-        GatherZone.Near => AptitudeTag.Near,
-        GatherZone.Mid => AptitudeTag.Mid,
-        GatherZone.Far => AptitudeTag.Far,
-        _ => AptitudeTag.Near
+        GatherZone.Easy => AptitudeTag.Easy,
+        GatherZone.Normal => AptitudeTag.Normal,
+        GatherZone.Hard => AptitudeTag.Hard,
+        _ => AptitudeTag.Easy
     };
 }

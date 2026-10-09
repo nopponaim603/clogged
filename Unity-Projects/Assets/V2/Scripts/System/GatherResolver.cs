@@ -54,7 +54,7 @@ public static class GatherResolver
         if (hasNonApt) value -= 15;
 
         if (sentUnits.Count == 2) value += 15;
-        if (config.zone == GatherZone.Far && sentUnits.Count == 1) value -= 20;
+        if (config.zone == GatherZone.Hard && sentUnits.Count == 1) value -= 20;
 
         if (hasPositiveTrait) value += 10;
         if (hasNegativeTrait) value -= 10;

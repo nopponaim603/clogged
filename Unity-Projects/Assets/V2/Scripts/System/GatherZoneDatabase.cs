@@ -1,6 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Holds the 3 zone configs. Defaults match the doc's "พื้นที่สำรวจ" and
+/// "ค่าความสำเร็จ" tables - all tunable in the Inspector per the doc's own
+/// "ค่าที่เปลี่ยนทีหลังได้" section.
+/// </summary>
 public class GatherZoneDatabase : MonoBehaviour
 {
     public static GatherZoneDatabase Instance { get; private set; }
@@ -26,7 +31,7 @@ public class GatherZoneDatabase : MonoBehaviour
     {
         zones.Add(new GatherZoneConfig
         {
-            zone = GatherZone.Near,
+            zone = GatherZone.Easy,
             apCost = 1,
             baseSuccessValue = 80,
             mainLoot = new LootAmount { type = InventoryItemType.CookingMaterial, amount = 2 },
@@ -38,7 +43,7 @@ public class GatherZoneDatabase : MonoBehaviour
         });
         zones.Add(new GatherZoneConfig
         {
-            zone = GatherZone.Mid,
+            zone = GatherZone.Normal,
             apCost = 2,
             baseSuccessValue = 55,
             mainLoot = new LootAmount { type = InventoryItemType.Medicine, amount = 1 },
@@ -50,7 +55,7 @@ public class GatherZoneDatabase : MonoBehaviour
         });
         zones.Add(new GatherZoneConfig
         {
-            zone = GatherZone.Far,
+            zone = GatherZone.Hard,
             apCost = 3,
             baseSuccessValue = 30,
             mainLoot = new LootAmount { type = InventoryItemType.Materials, amount = 2 },
