@@ -31,6 +31,9 @@ public class GatherMapController : MonoBehaviour
 
     public MapNodeView SelectedNode => selectedNode;
 
+    /// <summary>True from the moment a trip is confirmed until the scout is back at the base. Other panels use this to avoid giving a unit base work while it is walking out.</summary>
+    public bool TripInProgress { get; private set; }
+
     /// <summary>Where the scout rests and trips start/end, in MapPanel-centre-relative anchored coordinates.</summary>
     private Vector2 BasePosition => baseOffset;
 
@@ -125,7 +128,11 @@ public class GatherMapController : MonoBehaviour
         Vector2 best = Vector2.zero;
         float bestScore = -1f;
 
-        for (int i = 0; i < candidatesPerNode; i++)
+        // Spots too close to the base are skipped without using up one of the candidatesPerNode tries.
+        int accepted = 0;
+        int maxAttempts = candidatesPerNode * 20;
+
+        for (int attempt = 0; attempt < maxAttempts && accepted < candidatesPerNode; attempt++)
         {
             Vector2 candidate = new Vector2(
                 UnityEngine.Random.Range(min.x, max.x),
@@ -133,6 +140,8 @@ public class GatherMapController : MonoBehaviour
 
             float distToBase = Vector2.Distance(candidate, BasePosition);
             if (distToBase < baseClearRadius) continue;
+
+            accepted++;
 
             // Score = distance to the nearest neighbour (base or placed node). Biggest wins.
             float score = distToBase;
@@ -150,10 +159,10 @@ public class GatherMapController : MonoBehaviour
 
         if (bestScore < 0f)
         {
-            // Every candidate landed inside the base radius (tiny panel) - just drop one somewhere in bounds.
-            best = new Vector2(
-                UnityEngine.Random.Range(min.x, max.x),
-                UnityEngine.Random.Range(min.y, max.y));
+            // No usable spot found: put the node just outside the base clear radius.
+            Vector2 direction = UnityEngine.Random.insideUnitCircle.normalized;
+            if (direction == Vector2.zero) direction = Vector2.right;
+            best = BasePosition + direction * (baseClearRadius + 20f);
         }
 
         return best;
@@ -186,6 +195,8 @@ public class GatherMapController : MonoBehaviour
     /// </summary>
     public void ConfirmTrip(List<UnitCharacter> selectedUnits)
     {
+        if (TripInProgress) return;
+
         if (selectedNode == null)
         {
             Debug.LogWarning("[GatherMapController] No node selected.");
@@ -207,14 +218,21 @@ public class GatherMapController : MonoBehaviour
         GatherZone zone = selectedNode.Data.zone;
         Vector2 targetPos = selectedNode.Data.anchoredPosition;
 
+        TripInProgress = true;
+
         scoutWalker.MoveTo(targetPos, () =>
         {
             GatherDispatchResult result = GatherDispatchController.Instance.Dispatch(zone, selectedUnits);
+            ReturnToBase(result);
+        });
+    }
 
-            scoutWalker.MoveTo(BasePosition, () =>
-            {
-                OnTripResolved?.Invoke(result);
-            });
+    private void ReturnToBase(GatherDispatchResult result)
+    {
+        scoutWalker.MoveTo(BasePosition, () =>
+        {
+            TripInProgress = false;
+            OnTripResolved?.Invoke(result);
         });
     }
 }
