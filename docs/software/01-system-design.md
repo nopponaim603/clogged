@@ -1,5 +1,7 @@
 # clogged — System Design
 
+> ℹ️ เอกสารนี้อธิบาย **Web Prototype (Phaser)** ระยะที่ 1 — ระบบหลักปัจจุบันอยู่ใน Unity ดู [Unity V2 System Design](04-unity-system-design.md) / [Unity V2 Class Diagram](05-unity-class-diagram.md)
+
 **Version:** 1.0 | **Last Updated:** 2026-07-13
 > สร้างจากการอ่านโค้ดจริงใน `prototype_resource_game/src/` (Phaser 3 + TypeScript + Vite)
 
