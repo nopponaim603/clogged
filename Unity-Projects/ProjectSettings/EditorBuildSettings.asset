@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Day/Scenes/Setup.unity
     guid: af21d7ba0ad18144698fed2c61dd681a
   - enabled: 1
@@ -18,4 +18,3 @@ EditorBuildSettings:
     path: Assets/Night/Scenes/NPCtest.unity
     guid: 8afeee1e4c89f3f449b5c47cbc07ce59
   m_configObjects: {}
-  m_UseUCBPForAssetBundles: 0
