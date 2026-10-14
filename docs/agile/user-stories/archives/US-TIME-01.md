@@ -28,4 +28,4 @@
 
 ## 🔗 Related Files
 - Backlog: [Product Backlog](../01-product-backlog.md)
-- GDD: [Mechanics — Time/Day-Night System](../../gdd/01-mechanics.md#time--day-night-system)
+- GDD: [Mechanics — Time/Day-Night System](../../../wiki/archive/gdd-v1-prototype/01-mechanics.md#time--day-night-system)

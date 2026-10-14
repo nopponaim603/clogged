@@ -1,95 +1,63 @@
-# Survival Base — Narrative & World
+# clogged — Narrative & World
 
-**Version:** 1.0 (Prototype) | **Last Updated:** 2026-07-30
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+> V2 เน้นกลไก ยังไม่มีเนื้อเรื่องในเกม — เอกสารนี้แยก **สิ่งที่มีอยู่ในเกมจริง** ออกจาก **สิ่งที่ยังต้องออกแบบ** ให้ชัด
+> โลกของ Web Prototype (wasteland, monster, relic, Sarah/John/Emma) ดูที่ [archive](../wiki/archive/gdd-v1-prototype/02-narrative.md) — ไม่ได้ใช้ใน V2 แล้ว
 
-## World Setting
+## 1. สิ่งที่มีอยู่ในเกม V2
 
-### The Wasteland
+### 1.1 ฉากและโครงเรื่องที่สื่อผ่านกลไก
 
-A post-apocalyptic wasteland where civilization has collapsed. The player manages a small base of survivors who must survive 30 days in this hostile environment.
+| องค์ประกอบ | ในเกม | สื่อถึง |
+|---|---|---|
+| **ฐาน (Base)** | จุดกลางแมป จุดเริ่มและจุดกลับของทุกทริป | ที่หลบภัยแห่งเดียวของทีม |
+| **ถ้ำ / ดันเจี้ยน** | 6 จุดรอบฐาน 3 ระดับ (ข้อความในเกมเรียก "cave"; HUD เรียกระดับ Normal/Hard ว่า "Mid"/"Far") | ยิ่งไกลยิ่งอันตราย ยิ่งมีของมีค่า |
+| **Scout** | ไอคอนที่เดินจากฐานไปถ้ำแล้วกลับ | ทีมสำรวจที่ออกไปเสี่ยง |
+| **Core Item** | เป้าหมายของ run — ต้องหา "วัสดุ" จากถ้ำ Mid ก่อน แล้วจึงได้ตัวไอเท็มจากถ้ำ Far | สิ่งที่ทีมต้องการเพื่อออกจากสถานการณ์นี้ |
+| **7 วัน** | เส้นตายของ run | มีบางอย่างจะเกิดขึ้นหลังวันที่ 7 |
+| **Lost Signal** | ชื่อสถานะ Missing ในโค้ด — ยูนิตหายไปถาวรเมื่อ Fumble ที่ถ้ำ Far หรืออดอาหารครบ 3 stack | ทีมสื่อสารกันผ่านสัญญาณบางอย่าง |
+| **อาหาร / ยา / วัสดุ** | ทรัพยากร 4 ชนิด | ชีวิตประจำวันของผู้รอดชีวิต |
 
-**Key environmental elements:**
-- Barren, dangerous landscape (background: #1a1a2e dark blue-black)
-- Scattered resource deposits (wood, stone, iron, food, water)
-- Ancient ruins (relics) from a previous civilization
-- Dangerous creatures (monsters) that dwell in the wilderness
+### 1.2 ตัวละคร
 
-### Time Setting
+ทีม 4 คนคงที่ ปัจจุบันมีแค่ชื่อและความถนัด บุคลิกด้านล่าง **อนุมานจากความถนัด** เพื่อใช้ตั้งต้นการเขียนต่อ ยังไม่ใช่ canon
 
-- 30 days of survival
-- Each day: daylight (active hours) → night (monster attacks)
-- Resources are scarce; every day matters
-- The longer you survive, the worse the nights become (monster count increases)
+| ตัวละคร | ความถนัด / ไม่ถนัด | บทบาทในทีม (อนุมาน) |
+|---|---|---|
+| **Ann** | คล่องแคล่ว (Speed), เก่งพื้นที่ใกล้ / กลัวพื้นที่ไกล | หน่วยลาดตระเวนใกล้ฐาน ระมัดระวัง |
+| **Boon** | อึด (Endurance), เก่งพื้นที่ไกล / ทำอาหารไม่เป็น | คนแบกงานหนัก ลุยก่อนคิด |
+| **Cia** | เก็บของเก่ง (Gathering), เก่งพื้นที่กลาง, ทำอาหารเก่ง / ไม่ชอบการต่อสู้ | หัวใจของฐาน คนดูแลทุกคน |
+| **Dan** | สู้เก่ง (Combat), เก่งพื้นที่ไกล / ทำอาหารไม่เป็น | นักสู้ คู่หูของ Boon |
 
----
+### 1.3 Trait ในฐานะเรื่องเล่า
 
-## Lore (Inferred from Game Elements)
+Trait ที่ยูนิตได้จากทริปคือเรื่องเล่าที่เกิดจากการเล่น (emergent narrative) — ยูนิตที่รอดจาก Fumble จะได้ "Shaky Nerves" หรือ "Jumpy" ติดตัว ยูนิตที่ทำ Hard Success อาจกลายเป็น "Lucky Streak"
 
-### Factions
+| ดี | เสีย |
+|---|---|
+| Sharp-eyed, Steady Hands, Quick Feet, Thick-skinned, Lucky Streak | Clumsy, Jumpy, Shaky Nerves, Sluggish, Unlucky |
 
-| Entity | Role |
-|--------|------|
-| **Survivors (Player)** | Last standing group, managing a mobile base |
-| **Monsters** | Creatures of the wasteland — Goblin, Wolf, Giant Spider, Shadow Demon, Night Stalker |
-| **Ancient Civilization** | Left behind relics; their technology (circuit, aluminum) is still being salvaged |
+### 1.4 ข้อความจบเกม
 
-### Monster Ecology
+ระบบรู้ผลแล้ว (`Win`, `LoseDeadline`, `LoseAllUnitsLost`) แต่ **ยังไม่มีหน้าจอหรือข้อความจบเกม** — ร่างข้อความตั้งต้นสำหรับทีมพิจารณา:
 
-| Monster | Behavior | Notes |
-|---------|----------|-------|
-| **Goblin** | Small, weak, common | Easy hunt, low reward |
-| **Wolf** | Pack hunter, faster | Moderate threat |
-| **Giant Spider** | Ambush predator, web traps | Higher difficulty, more damage |
-| **Shadow Demon** | Stealth, hits hard | High difficulty, elite enemy |
-| **Night Stalker** | Nocturnal, unpredictable | Boss-level threat |
-| **Boss** | Ultimate threat | Appears every 3 levels, highest difficulty |
-
-### Relics
-
-Ancient structures from a prior civilization. Contain:
-- Food supplies (10 units)
-- Wood supplies (15 units)
-- Possibility of rare materials
-
-The exact nature of the ancient civilization is not defined in the prototype.
+| ผล | ร่างข้อความ |
+|---|---|
+| Win | ได้ Core Item แล้ว — ทีมของคุณมีทางรอด |
+| LoseDeadline | วันที่ 7 ผ่านไปโดยไม่มี Core Item — สายเกินไปแล้ว |
+| LoseAllUnitsLost | สัญญาณสุดท้ายเงียบลง — ไม่เหลือใครอยู่ที่ฐาน |
 
 ---
 
-## Story Progression
+## 2. สิ่งที่ยังต้องออกแบบ (Open Questions)
 
-### Win Condition
-> You survived 30 days in the wasteland. Your base endured. The survivors have a future.
+- **โลก:** ทีมอยู่ที่ไหน ทำไมติดอยู่ในฐาน ถ้ำคืออะไร
+- **Core Item:** คืออะไร ใช้ทำอะไร ทำไมต้องหาให้ได้ใน 7 วัน
+- **Lost Signal:** หายไปไหน กลับมาได้ไหม (ปัจจุบันถาวร)
+- **ข้อความระหว่างวัน:** มีเหตุการณ์/บทสนทนาตอน End Day หรือไม่
+- **ภาษา:** ข้อความในเกมตอนนี้เป็นภาษาอังกฤษทั้งหมด — จะรองรับภาษาไทยหรือไม่ (ฟอนต์ปัจจุบันไม่รองรับไทย ดู [Art Direction](03-art-direction.md#typography))
+- **ความต่อเนื่องจากแนวคิดเดิม:** ธีม "Ship → Day → Night" ของ v0.3 และระบบ Ship Navigator ใน Unity รุ่นก่อน ยังเกี่ยวกับ V2 หรือไม่
 
-### Lose Conditions
-| Trigger | Narrative |
-|---------|-----------|
-| Base destroyed | The monsters overwhelmed your defenses. The wasteland consumed everything. |
-| Food ran out | Starvation claimed your camp. No one survived. |
-| All crew died | You lost everyone. There is no one left to defend the base. |
-
----
-
-## Character Backgrounds (from Crew Templates)
-
-| Crew | Role | Personality |
-|------|------|------------|
-| **Sarah** | Gatherer / Scavenger | Fast hands, resourceful, pragmatic |
-| **John** | Scout / Archaeologist | Keen eyes, finds what others miss |
-| **Emma** | Hunter / Mercenary | Deadly with weapons, confident in combat |
-
-These are the starting crew. Additional crew are randomized with generic names and stats.
-
----
-
-## Narrative Gaps (Not Implemented)
-
-The prototype does NOT include:
-- [ ] Dialogue / voice lines
-- [ ] Cutscenes between days
-- [ ] Crew personality arcs or relationships
-- [ ] World-building exposition
-- [ ] Quest structure or story beats
-- [ ] Victory/defeat narrative variations beyond text messages
-- [ ] Lore documents or in-game journals
-
-**These are future additions.** The current prototype is mechanics-focused: survival through resource management.
+## Related Documents
+- [Game Concept](00-concept.md)
+- [Core Mechanics](01-mechanics.md)

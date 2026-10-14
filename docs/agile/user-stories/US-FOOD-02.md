@@ -30,4 +30,4 @@
 
 ## 🔗 Related Files
 - Backlog: [Product Backlog](../01-product-backlog.md)
-- GDD: [Concept — Win / Lose Conditions](../../gdd/00-concept.md#win--lose-conditions)
+- GDD: [Concept — Win / Lose Conditions](../../wiki/archive/gdd-v1-prototype/00-concept.md#win--lose-conditions)

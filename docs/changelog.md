@@ -1,5 +1,14 @@
 # Documentation Changelog — clogged
 
+## 2026-10-14
+
+- **Unity V2 Documentation** — เขียนจากโค้ดจริงใน `Unity-Projects/Assets/V2/` (scene `Core.unity`):
+  - Software: เพิ่ม [04-unity-system-design.md](./software/04-unity-system-design.md) (โครงสร้าง, Scene Flow, ระบบหลัก, data flow), [05-unity-class-diagram.md](./software/05-unity-class-diagram.md), [06-unity-core-scene-hierarchy.md](./software/06-unity-core-scene-hierarchy.md) (Hierarchy ทั้งหมดของ `Core.unity`); ใส่หมายเหตุใน 01–03 ว่าเป็นเอกสาร Web Prototype
+  - GDD v2.0: เขียน [00-concept](./gdd/00-concept.md), [01-mechanics](./gdd/01-mechanics.md), [02-narrative](./gdd/02-narrative.md), [03-art-direction](./gdd/03-art-direction.md), [04-audio-direction](./gdd/04-audio-direction.md) ใหม่ตามระบบ V2
+  - ย้าย GDD v1.0 (Web Prototype) ไป [wiki/archive/gdd-v1-prototype](./wiki/archive/gdd-v1-prototype/README.md)
+  - อัปเดต [index.md](./index.md)
+- **V2 Task Split (3 Developers)** — เพิ่ม [V2-TASK-OVERVIEW](./agile/user-stories/V2-TASK-OVERVIEW.md) (file ownership matrix, interface contracts, กติกาแก้ `Core.unity`), [US-V2-FACTORY-01](./agile/user-stories/US-V2-FACTORY-01.md), [US-V2-SCENE-01](./agile/user-stories/US-V2-SCENE-01.md), [US-V2-UI-01](./agile/user-stories/US-V2-UI-01.md); เพิ่ม section Unity V2 ใน [Product Backlog](./agile/01-product-backlog.md)
+
 ## 2026-08-21
 
 - **Task & Progress Tracker Weekly Report (W34)**:

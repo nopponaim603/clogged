@@ -83,7 +83,7 @@ sequenceDiagram
 
 - `MissionSystem` มี solo vs collaborative handler แยกกันสมบูรณ์ (โค้ดซ้ำ ~4 ชุด) — รวมเป็น generic function ที่รับ `Crew[]` เดียวได้
 - `GameScene` ทำหน้าที่เกินขอบเขต scene (input + queue orchestration + rendering) — ควรแตกเป็น controller/manager แยกเมื่อ scope โตขึ้นในเฟส 2
-- Food shortage คำนวณไว้แต่ยังไม่มีผลลบต่อเกม (ดู [Mechanics — ส่วนที่ยังต้องตัดสินใจ](../gdd/01-mechanics.md#ส่วนที่ยังต้องตัดสินใจ-ต่อยอดจาก-idea-design-เดิม))
+- Food shortage คำนวณไว้แต่ยังไม่มีผลลบต่อเกม (ดู [Mechanics — ส่วนที่ยังต้องตัดสินใจ](../wiki/archive/gdd-v1-prototype/01-mechanics.md#ส่วนที่ยังต้องตัดสินใจ-ต่อยอดจาก-idea-design-เดิม))
 
 ## Related Documents
 - [Class Diagram](02-class-diagram.md)

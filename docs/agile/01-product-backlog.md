@@ -4,6 +4,16 @@
 > Derived from [GDD — Core Mechanics](../gdd/01-mechanics.md) and cross-checked against the current state of `prototype_resource_game/src/` (Game Loop Audit 2026-08-03)
 > **Status legend:** ✅ Implemented in prototype · 🏗️ In-Progress / Task Defined · 🟡 Partial · ⬜ Backlog
 
+## Unity V2 — Production (2026-10)
+
+> ระบบหลักปัจจุบันอยู่ใน `Unity-Projects/Assets/V2/` — แบ่งงาน 3 กลุ่ม ดู [V2 Task Overview](./user-stories/V2-TASK-OVERVIEW.md) (ไฟล์ที่แต่ละกลุ่มเป็นเจ้าของ + interface contract)
+
+| ID | User Story | Acceptance Criteria | Estimate | Status |
+|----|-----------|---------------------|----------|--------|
+| [US-V2-FACTORY-01](./user-stories/US-V2-FACTORY-01.md) | As a player, I want factory facilities (kitchen, infirmary, workshop) with a clear cost → output panel | สูตรผลิตเป็น data, FactoryPanel แสดงต้นทุน/ผลผลิต/รอบสูงสุด, event ผลงานโรงงาน | L | ⬜ |
+| [US-V2-SCENE-01](./user-stories/US-V2-SCENE-01.md) | As a player, I want a readable map, a D100 dice roll and feedback for every outcome | Core.unity ใน Build + Restart, ไอคอนถ้ำแยกระดับ, animation ทอยเต๋า, popup/เสียง, transition ขึ้นวัน | L | ⬜ |
+| [US-V2-UI-01](./user-stories/US-V2-UI-01.md) | As a player, I want to see team status, odds before dispatch, and a clear end of run | การ์ดยูนิต + ปุ่มให้อาหาร, odds preview, ผลสำรวจ, ล็อก/ยืนยัน End Day, หน้าจอจบเกม | L | ⬜ |
+
 ## Must Have (MVP)
 
 | ID | User Story | Acceptance Criteria | Estimate | Status |

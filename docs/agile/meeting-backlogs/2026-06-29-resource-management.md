@@ -20,6 +20,6 @@
 - ป้องกันการโจมตีจาก enemy หรือจากธรรมชาติ
 
 ---
-> การตัดสินใจในรอบนี้ (Resource Management + Action Survival, Day/Night cycle) คือสิ่งที่ prototype ปัจจุบันสร้างจริง — ดู [Design Pivot](../../gdd/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน)
+> การตัดสินใจในรอบนี้ (Resource Management + Action Survival, Day/Night cycle) คือสิ่งที่ prototype ปัจจุบันสร้างจริง — ดู [Design Pivot](../../wiki/archive/gdd-v1-prototype/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน)
 
 **Related:** [Meeting Backlogs Hub](../03-meeting-backlogs.md) · [GDD Concept](../../gdd/00-concept.md)

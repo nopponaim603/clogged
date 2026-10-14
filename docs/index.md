@@ -2,18 +2,18 @@
 
 **Project:** clogged
 **Status:** Active | **Current Sprint:** [Sprint 02a — Production Sprint 1](./agile/sprint-backlogs/sprint-02a.md)
-**Last Updated:** 2026-08-21 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+**Last Updated:** 2026-10-14 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
 
-> ⚠️ GDD ได้อัปเดต **v1.0 (Prototype Reverse-Engineered)** — เอกสาร GDD ฉบับใหม่Reverse Engineering จาก source code `prototype_resource_game/` — ดู [Design Evolution](./gdd/00-concept.md#6-design-evolution)
+> ⚠️ GDD อัปเดตเป็น **v2.0 (Unity V2)** — อ้างอิงระบบจริงใน `Unity-Projects/Assets/V2/` ดู [Design Evolution](./gdd/00-concept.md#5-design-evolution) · GDD v1.0 ของ Web Prototype ย้ายไป [archive](./wiki/archive/gdd-v1-prototype/README.md)
 
 ---
 
 ## 📘 Game Design (GDD)
-- [Concept & Architecture](./gdd/00-concept.md) — Game loop, systems, architecture
-- [Core Mechanics](./gdd/01-mechanics.md) — Day/Night cycle, missions, crews, time system
-- [Narrative & World](./gdd/02-narrative.md) — Setting, factions, characters
-- [Art Direction](./gdd/03-art-direction.md) — Visual style, UI layout, colors
-- [Audio Direction](./gdd/04-audio-direction.md) — Music, SFX plan
+- [Concept](./gdd/00-concept.md) — Elevator pitch, design pillars, game loop, win/lose, design evolution
+- [Core Mechanics](./gdd/01-mechanics.md) — Unit/AP, End Day, D100 gather, base work, starvation, Core Item, ตัวเลข balance
+- [Narrative & World](./gdd/02-narrative.md) — สิ่งที่มีในเกม V2 + open questions ด้าน lore
+- [Art Direction](./gdd/03-art-direction.md) — สภาพภาพปัจจุบัน, color language, layout, ทิศทางภาพ
+- [Audio Direction](./gdd/04-audio-direction.md) — แผนเพลง/SFX ผูกกับ event ของ V2
 
 ---
 

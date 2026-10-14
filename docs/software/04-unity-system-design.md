@@ -17,7 +17,7 @@ Unity-Projects/Assets/V2/
 ├── Prefabs/
 │   ├── Dungeon Prefab.prefab   ← MapNodeView (จุดถ้ำบนแมป)
 │   └── ScoutIcon.prefab        ← ScoutWalkerView (ไอคอนเดินออก-กลับ)
-├── Sprites/                    ← tilemap_packed*.png (ยังเป็น placeholder)
+│                                 (sprite ของ prefab ทั้งสองดึงจาก Assets/Day/Sprites/tilemap_packed*.png)
 └── Scripts/
     ├── BaseWorkType.cs          (enum Cooking/Healing/Workshop)
     ├── BaseWorkResult.cs        (ผลของงานในฐาน 1 ครั้ง)
