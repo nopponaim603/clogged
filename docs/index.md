@@ -21,6 +21,7 @@
 - **Unity V2 (ระบบหลักปัจจุบัน — `Unity-Projects/Assets/V2`)**
   - [Unity V2 System Design — โครงสร้าง, Scene Flow, ระบบหลัก](./software/04-unity-system-design.md)
   - [Unity V2 Class Diagram](./software/05-unity-class-diagram.md)
+  - [Unity V2 Core Scene Hierarchy](./software/06-unity-core-scene-hierarchy.md)
 - **Web Prototype (Phaser — ระยะที่ 1, อ้างอิง)**
   - [System Design](./software/01-system-design.md)
   - [Class Diagram](./software/02-class-diagram.md)

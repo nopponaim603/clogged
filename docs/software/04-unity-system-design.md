@@ -349,5 +349,6 @@ sequenceDiagram
 
 ## Related Documents
 - [Unity V2 Class Diagram](05-unity-class-diagram.md)
+- [Unity V2 Core Scene Hierarchy](06-unity-core-scene-hierarchy.md)
 - [Core Mechanics](../gdd/01-mechanics.md)
 - [Web Prototype System Design](01-system-design.md) (ระยะที่ 1)

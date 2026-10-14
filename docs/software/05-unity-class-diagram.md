@@ -453,4 +453,5 @@ classDiagram
 
 ## Related Documents
 - [Unity V2 System Design](04-unity-system-design.md)
+- [Unity V2 Core Scene Hierarchy](06-unity-core-scene-hierarchy.md)
 - [Web Prototype Class Diagram](02-class-diagram.md) (ระยะที่ 1)
