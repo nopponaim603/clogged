@@ -29,6 +29,9 @@ public class GatherMapController : MonoBehaviour
     /// <summary>Fired once a confirmed trip fully resolves (after the walk-back animation).</summary>
     public event Action<GatherDispatchResult> OnTripResolved;
 
+    /// <summary>Fired whenever the selected cave changes (null when nothing is selected).</summary>
+    public event Action<MapNodeView> OnSelectionChanged;
+
     public MapNodeView SelectedNode => selectedNode;
 
     /// <summary>True from the moment a trip is confirmed until the scout is back at the base. Other panels use this to avoid giving a unit base work while it is walking out.</summary>
@@ -180,12 +183,31 @@ public class GatherMapController : MonoBehaviour
 
     private void HandleNodeClicked(MapNodeView clicked)
     {
-        if (selectedNode != null)
+        if (clicked == null || TripInProgress) return;
+
+        // Clicking the already-selected node deselects it, so the cave
+        // behaves like a toggle instead of always keeping one selected.
+        if (selectedNode == clicked)
         {
-            selectedNode.SetSelected(false);
+            clicked.SetSelected(false);
+            selectedNode = null;
+            OnSelectionChanged?.Invoke(null);
+            return;
         }
+
+        if (selectedNode != null) selectedNode.SetSelected(false);
+
         selectedNode = clicked;
         selectedNode.SetSelected(true);
+        OnSelectionChanged?.Invoke(selectedNode);
+    }
+
+    /// <summary>Clears the current cave selection (used after a trip resolves or on day start).</summary>
+    public void ClearSelection()
+    {
+        if (selectedNode != null) selectedNode.SetSelected(false);
+        selectedNode = null;
+        OnSelectionChanged?.Invoke(null);
     }
 
     /// <summary>

@@ -289,10 +289,14 @@ classDiagram
         <<MonoBehaviour, Singleton>>
         -List~MapNodeData~ nodeData
         -List~MapNodeView~ nodeViews
+        -MapNodeView selectedNode
         +MapNodeView SelectedNode
         +bool TripInProgress
         +event OnTripResolved(GatherDispatchResult)
+        +event OnSelectionChanged(MapNodeView)
         +ConfirmTrip(units) void
+        +ClearSelection() void
+        -HandleNodeClicked(view) void
         -SetupDefaultNodes() void
         -FindScatterPosition(min, max) Vector2
         -ReturnToBase(result) void
@@ -375,6 +379,12 @@ classDiagram
         <<MonoBehaviour>>
         -TMP_Text dayText, foodText, cookingMaterialText
         -TMP_Text medicineText, materialsText, coreItemStatusText
+        -Image coreItemIcon, foodIcon, cookingMaterialIcon
+        -Image medicineIcon, materialsIcon
+        -Sprite coreItemSprite, foodSprite, cookingMaterialSprite
+        -Sprite medicineSprite, materialsSprite
+        -bool hideResourceLabelWhenIconSet = true
+        -RefreshIcons() void
         -Update() poll DayManager + RunResources
     }
 
@@ -382,31 +392,83 @@ classDiagram
         <<MonoBehaviour>>
         -RectTransform container
         -UnitIconView iconPrefab
-        -Update() refresh ทุก icon
+        -int maxSelection = 2
+        -Color[] unitColors
+        +event OnSelectionChanged
+        +event OnSelectionRejected(string)
+        +GetSelectedUnits() List~UnitCharacter~
+        +ClearSelection() void
+        +SetSelectionEnabled(bool) void
+        +RefreshAvailability() void
+        -Update() refresh cards + drop unavailable selections
     }
 
     class UnitIconView {
-        <<MonoBehaviour>>
-        +Bind(unit) void
+        <<MonoBehaviour, IPointerClickHandler>>
+        -Image iconImage
+        -TMP_Text nameText, statusText
+        -float frameThickness, selectedFrameThickness
+        +event Clicked(UnitIconView)
+        +Bind(unit, accentColor, selectable) void
+        +SetSelected(bool) void
+        +SetSelectable(bool) void
+        +SetSelectionEnabled(bool) void
         +Refresh() void
+        +OnPointerClick(eventData) void
     }
 
     class GatherDispatchPanel {
         <<MonoBehaviour>>
         -Button dispatchButton
-        -Toggle[] unitToggles
+        -UnitRosterView rosterView
         -TMP_Text messageText
         -OnDispatchClicked() void
         -HandleTripResolved(result) void
-        -RefreshToggles() void
+        -HandleSelectionChanged() void
+        -RefreshAvailability() void
     }
 
     class MapNodeView {
         <<MonoBehaviour>>
         +MapNodeData Data
+        -TMP_Text zoneLabel
         +static event OnAnyNodeClicked(MapNodeView)
         +Initialize(data) void
         +SetSelected(bool) void
+        -BuildZoneLabel() void
+    }
+
+    class TmpOutlineUtil {
+        <<static>>
+        +ApplyOutline(text, color, width, softness) bool
+        +CreateOutlineMaterial(text, color, width, softness) Material
+        +SetOutlineColor(material, color) void
+        +CreateLabel(parent, name, width, height) TextMeshProUGUI
+    }
+
+    class WarningView {
+        <<MonoBehaviour>>
+        -TMP_Text label
+        -CanvasGroup backdropGroup
+        -float holdSeconds = 2.5
+        -float fadeSeconds = 0.3
+        +Show(text, kind) void
+        +ShowWarning(text) void
+        +ShowError(text) void
+        +ShowInfo(text) void
+        +Clear() void
+    }
+
+    class ButtonVisual {
+        <<MonoBehaviour>>
+        -Image iconImage
+        -TMP_Text label
+        -VisualMode mode = Label
+        -Sprite icon
+        +SetIcon(sprite, switchToIcon) void
+        +SetLabel(text, switchToLabel) void
+        +SetMode(mode) void
+        +Apply() void
     }
 
     class ScoutWalkerView {
@@ -432,11 +494,16 @@ classDiagram
 
     UnitRosterView "1" *-- "*" UnitIconView : spawns
     UnitIconView ..> UnitCharacter
+    UnitRosterView ..> UnitCharacter : selection
     StatusBarView ..> DayManager
     StatusBarView ..> RunResources
     GatherDispatchPanel ..> GatherMapController : ConfirmTrip / OnTripResolved
     GatherDispatchPanel ..> GatherDispatchController : CanDispatch
     GatherDispatchPanel ..> DayManager : OnDayStarted
+    GatherDispatchPanel ..> WarningView : warns
+    GatherDispatchPanel ..> UnitRosterView : selection
+    MapNodeView ..> TmpOutlineUtil : label outline
+    WarningView ..> TmpOutlineUtil : text outline
     BaseWorkPanel ..> BaseWorkController
     BaseWorkPanel ..> GatherMapController : TripInProgress / OnTripResolved
     BaseWorkPanel ..> DayManager : OnDayStarted

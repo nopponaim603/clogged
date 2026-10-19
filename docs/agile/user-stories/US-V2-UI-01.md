@@ -13,8 +13,9 @@
 **เพื่อให้** วางแผนแต่ละวันได้จากหน้าจอเดียว และรู้ชัดว่า run จบด้วยผลอะไร
 
 **สถานะปัจจุบัน:**
-- `StatusBarView` / `UnitRosterView` แสดงข้อความล้วน poll ทุกเฟรม; การ์ดยูนิตใช้ `ScoutIcon.prefab` ร่วมกับไอคอนเดินทาง
-- `GatherDispatchPanel` อยู่บน GameObject ชื่อ `TestDispatch` นอก Canvas, toggle ยูนิตผูกตาม **index** ของ roster, ผลทริปเป็นข้อความหลายบรรทัดใน `MessageUi`, ไม่แสดง odds ก่อนส่ง
+- `StatusBarView` แสดงข้อความล้วน poll ทุกเฟรม; `UnitRosterView` spawn **การ์ดยูนิต** (195×265, กรอบสีประจำตัว แดง/เหลือง/เขียว/น้ำเงิน) ที่คลิกเลือกได้เอง แทน toggle เดิม (ลบออกจาก scene แล้ว)
+- `GatherDispatchPanel` อยู่บน GameObject ชื่อ `TestDispatch` นอก Canvas, อ่านยูนิตที่เลือกจาก `UnitRosterView` (สูงสุด 2), ผลทริปเป็นข้อความหลายบรรทัดใน `MessageUi` (ย้ายมาอยู่ข้างการ์ด), ข้อผิดพลาด/เกินขีดจำกัดแสดงผ่าน `WarningView`
+- `Dispatch` / `EndDay` ถูกย้ายไปมุมขวาล่างชั่วคราว และมี `ButtonVisual` เตรียมไว้สลับข้อความ ↔ รูป icon
 - `StarvationController` (ให้อาหารลด stack) **ไม่มี UI**
 - ปุ่ม End Day **ไม่ล็อก** ระหว่างทริป และไม่ปิดเมื่อ run จบ; `DayManager.OnRunEnded` **ไม่มีผู้ฟัง** → ไม่มีหน้าจอจบเกม
 
