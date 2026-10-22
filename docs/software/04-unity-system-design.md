@@ -41,6 +41,7 @@ Unity-Projects/Assets/V2/
     └── UI/                     ← อ่าน state มาแสดง + ส่ง input ไป Controller
         ├── StatusBarView.cs, UnitRosterView.cs, UnitIconView.cs
         ├── GatherDispatchPanel.cs, MapNodeView.cs, ScoutWalkerView.cs
+        ├── WarningView.cs, ButtonVisual.cs, TmpOutlineUtil.cs
         └── BaseWorkPanel.cs
 ```
 
@@ -82,11 +83,12 @@ flowchart LR
 | `GatherMapController` | `GatherMapController` | แมป + เดินทาง (ใช้ `MapPanel`, `Dungeon Prefab`, `ScoutIcon`) |
 | `BaseworkController` | `BaseWorkController` | ตรรกะงานในฐาน |
 | `StavingController` | `StarvationController` | ปุ่มให้อาหาร (ยังไม่มี UI ต่อ) |
-| `StatusBar` | `StatusBarView` | HUD วัน + ทรัพยากร |
-| `CharCard` | `UnitRosterView` | การ์ดยูนิต 4 ใบ (`UnitIconView`) |
-| `TestDispatch` | `GatherDispatchPanel` | toggle ยูนิต + ปุ่ม Dispatch |
+| `StatusBar` | `StatusBarView` | HUD แยก 3 กลุ่ม: `DayFrame` (ขวา), `CoreItemGroup` + กรอบรอ sprite (ซ้าย), `TopBar` รวม Food/Medicine/CookingMaterial/Materials (กลาง) |
+| `CharCard` | `UnitRosterView` | การ์ดยูนิต 4 ใบ (`UnitIconView`, 195×265, กรอบสีประจำตัว) — คลิกการ์ดเพื่อเลือกส่งสำรวจ |
+| `TestDispatch` | `GatherDispatchPanel` | เลือกยูนิตผ่านการ์ด + ปุ่ม Dispatch |
+| `WarningText` | `WarningView` | แบนเนอร์เตือนในเกม: ตัวอักษรขาว + outline เปลี่ยนสีตามระดับ + แผงหลังดำ (แทน debug text) |
 | `BaseWorkPanel` | `BaseWorkPanel` | panel งานในฐาน |
-| `EndDay button` | (Button) | `onClick → DayManager.EndDay()` |
+| `EndDay button` | (Button) + `ButtonVisual` | `onClick → DayManager.EndDay()`; สลับข้อความ/รูปได้ |
 
 ### 2.2 Game Flow ภายใน `Core.unity`
 
@@ -199,7 +201,7 @@ stateDiagram-v2
 `CanDispatch(zone, units, out reason)` ตรวจ 1–2 คน, `CanBeSentGathering`, AP พอ → `Dispatch()` หัก AP **เต็มจำนวนต่อคน** (ไปคู่ไม่หาร), mark `HasGatheredToday`, ตั้ง `Away` → ทอย → ใช้ผล → คนที่ยัง `Away` กลับเป็น `Idle`/`Resting` → ยิง `OnGatherResolved` และคืน `GatherDispatchResult`
 
 ### GatherMapController — แมปและการเดินทาง
-ชั้นภาพที่ครอบ `GatherDispatchController` ไว้: สร้าง `MapNodeData` 2 จุดต่อระดับ (รวม 6) วางแบบ best-candidate sampling รอบฐานที่กลาง `MapPanel` (เว้นขอบ + รัศมีฐาน 180) เลือกจุดผ่าน static event `MapNodeView.OnAnyNodeClicked` และ `ConfirmTrip()` ให้ `ScoutWalkerView` เดินไป (0.6 s) → `Dispatch()` ตอนถึง → เดินกลับ → `OnTripResolved` ระหว่างนั้น `TripInProgress = true`
+ชั้นภาพที่ครอบ `GatherDispatchController` ไว้: สร้าง `MapNodeData` 2 จุดต่อระดับ (รวม 6) วางแบบ best-candidate sampling รอบฐานที่กลาง `MapPanel` (เว้นขอบ + รัศมีฐาน 180) เลือกจุดผ่าน static event `MapNodeView.OnAnyNodeClicked` — **คลิกซ้ำที่ถ้ำเดิมเพื่อยกเลิกการเลือกได้** (เหมือน toggle; ระหว่าง `TripInProgress` จะไม่รับคลิก) และยิง `OnSelectionChanged` ทุกครั้งที่เปลี่ยน จากนั้น `ConfirmTrip()` ให้ `ScoutWalkerView` เดินไป (0.6 s) → `Dispatch()` ตอนถึง → เดินกลับ → `OnTripResolved` ระหว่างนั้น `TripInProgress = true`
 
 ### BaseWorkController — งานในฐาน (ไม่จำกัดครั้งต่อวัน)
 
@@ -221,10 +223,12 @@ stateDiagram-v2
 
 | Class | อัปเดตแบบ | หน้าที่ |
 |---|---|---|
-| `StatusBarView` | poll ทุกเฟรม | วัน/deadline, ทรัพยากร, เตือนสีแดงถ้า Food < จำนวนคนที่ต้องกินคืนนี้, สถานะ Core Item |
-| `UnitRosterView` + `UnitIconView` | poll ทุกเฟรม | การ์ดยูนิต: ชื่อ, AP, สถานะ, Hungry ×n, จางเมื่อใช้งานไม่ได้ |
-| `GatherDispatchPanel` | event `OnTripResolved`, `OnDayStarted` | toggle เลือก ≤ 2 คน (index ตรงกับ roster), ปุ่ม Dispatch, แสดงผลทอย/loot/trait |
-| `MapNodeView` | — | วงกลมสีตาม zone, ยิง `OnAnyNodeClicked` |
+| `StatusBarView` | poll ทุกเฟรม | `DayFrame` (DAY + day/deadline + จำนวนวันเหลือ), `TopBar` (Food/Medicine/CookingMaterial/Materials), `CoreItemGroup` (ข้อความ "Core Item" + สถานะ Locked/Unlocked/Obtained และ tint ไอค่อนในกรอบ); เตือนสีแดงถ้า Food < จำนวนคนที่ต้องกินคืนนี้ |
+| `UnitRosterView` + `UnitIconView` | poll ทุกเฟรม | การ์ดยูนิตแบบการ์ด (กรอบสีประจำตัว: แดง/เหลือง/เขียว/น้ำเงิน): ชื่อ, AP, สถานะ, Hungry ×n, จางเมื่อใช้งานไม่ได้ — **การ์ดเป็นตัวเลือกยูนิตด้วยการคลิก** (สูงสุด 2 ใบ, การ์ดที่เลือกได้กรอบหนาขึ้น + ขยายเล็กน้อย) |
+| `GatherDispatchPanel` | event `OnTripResolved`, `OnDayStarted`, `UnitRosterView.OnSelectionChanged`, `GatherMapController.OnSelectionChanged` | อ่านยูนิตที่เลือกจาก `UnitRosterView` (ไม่ใช้ toggle แล้ว), ปุ่ม Dispatch; `MessageUi` แสดงข้อมูลถ้ำที่เลือก (โซน, AP ต่อคน, base success, loot) + ยูนิตที่เลือก และผลทอย/loot/trait หลังทริป |
+| `WarningView` | event (เรียกจาก `GatherDispatchPanel`) | แบนเนอร์เตือนในเกม: คิวข้อความ, ตัวอักษรขาวคงที่, outline (TMP material) เปลี่ยนสีตามระดับ — Warning เหลือง / Error แดง / Info ฟ้า, fade in → hold 2.5s → fade out + แผงหลังดำ (`WarningBackdrop`) — แทนการพึ่ง `Debug.Log` |
+| `ButtonVisual` | — | เตรียมปุ่มให้สลับระหว่างข้อความกับ sprite icon (`mode` = Label/Icon) สำหรับ `Dispatch` และ `EndDay` |
+| `MapNodeView` | — | วงกลมสีตาม zone + `ZoneLabel` (TMP, สร้างตอน runtime) แสดงชื่อโซน/AP กลางวง, ยิง `OnAnyNodeClicked` (คลิกซ้ำ = ยกเลิกการเลือก, `SelectedHighlight` แสดงสถานะ) |
 | `ScoutWalkerView` | coroutine | `MoveTo(pos, onArrived)` / `SnapTo` |
 | `BaseWorkPanel` | event + เช็ก `TripInProgress` ใน `Update` | เลือกงาน → ผู้ทำ (ไล่สีเขียว/แดงตาม aptitude Cooking) → รอบ หรือ ผู้ป่วย → preview → Confirm; ล็อก Confirm ระหว่างทริป |
 
@@ -334,6 +338,9 @@ sequenceDiagram
 | `GatherMapController.OnTripResolved(result)` | หลังเดินกลับถึงฐาน | `GatherDispatchPanel`, `BaseWorkPanel` |
 | `GatherDispatchController.OnGatherResolved(result)` | ท้าย `Dispatch()` | — (ยังไม่มี) |
 | `MapNodeView.OnAnyNodeClicked(view)` (static) | คลิกจุดบนแมป | `GatherMapController` |
+| `GatherMapController.OnSelectionChanged(node)` | เลือก/ยกเลิกถ้ำ (คลิกซ้ำ = ยกเลิก) | `GatherDispatchPanel` |
+| `UnitRosterView.OnSelectionChanged()` | คลิกเลือก/ยกเลิกการ์ดยูนิต | `GatherDispatchPanel` |
+| `UnitRosterView.OnSelectionRejected(reason)` | คลิกการ์ดที่เลือกไม่ได้ / เกิน 2 คน | `GatherDispatchPanel` (ส่งต่อให้ `WarningView`) |
 
 ## 6. Known Gaps / Technical Debt (สังเกตจากโค้ด ณ 2026-10-14)
 
@@ -342,7 +349,7 @@ sequenceDiagram
 - **End Day ไม่ถูกล็อกระหว่างทริป** — `BaseWorkPanel` ล็อกตาม `TripInProgress` แต่ปุ่ม End Day ไม่ล็อก ถ้ากดระหว่างไอคอนกำลังเดินออก ยูนิตที่ส่งไปจะยังเป็น `Idle` (ได้กินอาหาร + refresh AP) แล้วค่อยถูก dispatch ในวันใหม่ — ยังไม่ได้ทดสอบในเกม
 - **สถานะ `Away` เกิดขึ้นชั่วคราวเท่านั้น** — `Dispatch()` resolve ในเฟรมเดียว ยูนิตจึงไม่เคยเป็น `Away` ตอน End Day; เงื่อนไข "ข้าม Away" ใน `DayManager`/`StatusBarView` จะมีผลก็ต่อเมื่อทำทริปข้ามวันในอนาคต
 - **Build Settings ไม่มี `Core.unity`** และยังอ้าง `Setup.unity` ที่ไม่มีไฟล์แล้ว
-- `GatherDispatchPanel` อยู่บน GameObject ชื่อ `TestDispatch` และผูก toggle ตาม index roster (Ann, Boon, Cia, Dan) — ถ้าเปลี่ยนลำดับ roster ต้องแก้ toggle ตาม
+- `GatherDispatchPanel` อยู่บน GameObject ชื่อ `TestDispatch` — เลือกยูนิตด้วยการคลิกการ์ดใน `CharCard` (ไม่ผูก index กับ toggle แล้ว) Toggle `Ann…Dan` เดิมถูกลบออกจาก scene แล้ว
 - `DiceRollView` เป็น class ว่าง — ยังไม่มี animation ทอยเต๋า ผลแสดงเป็นข้อความ
 - Aptitude `Speed/Endurance/Gathering/Combat` ยังไม่มีผลต่อกลไกใด
 - ไม่มี save/load — state ทั้งหมดอยู่ใน memory ของ scene เดียว

@@ -1,10 +1,12 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
-/// Always-visible HUD strip: day/deadline counter and the shared resource
-/// totals. Polls DayManager/RunResources every frame - same simple approach
-/// as UnitRosterView, fine for a handful of text fields with no event wiring needed.
+/// Always-visible HUD strip: Core Item state on the left, the shared resource
+/// totals in the middle, and the day counter on the right. Polls
+/// DayManager/RunResources every frame - same simple approach as
+/// UnitRosterView, fine for a handful of text fields with no event wiring needed.
 /// </summary>
 public class StatusBarView : MonoBehaviour
 {
@@ -18,7 +20,28 @@ public class StatusBarView : MonoBehaviour
     [SerializeField] private TMP_Text materialsText;
     [SerializeField] private TMP_Text coreItemStatusText;
 
+    [Header("Icon Slots (optional - drop art in later)")]
+    [Tooltip("Placeholder frame next to the Core Item label; tinted by its locked/unlocked/obtained state.")]
+    [SerializeField] private Image coreItemIcon;
+    [SerializeField] private Sprite coreItemSprite;
+
+    [SerializeField] private Image foodIcon;
+    [SerializeField] private Sprite foodSprite;
+    [SerializeField] private Image cookingMaterialIcon;
+    [SerializeField] private Sprite cookingMaterialSprite;
+    [SerializeField] private Image medicineIcon;
+    [SerializeField] private Sprite medicineSprite;
+    [SerializeField] private Image materialsIcon;
+    [SerializeField] private Sprite materialsSprite;
+
+    [Tooltip("When an icon sprite is assigned, hide that resource's text so the HUD can become icon-only.")]
+    [SerializeField] private bool hideResourceLabelWhenIconSet = true;
+
     private const string WarningHex = "#E65C5C";
+
+    private static readonly Color LockedColor = new Color(1f, 1f, 1f, 0.18f);
+    private static readonly Color UnlockedColor = new Color(1f, 0.84f, 0.35f, 0.75f);
+    private static readonly Color ObtainedColor = new Color(1f, 0.9f, 0.45f, 1f);
 
     private static int CountMouthsTonight()
     {
@@ -36,6 +59,7 @@ public class StatusBarView : MonoBehaviour
     {
         RefreshDay();
         RefreshResources();
+        RefreshIcons();
     }
 
     private void RefreshDay()
@@ -47,8 +71,8 @@ public class StatusBarView : MonoBehaviour
 
         string left = daysLeft <= 1
             ? $"<color={WarningHex}>last day!</color>"
-            : $"{daysLeft} days left";
-        dayText.text = $"Day {day} / {deadline} ({left})";
+            : $"{daysLeft} left";
+        dayText.text = $"DAY\n{day} / {deadline}<size=70%>  ({left})</size>";
     }
 
     private void RefreshResources()
@@ -64,7 +88,7 @@ public class StatusBarView : MonoBehaviour
                 ? $"Food: {food} (need {need} tonight)"
                 : $"<color={WarningHex}>Food: {food} (need {need} tonight)</color>";
         }
-        if (cookingMaterialText != null) cookingMaterialText.text = $"Cooking Material: {RunResources.Instance.CookingMaterial}";
+        if (cookingMaterialText != null) cookingMaterialText.text = $"Cooking: {RunResources.Instance.CookingMaterial}";
         if (medicineText != null) medicineText.text = $"Medicine: {RunResources.Instance.Medicine}";
         if (materialsText != null) materialsText.text = $"Materials: {RunResources.Instance.Materials}";
 
@@ -72,16 +96,52 @@ public class StatusBarView : MonoBehaviour
         {
             if (RunResources.Instance.HasCoreItem)
             {
-                coreItemStatusText.text = "Core Item: OBTAINED";
+                coreItemStatusText.text = "Core Item\n<color=#FFE68A>Obtained</color>";
             }
             else if (RunResources.Instance.HasCoreItemUnlock)
             {
-                coreItemStatusText.text = "Core Item: Unlocked - go Far";
+                coreItemStatusText.text = "Core Item\n<color=#FFD75E>Unlocked</color>";
             }
             else
             {
-                coreItemStatusText.text = "Core Item: Locked - go Mid first";
+                coreItemStatusText.text = "Core Item\n<color=#9AA4B2>Locked</color>";
             }
         }
     }
+
+    /// <summary>
+    /// Keeps the icon frames in sync. A slot with no sprite stays a faint
+    /// placeholder, so the layout is already prepared for real art later.
+    /// </summary>
+    private void RefreshIcons()
+    {
+        if (RunResources.Instance != null && coreItemIcon != null)
+        {
+            if (coreItemSprite != null) coreItemIcon.sprite = coreItemSprite;
+
+            if (RunResources.Instance.HasCoreItem) coreItemIcon.color = ObtainedColor;
+            else if (RunResources.Instance.HasCoreItemUnlock) coreItemIcon.color = UnlockedColor;
+            else coreItemIcon.color = LockedColor;
+        }
+
+        ApplyResourceIcon(foodIcon, foodSprite, foodText);
+        ApplyResourceIcon(cookingMaterialIcon, cookingMaterialSprite, cookingMaterialText);
+        ApplyResourceIcon(medicineIcon, medicineSprite, medicineText);
+        ApplyResourceIcon(materialsIcon, materialsSprite, materialsText);
+    }
+
+    private void ApplyResourceIcon(Image icon, Sprite sprite, TMP_Text label)
+    {
+        if (icon == null) return;
+
+        bool hasSprite = sprite != null;
+        if (hasSprite) icon.sprite = sprite;
+        icon.color = hasSprite ? Color.white : LockedColor;
+
+        if (label != null && hideResourceLabelWhenIconSet)
+        {
+            label.enabled = !hasSprite;
+        }
+    }
 }
+
