@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.20 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
+**Version:** 0.21 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -836,9 +836,40 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 **Import settings** (`Assets/V2/Sprites/Icons/`) — ตั้งด้วย `TextureImporter` ผ่าน `AgentScripts/ImportIconSprites.cs`: `Sprite (Single)` · `Point` · `FullRect` · `Uncompressed` · `alphaIsTransparency` · no mipmap · PPU 100 · Clamp · ไม่สร้าง physics shape
 
-**ยังไม่ต่อเข้ากับ UI** — รอเลือกตำแหน่ง/วิธีวางบนการ์ด (จำนวน pip, จะเก็บข้อความ `AP x/y` ไว้หรือไม่) และรอจับคู่ชื่อ Core Item A/B
+**ยังไม่ต่อเข้ากับ UI ตอนนั้น** — ต่อเข้าแล้วใน §7.19 (`ap_45/30/15` → pip บนการ์ด) · CoreItem 8 ไอคอนยังรอจับคู่ชื่อ Core Item A/B
 
 **ยืนยันแล้ว:** `script.run` คืน `ok` ครบ 11 ไฟล์ พร้อมขนาด rect จริง (10×12, 12×12, 16×10, 16×14, 16×16) และ `.meta` แสดง `filterMode: 0` / `spriteMode: 1`
+
+### 7.19 AP บนการ์ดเปลี่ยนจากตัวเลขเป็น pip (2026-10-28)
+
+**โจทย์:** `statusText` เดิมพิมพ์ `AP 3/3` เป็นข้อความ ต้องการแทนด้วยไอคอนจาก tileset เพื่อให้เห็นต้นทุนของ action ก่อนกดยืนยัน
+
+**รูปแบบ 3 สถานะ** (สไปรต์จาก §7.18) — วาดจากซ้ายไปขวา, AP ถูกใช้จากซ้าย
+
+| ไอคอน | เงื่อนไข | ความหมาย |
+|---|---|---|
+| `ap_45` | `i < current − spending` | ยังเหลือและไม่ถูกใช้ใน action นี้ |
+| `ap_30` | `current − spending ≤ i < current` | action ที่กำลังจะยืนยันจะกิน pip นี้ |
+| `ap_15` | `i ≥ current` | ใช้ไปแล้ว |
+
+**ที่แก้**
+
+| ไฟล์ | สิ่งที่เพิ่ม |
+|---|---|
+| `Scripts/UI/UnitIconView.cs` | field `apPipAvailable/Pending/Spent` + metric (`18×22`, spacing 4, row 22) · `BuildApPips()` สร้าง row `ApPips` ใต้ชื่อ · `RefreshApPips()` สร้าง pip เท่า `maxActionPoints` แล้วเพนต์ sprite ตามสถานะ · `SetApCostPreview(int)` + `ApCostPreview` |
+| `Scripts/UI/UnitRosterView.cs` | `CurrentPendingApCost()` — อ่านจาก `SkillFlowController.PendingApCost` ถ้ามีสกิล armed, ไม่งั้นอ่าน cave ที่เลือกบน map · เรียก `SetApCostPreview()` ทุกเฟรมก่อน `Refresh()` |
+| `Scripts/UI/SkillFlowController.cs` | `PendingApCost` = base cost × จำนวนรอบ (cook/craft) หรือค่า heal ตามโหมดยา · 0 เมื่อไม่ได้ armed |
+| `Scripts/Controllers/BaseWorkController.cs` | `CookBaseApCost` / `WorkshopBaseApCost` / `HealBaseApCost(bool)` — ต้นทุน **ก่อน** บวก starvation เพราะต้องใช้เพนต์การ์ดหลายใบ |
+| `Scripts/UI/UnitIconView.cs` (layout) | `statusText` ย้ายลงมา `apPipRowHeight + 2` และลดความสูง 36 → 32 — บรรทัด `AP x/y` ถูกแทนที่ จึงไม่ต้องขยายการ์ด |
+| `Assets/V2/Prefabs/ScoutIcon.prefab` | ผูกสไปรต์ 3 ตัว + metric ผ่าน `AgentScripts/WireApPips.cs` |
+
+**ทำไมพรีวิวไม่ใช่การ push จากฝั่ง panel:** สองเจ้าของ (gather กับ skill) เขียนค่าเดียวกันไม่ได้ — ถ้า skill disarm แล้วเขียน 0 จะลบค่าของ cave ที่เลือกไว้ · จึงให้ `UnitRosterView` **อ่าน** จากระบบเจ้าของทุกเฟรมแทน (single reader, ไม่มีลำดับการเขียนที่ผิดได้)
+
+**Starvation:** `UnitIconView` เรียก `unit.GetActualApCost(base)` เอง ทำให้หน่วยที่อดอาหารเห็น pip สี `ap_30` มากกว่าคนอื่นจากต้นทุนเดียวกัน
+
+**ยืนยันแล้ว:** `TestUiRedesign` เพิ่ม 3 ข้อเป็น **ALL PASS 46 ข้อ** — "card paints one pip per action point", "pending cost flips the top pips to the about-to-be-spent state", "spent AP turns the pips into the spent state" และขยายข้อ "cook queues a second round" ให้ยืนยัน `flow.PendingApCost == 2` · ภาพหน้าจอ: เลือกถ้ำ Easy (1 AP) → ทุกการ์ดมี pip ขวาสุดเป็น `ap_30` ตามที่ควรเป็น
+
+> หมายเหตุ: `RefreshApPips()` ถูกเรียกจาก `Refresh()` ซึ่ง roster เรียกทุกเฟรมอยู่แล้ว — ไม่มี allocation เพิ่มหลังสร้าง pip ครบ · ถ้าไม่ผูกสไปรต์ การ์ดจะยังพิมพ์ `AP x/y` แบบเดิม (fallback)
 
 ---
 
@@ -949,8 +980,10 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 27. [ ] **ฟอนต์ใหม่ไม่ทำให้ layout แตก** — ขนาดตัวอักษร (cap height / line height) ตรงกับ LiberationSans เดิม และข้อความในแถบทรัพยากรไม่ตัดขึ้นบรรทัดใหม่
 28. [ ] **กลุ่ม `Warning` เป็น parent/child ที่ตรงกัน** — CanvasGroup ตัวเดียวบน group root, backdrop กับ text stretch เต็ม group และข้อความอยู่กึ่งกลาง (inset เท่ากันทั้ง 4 ด้าน)
 29. [ ] **สีบนแบนเนอร์ = สีใน log** ของข้อความเดียวกัน — ทั้งคู่อ่านจาก `UiPalette.For(LogKind)` และไม่มี enum/ตารางสีที่สอง
+30. [ ] **การ์ดแสดง AP เป็นไอคอน ไม่ใช่ตัวเลข** — 1 pip ต่อ 1 AP: `ap_45` = ยังมี, `ap_30` = action ที่กำลังจะยืนยันจะกิน pip นี้, `ap_15` = ใช้ไปแล้ว · จำนวน pip ตรงกับ `maxActionPoints` และอัปเดตทันทีที่ AP เปลี่ยน
+31. [ ] **พรีวิวต้นทุนอ่านจากระบบเจ้าของ** — Cave ที่เลือก (dispatch) หรือสกิลที่ queue ไว้ (cook/craft/heal) เป็นตัวกำหนดจำนวน pip สี `ap_30` และโหลด starvation ต่อคน (base + `starvationStacks`)
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–29 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 42 ข้อ** (§7.12–§7.13, §7.15–§7.17) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15)
+> **สถานะ AC (2026-10-28):** ข้อ 1–31 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 46 ข้อ** (§7.12–§7.13, §7.15–§7.19) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15) · pip ตรวจด้วยภาพหน้าจอ (§7.19)
 
 ---
 

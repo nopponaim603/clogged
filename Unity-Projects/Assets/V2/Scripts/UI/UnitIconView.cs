@@ -39,6 +39,16 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
     [SerializeField] private float targetablePulseSpeed = 3.2f;
     [SerializeField] private float targetablePulseMinAlpha = 0.55f;
 
+    [Header("AP Pips")]
+    [Tooltip("One pip per action point. Available = still unspent, pending = the action about to be confirmed will eat it, spent = already gone.")]
+    [SerializeField] private Sprite apPipAvailable;
+    [SerializeField] private Sprite apPipPending;
+    [SerializeField] private Sprite apPipSpent;
+    [SerializeField] private float apPipWidth = 18f;
+    [SerializeField] private float apPipHeight = 22f;
+    [SerializeField] private float apPipSpacing = 4f;
+    [SerializeField] private float apPipRowHeight = 22f;
+
     private CanvasGroup group;
     private UnitCharacter unit;
     private Color accent = Color.white;
@@ -47,15 +57,31 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
     private bool chromeBuilt;
     private bool targetable;
     private float appliedThickness = -1f;
+    private int pendingApCost;
 
     // 0 = top, 1 = bottom, 2 = left, 3 = right
     private readonly Image[] frame = new Image[4];
+    private readonly System.Collections.Generic.List<Image> apPips =
+        new System.Collections.Generic.List<Image>();
+    private RectTransform apPipRow;
 
     public event Action<UnitIconView> Clicked;
 
     public UnitCharacter Unit => unit;
     public bool IsSelected { get; private set; }
     public bool CanBeSelected => selectable && selectionEnabled && unit != null;
+
+    /// <summary>Base AP cost of the action being set up right now (0 when nothing is pending).</summary>
+    public int ApCostPreview => pendingApCost;
+
+    /// <summary>
+    /// How many action points the action the player is currently setting up will
+    /// spend, before this unit's starvation surcharge. 0 clears the preview.
+    /// </summary>
+    public void SetApCostPreview(int baseApCost)
+    {
+        pendingApCost = Mathf.Max(0, baseApCost);
+    }
 
     /// <summary>True while this card is a legal target for the action being aimed (e.g. a heal patient).</summary>
     public bool IsTargetable => targetable;
@@ -155,9 +181,15 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
             // Busy reads as its own line so a unit that already gathered today is
             // still visibly usable for base work (it keeps its remaining AP).
             string busy = unit.HasGatheredToday ? "\nOut today" : "";
-            string text = $"AP {unit.currentActionPoints}/{unit.maxActionPoints}\n{StateLabel(unit.state)}{hunger}{busy}";
+            // Pips carry the AP count once they are wired, so the text keeps only
+            // the state lines and the two never say the same thing twice.
+            string text = apPipRow != null
+                ? $"{StateLabel(unit.state)}{hunger}{busy}"
+                : $"AP {unit.currentActionPoints}/{unit.maxActionPoints}\n{StateLabel(unit.state)}{hunger}{busy}";
             if (statusText.text != text) statusText.text = text;
         }
+
+        RefreshApPips();
 
         if (iconImage != null)
         {
@@ -220,7 +252,11 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         }
 
         LayoutText(nameText, padding + portraitHeight + 6f, 34f, Color.white, 30f);
-        LayoutText(statusText, padding + portraitHeight + 42f, 54f, statusColor, 24f);
+
+        // The pips take over the "AP x/y" line, so the state text starts one row lower.
+        float apTop = padding + portraitHeight + 42f;
+        BuildApPips(apTop);
+        LayoutText(statusText, apTop + (apPipRow != null ? apPipRowHeight + 2f : 0f), 32f, statusColor, 24f);
 
         for (int i = 0; i < frame.Length; i++)
         {
@@ -230,8 +266,70 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         ConfigureFrameRects();
     }
 
-    private void LayoutText(TMP_Text text, float topOffset, float height, Color color, float maxFontSize)
+    /// <summary>
+    /// Row that holds the AP pips. Nothing is built when the three sprites are
+    /// missing, so a card prefab without them keeps the old "AP x/y" text.
+    /// </summary>
+    private void BuildApPips(float topOffset)
     {
+        if (apPipAvailable == null || apPipPending == null || apPipSpent == null) return;
+
+        var go = new GameObject("ApPips", typeof(RectTransform));
+        apPipRow = (RectTransform)go.transform;
+        apPipRow.SetParent(transform, false);
+        apPipRow.anchorMin = new Vector2(0f, 1f);
+        apPipRow.anchorMax = new Vector2(1f, 1f);
+        apPipRow.pivot = new Vector2(0.5f, 1f);
+        apPipRow.anchoredPosition = new Vector2(0f, -topOffset);
+        apPipRow.sizeDelta = new Vector2(-padding * 2f, apPipRowHeight);
+    }
+
+    /// <summary>One pip per action point, painted from the unit's live AP plus the pending action's cost.</summary>
+    private void RefreshApPips()
+    {
+        if (apPipRow == null || unit == null) return;
+
+        int total = Mathf.Max(0, unit.maxActionPoints);
+        int left = Mathf.Clamp(unit.currentActionPoints, 0, total);
+        int spending = pendingApCost > 0 ? Mathf.Min(unit.GetActualApCost(pendingApCost), left) : 0;
+
+        while (apPips.Count < total)
+        {
+            var go = new GameObject("ApPip" + apPips.Count, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(apPipRow, false);
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+
+            var image = go.GetComponent<Image>();
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+            image.raycastTarget = false;
+            apPips.Add(image);
+        }
+
+        for (int i = 0; i < apPips.Count; i++)
+        {
+            bool visible = i < total;
+            var pip = apPips[i];
+            if (pip.gameObject.activeSelf != visible) pip.gameObject.SetActive(visible);
+            if (!visible) continue;
+
+            var rect = (RectTransform)pip.transform;
+            rect.sizeDelta = new Vector2(apPipWidth, apPipHeight);
+            rect.anchoredPosition = new Vector2(i * (apPipWidth + apPipSpacing), 0f);
+
+            // AP drains from the left, so the pips just before the boundary are
+            // the ones the pending action will eat.
+            Sprite sprite = i >= left ? apPipSpent
+                : i >= left - spending ? apPipPending
+                : apPipAvailable;
+            if (pip.sprite != sprite) pip.sprite = sprite;
+        }
+    }
+
+    private void LayoutText(TMP_Text text, float topOffset, float height, Color color, float maxFontSize)    {
         if (text == null) return;
 
         text.alignment = TextAlignmentOptions.TopLeft;

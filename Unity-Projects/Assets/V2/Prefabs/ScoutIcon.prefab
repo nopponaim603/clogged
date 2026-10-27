@@ -387,6 +387,13 @@ MonoBehaviour:
   targetableFrameThickness: 7
   targetablePulseSpeed: 3.2
   targetablePulseMinAlpha: 0.55
+  apPipAvailable: {fileID: 21300000, guid: 8cfab1e1d0639b945a00e964e54a5514, type: 3}
+  apPipPending: {fileID: 21300000, guid: e80eac216aa6cf441a4f96dbf492ffc9, type: 3}
+  apPipSpent: {fileID: 21300000, guid: 01c950f48697e03468adc39f0ff96486, type: 3}
+  apPipWidth: 18
+  apPipHeight: 22
+  apPipSpacing: 4
+  apPipRowHeight: 22
 --- !u!225 &2848246395873638416
 CanvasGroup:
   m_ObjectHideFlags: 0

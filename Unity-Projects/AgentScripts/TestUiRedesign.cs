@@ -77,6 +77,26 @@ public static class TestUiRedesign
         ClickCard(roster, chef);
         Check("card click selects the chef", roster.SelectedUnit == chef);
 
+        // --- 3b. ap pips ---------------------------------------------------
+        Section("ap pips");
+        UnitIconView chefCard = roster.Cards.FirstOrDefault(c => c.Unit == chef);
+        Check("a card exists for the chef", chefCard != null);
+        if (chefCard != null)
+        {
+            chefCard.SetApCostPreview(0);
+            chefCard.Refresh();
+            Check("card paints one pip per action point",
+                PipStates(chefCard) == ExpectedPips(chef, 0), PipStates(chefCard));
+
+            chefCard.SetApCostPreview(2);
+            chefCard.Refresh();
+            Check("pending cost flips the top pips to the about-to-be-spent state",
+                PipStates(chefCard) == ExpectedPips(chef, 2), PipStates(chefCard));
+
+            chefCard.SetApCostPreview(0);
+            chefCard.Refresh();
+        }
+
         int apBefore = chef.currentActionPoints;
         int foodBefore = RunResources.Instance.Food;
 
@@ -86,7 +106,8 @@ public static class TestUiRedesign
             roster.HandPanel.MaxSelection == 1 && action.IsVisible && action.CurrentLabel == "COOK");
 
         ClickButton(skill, "CookButton");
-        Check("cook queues a second round", PendingRounds(flow) == 2);
+        Check("cook queues a second round", PendingRounds(flow) == 2 && flow.PendingApCost == 2,
+            $"rounds={PendingRounds(flow)} cost={flow.PendingApCost}");
 
         RightClickButton(skill, "CookButton");
         Check("right click clears the queue, disarms, keeps the card",
@@ -98,6 +119,15 @@ public static class TestUiRedesign
         Check("cook spends AP, makes food, disarms and logs",
             chef.currentActionPoints < apBefore && RunResources.Instance.Food > foodBefore &&
             flow.Armed == SkillKind.None && LastEntryContains("cooked"));
+
+        if (chefCard != null)
+        {
+            chefCard.SetApCostPreview(0);
+            chefCard.Refresh();
+            Check("spent AP turns the pips into the spent state",
+                PipStates(chefCard) == ExpectedPips(chef, 0) && PipStates(chefCard).Contains("ap_15"),
+                PipStates(chefCard));
+        }
 
         ClickCard(roster, chef);
         ClickButton(skill, "CookButton");
@@ -537,8 +567,39 @@ public static class TestUiRedesign
         return "?";
     }
 
-    static UnitIconView FirstSelectable(UnitRosterView roster)
+    /// <summary>Sprite names of the visible AP pips, left to right ("none" when the card has no row).</summary>
+    static string PipStates(UnitIconView card)
     {
+        var row = card.transform.Find("ApPips");
+        if (row == null) return "none";
+
+        var parts = new List<string>();
+        for (int i = 0; i < row.childCount; i++)
+        {
+            var child = row.GetChild(i);
+            if (!child.gameObject.activeSelf) continue;
+            var image = child.GetComponent<Image>();
+            parts.Add(image != null && image.sprite != null ? image.sprite.name : "?");
+        }
+        return parts.Count == 0 ? "none" : string.Join(",", parts);
+    }
+
+    /// <summary>The pip string the card should paint for this unit and pending base cost.</summary>
+    static string ExpectedPips(UnitCharacter unit, int pendingBaseCost)
+    {
+        int total = unit.maxActionPoints;
+        int left = Mathf.Clamp(unit.currentActionPoints, 0, total);
+        int spending = pendingBaseCost > 0 ? Mathf.Min(unit.GetActualApCost(pendingBaseCost), left) : 0;
+
+        var parts = new List<string>();
+        for (int i = 0; i < total; i++)
+        {
+            parts.Add(i >= left ? "ap_15" : i >= left - spending ? "ap_30" : "ap_45");
+        }
+        return parts.Count == 0 ? "none" : string.Join(",", parts);
+    }
+
+    static UnitIconView FirstSelectable(UnitRosterView roster)    {
         foreach (var card in roster.Cards)
         {
             if (card.CanBeSelected) return card;

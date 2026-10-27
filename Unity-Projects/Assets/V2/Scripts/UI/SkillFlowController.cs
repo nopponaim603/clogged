@@ -30,6 +30,24 @@ public class SkillFlowController : MonoBehaviour
     public SkillKind Armed => armed;
     public bool IsSkillActive => armed != SkillKind.None;
 
+    /// <summary>
+    /// Base AP the queued skill will spend on the worker - the number the cards
+    /// paint as "about to be used". 0 when no skill is armed.
+    /// </summary>
+    public int PendingApCost
+    {
+        get
+        {
+            var controller = BaseWorkController.Instance;
+            if (controller == null || armed == SkillKind.None) return 0;
+
+            if (armed == SkillKind.Heal) return controller.HealBaseApCost(healUseMedicine);
+
+            int perRound = armed == SkillKind.Cook ? controller.CookBaseApCost : controller.WorkshopBaseApCost;
+            return perRound * Mathf.Max(1, pendingRounds);
+        }
+    }
+
     private SkillKind armed = SkillKind.None;
     private int pendingRounds;
     private bool healUseMedicine;

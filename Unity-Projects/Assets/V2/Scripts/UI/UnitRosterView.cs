@@ -118,6 +118,7 @@ public class UnitRosterView : MonoBehaviour
     {
         bool selectionChanged = false;
         bool healing = IsHealTargeting();
+        int pendingCost = CurrentPendingApCost();
         foreach (var view in views)
         {
             // AP, wounds and "out today" all move without the roster being told,
@@ -128,6 +129,7 @@ public class UnitRosterView : MonoBehaviour
             // While aiming a heal, every legal patient is highlighted so the
             // eligible cards stand out from the merely-disabled ones.
             view.SetTargetable(healing && pickable);
+            view.SetApCostPreview(pendingCost);
             view.Refresh();
 
             // A unit can become unavailable mid-day (AP spent on base work,
@@ -147,6 +149,25 @@ public class UnitRosterView : MonoBehaviour
     private bool IsHealTargeting()
     {
         return handPanel != null && handPanel.Mode == CharacterHandPanel.SelectionMode.HealTarget;
+    }
+
+    /// <summary>
+    /// Base AP cost of whatever the player is setting up right now: the queued
+    /// skill if one is armed, otherwise the cave picked on the map. Read from the
+    /// owning systems instead of a cached push so the two can never disagree.
+    /// </summary>
+    private int CurrentPendingApCost()
+    {
+        var skills = SkillFlowController.Instance;
+        if (skills != null && skills.IsSkillActive) return skills.PendingApCost;
+
+        var map = GatherMapController.Instance;
+        var node = map != null ? map.SelectedNode : null;
+        if (node == null) return 0;
+
+        var database = GatherZoneDatabase.Instance;
+        var config = database != null ? database.GetConfig(node.Data.zone) : null;
+        return config != null ? config.apCost : 0;
     }
 
     private void OnDestroy()

@@ -40,6 +40,12 @@ public class BaseWorkController : MonoBehaviour
 
     // --- Planning helpers (the UI reads these so the numbers live in one place) ---
 
+    // Base costs, before each unit's starvation surcharge - callers that paint
+    // more than one unit's card need the unmodified number.
+    public int CookBaseApCost => cookApCost;
+    public int WorkshopBaseApCost => workshopApCost;
+    public int HealBaseApCost(bool useMedicine) => useMedicine ? healApCostWithMedicine : healApCostWithoutMedicine;
+
     public int CookApPerRound(UnitCharacter worker) => worker.GetActualApCost(cookApCost);
     public int CookMaterialPerRound => cookMaterialCostPerRound;
 
