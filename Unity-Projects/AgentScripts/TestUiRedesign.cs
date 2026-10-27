@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -114,6 +115,15 @@ public static class TestUiRedesign
             roster.HandPanel.Mode == CharacterHandPanel.SelectionMode.HealTarget &&
             roster.SelectedCount == 0 && !action.IsVisible);
 
+        // The roster paints on Update(), which does not tick inside one test frame.
+        roster.RefreshAvailability();
+        var healable = roster.Cards.Where(c => c.Unit != null && c.Unit.state == UnitState.Hurt).ToList();
+        var notHealable = roster.Cards.Where(c => c.Unit != null && c.Unit.state != UnitState.Hurt).ToList();
+        Check("every hurt card is highlighted as a heal target",
+            healable.Count > 0 && healable.All(c => c.IsTargetable));
+        Check("cards that cannot be healed are not highlighted",
+            notHealable.All(c => !c.IsTargetable));
+
         ClickCard(roster, patient);
         Check("hurt unit is pickable and the button offers HEAL",
             roster.SelectedUnit == patient && action.IsVisible && action.CurrentLabel == "HEAL");
@@ -123,6 +133,10 @@ public static class TestUiRedesign
         Check("heal with medicine cures and spends 1 medicine",
             patient.state == UnitState.Idle && RunResources.Instance.Medicine == medicineBefore - 1 &&
             roster.HandPanel.Mode == CharacterHandPanel.SelectionMode.Dispatch);
+
+        roster.RefreshAvailability();
+        Check("the heal highlight clears once the action resolves",
+            roster.Cards.All(c => !c.IsTargetable));
 
         // AP-only mode: no medicine involved, costs 2 AP.
         patient.state = UnitState.Hurt;

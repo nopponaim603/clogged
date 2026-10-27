@@ -117,12 +117,17 @@ public class UnitRosterView : MonoBehaviour
     private void Update()
     {
         bool selectionChanged = false;
+        bool healing = IsHealTargeting();
         foreach (var view in views)
         {
             // AP, wounds and "out today" all move without the roster being told,
             // so selectability is re-derived instead of cached on events.
             bool pickable = CanPick(view.Unit);
             view.SetSelectable(pickable);
+
+            // While aiming a heal, every legal patient is highlighted so the
+            // eligible cards stand out from the merely-disabled ones.
+            view.SetTargetable(healing && pickable);
             view.Refresh();
 
             // A unit can become unavailable mid-day (AP spent on base work,
@@ -136,6 +141,12 @@ public class UnitRosterView : MonoBehaviour
         }
 
         if (selectionChanged) OnSelectionChanged?.Invoke();
+    }
+
+    /// <summary>True while the hand is collecting a heal patient.</summary>
+    private bool IsHealTargeting()
+    {
+        return handPanel != null && handPanel.Mode == CharacterHandPanel.SelectionMode.HealTarget;
     }
 
     private void OnDestroy()
@@ -272,6 +283,7 @@ public class UnitRosterView : MonoBehaviour
         foreach (var view in views)
         {
             view.SetSelectionEnabled(enabled);
+            if (!enabled) view.SetTargetable(false);
         }
     }
 
@@ -282,6 +294,7 @@ public class UnitRosterView : MonoBehaviour
     public void RefreshAvailability()
     {
         bool changed = false;
+        bool healing = IsHealTargeting();
         foreach (var view in views)
         {
             if (view.Unit == null) continue;
@@ -294,6 +307,7 @@ public class UnitRosterView : MonoBehaviour
                 changed = true;
             }
             view.SetSelectable(pickable);
+            view.SetTargetable(healing && pickable);
             view.Refresh();
         }
         if (changed) OnSelectionChanged?.Invoke();

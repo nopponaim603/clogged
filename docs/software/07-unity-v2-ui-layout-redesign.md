@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.15 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · รอ final review
+**Version:** 0.16 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -585,13 +585,13 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 ### 7.12 รวมชุดทดสอบเหลือไฟล์เดียว (2026-10-28)
 
-เดิมต้องเข้า play mode 4 รอบ (`TestCleanup`, `TestSkillFlow`, `TestDispatchGating`, `TestClickTargets`) ซึ่งกินเวลาและทรัพยากรเพราะการสั่ง play Unity ช้า — รวมเป็น **`AgentScripts/TestUiRedesign.cs`** ไฟล์เดียว รันครั้งเดียวจบ 32 ข้อ
+เดิมต้องเข้า play mode 4 รอบ (`TestCleanup`, `TestSkillFlow`, `TestDispatchGating`, `TestClickTargets`) ซึ่งกินเวลาและทรัพยากรเพราะการสั่ง play Unity ช้า — รวมเป็น **`AgentScripts/TestUiRedesign.cs`** ไฟล์เดียว รันครั้งเดียวจบ **35 ข้อ** (เดิม 32 ข้อ; เพิ่ม 3 ข้อใน §7.13)
 
 | ส่วน | ครอบอะไร | จำนวนข้อ |
 |---|---|---|
 | `structure` | ของเก่าถูกลบครบ, 2 ช่อง Core Item ไม่ทับกัน, `coreItemBIcon` ผูกแล้ว + เปลี่ยนสีเมื่อได้ B, `DayFrame` มี `EndDayTrigger` | 5 |
 | `clickability` | ทุก interactive element (16 ชิ้น) ผ่าน `EventSystem.RaycastAll` จริง + ไม่มีถ้ำใต้กรอบ DAY + raycast ที่ DayFrame resolve ถึง `EndDayTrigger` | 3 |
-| `skill flow` | Heal เทาเมื่อไม่มีคนเจ็บ, Cook queue 1→2, คลิกขวาล้าง (การ์ดยังเลือก), ยืนยันแล้วหัก AP/ได้อาหาร, สลับไป Craft ล้าง counter, Heal MED, Heal AP | 14 |
+| `skill flow` | Heal เทาเมื่อไม่มีคนเจ็บ, Cook queue 1→2, คลิกขวาล้าง (การ์ดยังเลือก), ยืนยันแล้วหัก AP/ได้อาหาร, สลับไป Craft ล้าง counter, Heal MED, Heal AP, **ไฮไลต์ผู้ป่วย 3 ข้อ (§7.13)** | 17 |
 | `dispatch` | ปุ่มซ่อน/โผล่, สกิลแย่งปุ่มแล้วคืน, ทริป resolve ทันที, คนที่ busy ยังกดได้ | 8 |
 | `end day` | คลิก DayFrame → day เดินหน้า + log | 2 |
 
@@ -632,6 +632,65 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 | `ObtainCoreItem(B)` → `HasBothCoreItems` | `true` (ถูกต้อง) |
 | `RunLog.Add` → `Entries.Count` | `1`, stamp day ตรงกับ `DayManager` |
 | Console ระหว่าง play mode | ไม่มี error (มีแค่ warning ของ Unity Account API) |
+
+### 7.13 ไฮไลต์คนที่รักษาได้ (2026-10-28)
+
+**ปัญหา:** ตอนกด Heal แล้วต้องเลือกคนไข้ การ์ดของคนที่เจ็บ (ซึ่งเป็นคนเดียวที่เลือกได้) กลับถูก `CanvasGroup.alpha` ลดลงเหลือ 0.55 เพราะ `Refresh()` ลดความสว่างให้ทุกคนที่ `state != Idle` — คนที่ต้องเลือกจึงดู "กดไม่ได้" มากกว่าคนอื่น
+
+**ดีไซน์:** เพิ่มสถานะที่ 3 นอกจาก *selectable* และ *selected* คือ **targetable** = การ์ดที่ถูกต้องของ action ที่กำลังเล็งอยู่
+
+| สถานะ | กรอบ | ความหนา | alpha | หมายเหตุ |
+|---|---|---|---|---|
+| ปกติ | สี `accent` ของตัวละคร | 4 | 0.6 (0.2 ถ้ากดไม่ได้) | |
+| เลือกแล้ว | `accent` | 7 | 1.0 | + `selectedScale` 1.06 |
+| **targetable** | **มินต์ `(0.55, 1, 0.75)`** | **7** | **1.0 · เต้น 0.55↔1.0** | สีไม่อยู่ในชุด `accent` ของทั้ง 4 ตัว |
+
+- `UnitIconView.SetTargetable(bool)` เป็นทางเดียวที่ตั้งค่า; `ApplyFrame()` จัดการความหนา, `Update()` เฉพาะการ์ดที่ targetable เท่านั้นที่คำนวณพัลส์ (sin ที่ `targetablePulseSpeed` 3.2) — การ์ดปกติไม่มีค่าใช้จ่าย
+- `SetSelectionEnabled(false)` ล้าง flag ทิ้ง เพื่อไม่ให้กรอบเต้นค้างตอนปิดการเลือกชั่วคราว
+- `UnitRosterView` เป็นคนตัดสิน: `IsHealTargeting()` (`HandPanel.Mode == HealTarget`) && `CanPick(unit)` — เรียกทั้งใน `Update()` และ `RefreshAvailability()`
+- `AlphaForState()` แยกออกมาจาก `Refresh()` เพื่อให้ `targetable` override alpha ได้ในที่เดียว
+
+**ผลลัพธ์:** กด Heal → คนเจ็บกรอบมินต์หนา เต้นอยู่ที่ alpha เต็ม ส่วนคนที่รักษาไม่ได้จาง 0.5 → ตาเห็นทันทีว่าเลือกใครได้
+
+**ยืนยันแล้ว:** `DemoTargets` จัดสถานะ (Boon เจ็บ, Ann เป็นหมอ) แล้วรายงาน `mode=HealTarget targetable=1/4` — ตรงกับภาพหน้าจอ (การ์ด Boon กรอบมินต์, อีก 3 ใบจาง)
+
+### 7.14 ฟอนต์ pixel จาก tileset (2026-10-28)
+
+`Assets/Day/Sprites/tilemap_packed.png` (288×176) เป็นชีตไทล์กริด **16×16 ไม่มี gutter, 18 คอลัมน์ × 11 แถว** ตรวจแล้วพบว่ามีตัวอักษรอยู่ 5 แถว:
+
+| แถว (y) | คอลัมน์ 0–12 | สไตล์ |
+|---|---|---|
+| 6 (96–111) | `A`–`M` | มีเงา lavender ด้านล่าง |
+| 7 (112–127) | `N`–`Z` | มีเงา lavender |
+| 8 (128–143) | `%` `+` `-` `0`–`9` | มีเงา lavender |
+| 9 (144–159) | `A`–`M` | แบน ไม่มีเงา |
+| 10 (160–175) | `N`–`Z` | แบน ไม่มีเงา |
+
+เลือกใช้ **แถว 6–8** เพราะเป็นชุดเดียวที่ครบทั้งตัวอักษรและตัวเลข (ชุดแบนไม่มีตัวเลขเลย)
+
+**ข้อค้นพบสำคัญ:** ตัวอักษรแต่ละไทล์วาดเป็น *ตัวขาวบนแผ่นสีเข้ม + เงา lavender* แต่ TMP tint glyph ด้วย **alpha อย่างเดียว** ดังนั้นถ้าคัดลอกทั้งไทล์จะได้ "บล็อกทึบ" ไม่ใช่ตัวอักษร — ต้องสกัดเฉพาะพิกเซลขาว (`r,g,b > 0.85`) เป็น mask ขาวบนโปร่งใส
+
+**ผลลัพธ์** (`Tools > V2 > Rebuild Pixel Font` → `Assets/V2/Editor/PixelFontBuilder.cs`)
+
+| ไฟล์ | คืออะไร |
+|---|---|
+| `Assets/V2/Fonts/PixelTilesetAtlas.png` | 128×80, 39 glyph ในกริด 8 คอลัมน์, Point filter, ไม่บีบอัด |
+| `Assets/V2/Fonts/PixelTileset.mat` | material shader `TextMeshPro/Bitmap` |
+| `Assets/V2/Fonts/PixelTileset.asset` | `TMP_FontAsset` — 66 glyph / 66 character |
+| `Assets/V2/Fonts/Source/tilemap_packed.png` | สำเนาต้นฉบับ ให้ pipeline ไม่ต้องพึ่ง `Assets/Day` |
+
+| ค่า | ผล |
+|---|---|
+| ตัวอักษรที่มี | `A`–`Z` (26) + `a`–`z` (พับไปตัวพิมพ์ใหญ่) + `0`–`9` + `% + -` + space = 66 |
+| ขนาดตัวอักษรจริง | 6×8 px (`I` 2×8, `M`/`W` 8×8, `Q` 6×9) |
+| em / cap height | `pointSize` 16 / cap 8 → cap = fontSize ÷ 2 |
+| ระยะห่าง | `bearingX` = ตำแหน่งในไทล์, advance = ink + 2, space = 6 |
+| Fallback | LiberationSans SDF → เครื่องหมายอื่น (`•` `×` `≥` ฯลฯ) ไม่กลายเป็นกล่องเปล่า |
+
+**วิธีใช้:** ตั้ง `fontSize` เป็น **32** (หรือ 16/48 = ตัวคูณของ 16) เพื่อให้ 1 texel = 2 px พอดี; ที่ขนาดอื่นภาพจะไม่คมเพราะเป็น bitmap ไม่ใช่ SDF
+**ข้อจำกัด:** ไม่มีตัวพิมพ์เล็กจริง (พับเป็นใหญ่), ไม่มีวรรคตอนนอกจาก `% + -`, ไม่มีสระไทย — ฟอนต์นี้เหมาะกับตัวเลข/ป้าย/HUD อังกฤษ ไม่ใช่บทสนทนา
+
+**ยืนยันแล้ว:** รัน builder ซ้ำได้ผลเท่าเดิม (`glyphs=66`, `brightPixels=2295`), preview render ที่ `Temp/pixel-font-preview.png` อ่านออกครบ A–Z / a–z / 0–9 / `%+-` / "Day 7", compile 0 error
 
 ---
 
@@ -736,8 +795,10 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 21. [ ] ไม่มีถ้ำ (node) อยู่ใต้ panel ใด ๆ — ทุกใบมองเห็นและกดได้
 22. [ ] ไม่มี console warning จาก missing script / glyph ที่ฟอนต์ไม่มี
 23. [ ] **ทุก interactive element ผ่าน raycast จริง** — `EventSystem.RaycastAll` ที่กลาง element ต้อง hit element นั้น (ไม่ใช่ panel ข้างหลัง) · ตรวจด้วย `AgentScripts/TestUiRedesign.cs`
+24. [ ] **ตอนเลือกคนไข้ คนที่รักษาได้ถูกไฮไลต์** — กรอบมินต์หนา alpha เต็มและเต้น ส่วนคนที่รักษาไม่ได้จาง และไฮไลต์หายทันทีที่จบการรักษา
+25. [ ] **มีฟอนต์ pixel จาก tileset ที่ใช้ได้จริง** — `Assets/V2/Fonts/PixelTileset.asset` ครอบ A–Z / a–z / 0–9 / `% + -` + space, มี fallback, และสร้างซ้ำได้จากเมนู `Tools > V2 > Rebuild Pixel Font`
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–19 ผ่านการตรวจด้วยสคริปต์ใน play mode (ดู §7.8–§7.10) · ข้อ 20–23 ผ่านในชุด `TestCleanup` + `TestClickTargets` (§7.11)
+> **สถานะ AC (2026-10-28):** ข้อ 1–25 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 35 ข้อ** (§7.12–§7.13) · ฟอนต์ตรวจด้วย preview render (§7.14)
 
 ---
 

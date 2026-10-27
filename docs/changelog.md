@@ -1,5 +1,10 @@
 # Documentation Changelog — clogged
 
+## 2026-10-28
+
+- **v0.16 (ไฮไลต์คนไข้ + ฟอนต์จาก tileset — §7.13, §7.14)** — เพิ่ม `UnitIconView.SetTargetable()` + `targetableColor` (มินต์) และ `UnitRosterView.IsHealTargeting()`: ตอนกด Heal การ์ดของคนที่เจ็บจะได้กรอบหนา alpha เต็มและเต้น (เดิมจาง 0.55 เพราะ `state != Idle` ทำให้คนที่ต้องเลือกดู "กดไม่ได้" ที่สุด) · `AlphaForState()` แยกออกมาให้ `targetable` override alpha ได้ · เพิ่ม `Assets/V2/Editor/PixelFontBuilder.cs` (+ เมนู `Tools > V2 > Rebuild Pixel Font`) สร้าง `Assets/V2/Fonts/PixelTileset.asset` จากไทล์ตัวอักษรใน `tilemap_packed.png` — 39 glyph (A–Z, 0–9, `% + -`) + พับ lowercase + space = 66 character, mask ขาวล้วนเพราะ TMP tint ด้วย alpha (ถ้าคัดลอกทั้งไทล์จะได้บล็อกทึบ), fallback เป็น LiberationSans SDF · `TestUiRedesign` เพิ่ม 3 ข้อ → **ALL PASS 35 ข้อ** · AC ข้อ 24–25
+- **ตรวจ tileset:** `tilemap_packed.png` 288×176 กริด 16×16 ไม่มี gutter · ตัวอักษรอยู่แถว 6–8 (A–M, N–Z, `%+-0–9` แบบมีเงา) และแถว 9–10 (A–Z แบบแบน ไม่มีตัวเลข) → เลือกแถว 6–8 เพราะครบตัวเลข
+
 ## 2026-10-27
 
 - **UI Layout Redesign Spec (Draft v0.2)** — ร่างสเปก UI ใหม่จากแบบร่างกระดาษ 3 โซน:

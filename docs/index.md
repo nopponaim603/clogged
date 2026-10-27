@@ -2,7 +2,7 @@
 
 **Project:** clogged
 **Status:** Active | **Current Sprint:** [Sprint 01 — Prototype](./agile/sprint-backlogs/sprint-01.md)
-**Last Updated:** 2026-08-08 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+**Last Updated:** 2026-10-28 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
 
 > ⚠️ GDD ได้อัปเดต **v1.0 (Prototype Reverse-Engineered)** — เอกสาร GDD ฉบับใหม่Reverse Engineering จาก source code `prototype_resource_game/` — ดู [Design Evolution](./gdd/00-concept.md#6-design-evolution)
 
@@ -23,7 +23,7 @@
 - [Unity V2 System Design](./software/04-unity-system-design.md)
 - [Unity V2 Class Diagram](./software/05-unity-class-diagram.md)
 - [Unity V2 Core Scene Hierarchy](./software/06-unity-core-scene-hierarchy.md)
-- [Unity V2 UI Layout Redesign](./software/07-unity-v2-ui-layout-redesign.md) — สเปก v0.15 · **P0–P5 เสร็จครบ** + แก้ bug DayFrame click (§7.11) · ชุดทดสอบเหลือไฟล์เดียว (§7.12) · รอ final review
+- [Unity V2 UI Layout Redesign](./software/07-unity-v2-ui-layout-redesign.md) — สเปก v0.16 · **P0–P5 เสร็จครบ** + แก้ bug DayFrame click (§7.11) · ชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนไข้ (§7.13) · ฟอนต์ pixel จาก tileset (§7.14) · รอ final review
 
 ---
 
