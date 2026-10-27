@@ -23,7 +23,7 @@
 - [Unity V2 System Design](./software/04-unity-system-design.md)
 - [Unity V2 Class Diagram](./software/05-unity-class-diagram.md)
 - [Unity V2 Core Scene Hierarchy](./software/06-unity-core-scene-hierarchy.md)
-- [Unity V2 UI Layout Redesign](./software/07-unity-v2-ui-layout-redesign.md) — สเปก v0.18 · **P0–P5 เสร็จครบ** + แก้ bug DayFrame click (§7.11) · ชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนไข้ (§7.13) · ฟอนต์ pixel จาก tileset (§7.14) · TMP ทั้ง V2 UI ใช้ฟอนต์ใหม่ (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · รอ final review
+- [Unity V2 UI Layout Redesign](./software/07-unity-v2-ui-layout-redesign.md) — สเปก v0.19 · **P0–P5 เสร็จครบ** + แก้ bug DayFrame click (§7.11) · ชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนไข้ (§7.13) · ฟอนต์ pixel จาก tileset (§7.14) · TMP ทั้ง V2 UI ใช้ฟอนต์ใหม่ (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
 
 ---
 

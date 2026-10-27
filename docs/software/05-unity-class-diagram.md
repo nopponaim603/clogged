@@ -471,11 +471,13 @@ classDiagram
         -CanvasGroup backdropGroup
         -float holdSeconds = 2.5
         -float fadeSeconds = 0.3
-        +Show(text, kind) void
-        +ShowWarning(text) void
-        +ShowError(text) void
-        +ShowInfo(text) void
+        +Show(text, LogKind kind) void
         +Clear() void
+    }
+
+    class UiPalette {
+        <<static>>
+        +Color For(LogKind) Color
     }
 
     class ButtonVisual {

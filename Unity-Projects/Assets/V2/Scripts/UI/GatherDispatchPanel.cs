@@ -188,7 +188,7 @@ public class GatherDispatchPanel : MonoBehaviour
     {
         if (string.IsNullOrEmpty(text)) return;
 
-        if (warningView != null) warningView.Show(text, WarningKind.Error);
+        if (warningView != null) warningView.Show(text, LogKind.Warning);
         RunLog.Add(LogKind.Warning, text);
     }
 

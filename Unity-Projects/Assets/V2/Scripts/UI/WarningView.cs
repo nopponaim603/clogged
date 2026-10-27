@@ -3,19 +3,12 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-public enum WarningKind
-{
-    /// <summary>Rule violations the player must fix (no cave picked, unit unavailable).</summary>
-    Warning,
-    /// <summary>Hard refusals such as exceeding the selection limit.</summary>
-    Error,
-    /// <summary>Neutral in-game notice.</summary>
-    Info,
-}
-
 /// <summary>
-/// In-game warning banner that replaces raw debug text. Shows one queued
-/// message at a time, colored by severity, fades in, holds, then fades out.
+/// In-game warning banner: one queued message at a time, fades in, holds, fades
+/// out. The text takes its colour from <see cref="UiPalette"/>, the same table
+/// the log row for that message uses, so a line never looks amber in the log and
+/// red on the banner.
+///
 /// Attach to the banner root: one CanvasGroup there fades the backdrop art and
 /// the label together, so the two never drift apart.
 /// </summary>
@@ -29,58 +22,31 @@ public class WarningView : MonoBehaviour
     [SerializeField] private float fadeSeconds = 0.3f;
     [SerializeField] private float spacingSeconds = 0.15f;
 
-    [Header("Colors")]
-    [SerializeField] private Color textColor = Color.white;
-    [Tooltip("Outline colour per severity — the text stays white, only the edge changes.")]
-    [SerializeField] private Color warningOutline = new Color(1f, 0.78f, 0.12f);
-    [SerializeField] private Color errorOutline = new Color(1f, 0.25f, 0.22f);
-    [SerializeField] private Color infoOutline = new Color(0.35f, 0.78f, 1f);
-
-    [Header("Outline")]
-    [Tooltip("TMP material outline, added at runtime. UGUI Outline does not render on TMP text.")]
-    [SerializeField] private float outlineWidth = 0.28f;
-
-    private readonly Queue<KeyValuePair<string, WarningKind>> queue = new Queue<KeyValuePair<string, WarningKind>>();
+    private readonly Queue<KeyValuePair<string, LogKind>> queue = new Queue<KeyValuePair<string, LogKind>>();
     private CanvasGroup group;
     private Coroutine routine;
-    private Material outlineMaterial;
 
     private void Awake()
     {
         group = GetComponent<CanvasGroup>();
         if (label == null) label = GetComponentInChildren<TMP_Text>(true);
 
-        // UGUI Outline/Shadow are no-ops on TMP, so the edge is painted into a
-        // text material instance. Keeping the instance lets each message just
-        // recolour the outline while the glyphs stay white.
-        outlineMaterial = TmpOutlineUtil.CreateOutlineMaterial(label, warningOutline, outlineWidth);
-        if (outlineMaterial != null)
-        {
-            label.fontMaterial = outlineMaterial;
-            label.color = textColor;
-        }
-        else if (label != null)
-        {
-            label.color = textColor;
-        }
-
         SetAlpha(0f);
         group.blocksRaycasts = false;
         group.interactable = false;
     }
 
-    /// <summary>Queues a message. Repeated identical messages refresh instead of stacking.</summary>
-    public void Show(string message, WarningKind kind = WarningKind.Warning)
+    /// <summary>
+    /// Queues a message. Pass the same <see cref="LogKind"/> that goes into the
+    /// log for this event; that is what decides the colour.
+    /// </summary>
+    public void Show(string message, LogKind kind = LogKind.Warning)
     {
         if (string.IsNullOrWhiteSpace(message)) return;
 
-        queue.Enqueue(new KeyValuePair<string, WarningKind>(message, kind));
+        queue.Enqueue(new KeyValuePair<string, LogKind>(message, kind));
         if (routine == null) routine = StartCoroutine(RunQueue());
     }
-
-    public void ShowWarning(string message) => Show(message, WarningKind.Warning);
-    public void ShowError(string message) => Show(message, WarningKind.Error);
-    public void ShowInfo(string message) => Show(message, WarningKind.Info);
 
     public void Clear()
     {
@@ -102,8 +68,7 @@ public class WarningView : MonoBehaviour
             if (label != null)
             {
                 label.text = entry.Key;
-                label.color = textColor;
-                TmpOutlineUtil.SetOutlineColor(outlineMaterial, OutlineFor(entry.Value));
+                label.color = UiPalette.For(entry.Value);
             }
 
             yield return Fade(0f, 1f, fadeSeconds);
@@ -138,15 +103,5 @@ public class WarningView : MonoBehaviour
         // already fades it. Only a separately parented backdrop needs its own
         // group driven.
         if (backdropGroup != null && backdropGroup != group) backdropGroup.alpha = alpha;
-    }
-
-    private Color OutlineFor(WarningKind kind)
-    {
-        switch (kind)
-        {
-            case WarningKind.Error: return errorOutline;
-            case WarningKind.Info: return infoOutline;
-            default: return warningOutline;
-        }
     }
 }

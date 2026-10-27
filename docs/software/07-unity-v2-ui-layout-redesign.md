@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.18 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · รอ final review
+**Version:** 0.19 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -109,13 +109,14 @@
 | หัวข้อ | สเปก |
 |---|---|
 | ตำแหน่ง | กลางจอ (เหนือ map area) |
-| แสดงเมื่อ | **เฉพาะ `WarningKind.Error`** — การกระทำที่ทำไม่ได้ |
+| แสดงเมื่อ | **เฉพาะการกระทำที่ทำไม่ได้** — บันทึกเป็น `LogKind.Warning` ทั้งใน log และบนแบนเนอร์ |
 | ตัวอย่าง | เลือกการ์ดตัวที่ 3 (เกิน limit), AP ไม่พอ, Cooking Material / Materials ไม่พอ, กด Heal ตอนไม่มีคนบาดเจ็บ, ยืนยันโดยยังไม่เลือกผู้ป่วย |
 | ข้อความทั่วไป/ข้อมูล | **ไม่ขึ้น warning** → ลง log เท่านั้น |
 | พร้อม log | ทุกครั้งที่ขึ้น warning ต้องมี log entry ชนิดเดียวกันด้วย |
-| Animation | **คงของเดิม** — fade in 0.3s → hold 2.5s → fade out 0.3s, คิวทีละข้อความ (`WarningView` เดิม) |
+| สี | **อ่านจาก `UiPalette.For(kind)` ตัวเดียวกับ log** — ข้อความบนแบนเนอร์จึงเป็นสีเดียวกับบรรทัดใน log เป๊ะ (เดิมข้อความขาวล้วน + outline แยกชุดสีของตัวเอง) |
+| Animation | **คงของเดิม** — fade in 0.3s → hold 2.5s → fade out 0.3s, คิวทีละข้อความ |
 | โครงสร้าง | group `Warning` (CanvasGroup + `WarningView`) → `WarningBackdrop` (Image, stretch เต็ม) + `WarningText` (TMP, stretch inset 8/6) — ดู §7.16 |
-| ต้องแก้ | `WarningView.Show*` callers: จัดประเภท `Warning`/`Error`/`Info` ใหม่ให้เหลือเฉพาะ Error ที่เด้งกลางจอ |
+| API | `WarningView.Show(text, LogKind kind)` — kind ตัวเดียวตัดสินทั้งสีและคู่ log (ไม่มี enum ที่สองแล้ว) — ดู §7.17 |
 
 ### 4.2 `LogMessagePanel` — ประวัติการกระทำ (ล่างซ้าย)
 
@@ -766,6 +767,41 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 > **บทเรียนเรื่อง process:** การแก้ `.unity` จากภายนอกขณะ editor เปิดซีนนั้นอยู่ ทำให้ Unity ขึ้น dialog "The open scene(s) have been modified externally" และบล็อก main thread (pipeline ทุกคำสั่ง timeout) — งานซีน/prefab ต้องทำผ่าน editor API (`script.run`) เท่านั้น
 
+### 7.17 สีของ Warning อ่านจากตารางเดียวกับ log (2026-10-28)
+
+**ปัญหา:** ข้อความเดียวกันเป็นสองสี — `[D1] Pick a cave on the map first.` ใน log เป็น**เหลืองอำพัน** แต่บนแบนเนอร์เป็น**ขาว** (และ outline แดง) เพราะสองฝั่งมีชุดสีของตัวเอง:
+
+| | log (`LogMessagePanel`) | banner (`WarningView`) |
+|---|---|---|
+| แหล่งสี | 6 field ที่ serialize ไว้ | 3 field outline + `textColor` ขาว |
+| enum | `LogKind` (6 ค่า) | `WarningKind` (3 ค่า) |
+| ใช้สีกับ | `row.color` = ตัวข้อความ | `label.color` = ขาว · outline = สี |
+| ค่าที่ผูกกับ "warning" | `(1, 0.72, 0.25)` อำพัน | `errorOutline (1, 0.25, 0.22)` แดง |
+
+เรียกด้วย `WarningKind.Error` แต่ลง log ด้วย `LogKind.Warning` → สีไม่มีทางตรงกันได้
+
+**อีกปัญหาที่เจอพร้อมกัน:** ฟอนต์ pixel ใช้ shader `TextMeshPro/Bitmap` ซึ่ง **ไม่มี property outline เลย** (`_MainTex _FaceTex _FaceColor _VertexOffsetX …`) ดังนั้น `TmpOutlineUtil.SetOutlineColor(...)` ที่ `WarningView` เรียกมาตลอดจึงเป็น no-op — ที่เห็นเป็นตัวขาวเฉย ๆ ไม่ใช่ "ขาว + outline แดง"
+
+**ที่แก้**
+
+| อย่าง | เดิม | ใหม่ |
+|---|---|---|
+| ตารางสี | 2 ชุด (6 + 4 สี) | **`UiPalette`** (`Scripts/UI/UiPalette.cs`) — 6 สีคงที่ + `For(LogKind)` |
+| enum | `LogKind` + `WarningKind` | **`LogKind` ตัวเดียว** — ลบ `WarningKind` ทิ้ง |
+| API | `Show(text, WarningKind)` + `ShowWarning/ShowError/ShowInfo` | `Show(text, LogKind kind = LogKind.Warning)` |
+| สีข้อความ | ขาว + outline (no-op) | **`label.color = UiPalette.For(kind)`** |
+| outline | สร้าง material instance ทุก Awake | ลบทิ้ง (ใช้ไม่ได้กับ bitmap shader) |
+| `LogMessagePanel` | 6 field ใน Inspector | อ่าน `UiPalette.For(entry.Kind)` |
+| call site | `Show(msg, WarningKind.Error)` + `RunLog.Add(LogKind.Warning, msg)` | `Show(msg, LogKind.Warning)` + `RunLog.Add(LogKind.Warning, msg)` — ค่าเดียวกัน |
+
+**`SkillFlowController.Warn()`** เดิมขึ้นแบนเนอร์แต่ **ไม่ลง log** (แค่ `Debug.LogWarning`) ซึ่งขัดกับ AC ข้อ 1 — แก้ให้ลง `RunLog.Add(LogKind.Warning, …)` ด้วย ทำให้คู่ banner↔log ครบทุกจุด
+
+**ผล:** วัดจากภาพหน้าจอ — แบนเนอร์ `#FFB840` และบรรทัด log ของข้อความเดียวกัน `#FFB840` (3028 vs 1511 พิกเซลที่ค่าตรงกัน)
+
+**ยืนยันแล้ว:** `TestUiRedesign` เพิ่ม 3 ข้อ → **ALL PASS 42 ข้อ** — "banner colour matches the log row" สำหรับ `Warning` / `Fail` / `Success` โดยเทียบสีที่ **render จริง** ของทั้งสองฝั่ง (ไม่ใช่เทียบค่าคงที่) · console 0 error
+
+> หมายเหตุ: `Show()` เรียก `StartCoroutine` ซึ่งรัน body ถึง `yield` แรกแบบ synchronous → ข้อความและสีถูกเพนต์ทันทีใน `Show()` เทสต์จึงเทียบสีได้ในเฟรมเดียว
+
 ---
 
 ## 8. Contracts ที่ต้องเพิ่ม (ต่อยอดจากข้อ 3 ใน Overview)
@@ -874,8 +910,9 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 26. [ ] **TMP ทุกตัวใน V2 UI ใช้ฟอนต์นี้** — รวม label ที่สร้างจากโค้ด (`TMP_Settings` default ชี้ PixelTileset) และไม่มีอักขระใดต้อง fallback · ตรวจด้วย `TestUiRedesign` 2 ข้อ
 27. [ ] **ฟอนต์ใหม่ไม่ทำให้ layout แตก** — ขนาดตัวอักษร (cap height / line height) ตรงกับ LiberationSans เดิม และข้อความในแถบทรัพยากรไม่ตัดขึ้นบรรทัดใหม่
 28. [ ] **กลุ่ม `Warning` เป็น parent/child ที่ตรงกัน** — CanvasGroup ตัวเดียวบน group root, backdrop กับ text stretch เต็ม group และข้อความอยู่กึ่งกลาง (inset เท่ากันทั้ง 4 ด้าน)
+29. [ ] **สีบนแบนเนอร์ = สีใน log** ของข้อความเดียวกัน — ทั้งคู่อ่านจาก `UiPalette.For(LogKind)` และไม่มี enum/ตารางสีที่สอง
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–28 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 39 ข้อ** (§7.12–§7.13, §7.15–§7.16) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15)
+> **สถานะ AC (2026-10-28):** ข้อ 1–29 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 42 ข้อ** (§7.12–§7.13, §7.15–§7.17) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15)
 
 ---
 

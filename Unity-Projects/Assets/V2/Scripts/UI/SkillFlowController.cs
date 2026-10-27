@@ -400,7 +400,9 @@ public class SkillFlowController : MonoBehaviour
 
     private void Warn(string message)
     {
-        if (warningView != null) warningView.Show(message, WarningKind.Error);
-        Debug.LogWarning("[SkillFlowController] " + message);
+        // The banner and the log must agree, so both take LogKind.Warning: one
+        // enum decides the colour on both sides.
+        if (warningView != null) warningView.Show(message, LogKind.Warning);
+        RunLog.Add(LogKind.Warning, message);
     }
 }

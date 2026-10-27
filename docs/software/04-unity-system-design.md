@@ -94,7 +94,7 @@ flowchart LR
 | `DispatchActionPanel` | `DispatchActionPanel` | ปุ่มยืนยันตัวเดียว (ซ่อนเมื่อว่าง, label ตามบริบท) ใช้ร่วมกันทั้ง gather และ skill |
 | `SkillTriggerPanel` | `SkillTriggerPanel` | ปุ่ม Cook / Heal (+toggle MED/AP) / Craft แทน `BaseWorkPanel` เดิม |
 | `LogPanel` | `LogMessagePanel` | ประวัติการกระทำ 16 entry, ย่อ/กางได้ |
-| `WarningText` | `WarningView` | แบนเนอร์เตือนในเกม: ตัวอักษรขาว + outline เปลี่ยนสีตามระดับ + แผงหลังดำ |
+| `Warning` | `WarningView` | แบนเนอร์เตือนในเกม: สีข้อความมาจาก `UiPalette` (ตัวเดียวกับที่ log ใช้) + แผงหลังดำ |
 
 ### 2.2 Game Flow ภายใน `Core.unity`
 

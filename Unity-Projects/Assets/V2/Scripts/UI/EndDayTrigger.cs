@@ -77,7 +77,7 @@ public class EndDayTrigger : MonoBehaviour, IPointerClickHandler
         if (string.IsNullOrEmpty(message)) return;
 
         var warning = FindAnyObjectByType<WarningView>();
-        if (warning != null) warning.Show(message, WarningKind.Error);
+        if (warning != null) warning.Show(message, LogKind.Warning);
         RunLog.Add(LogKind.Warning, message);
     }
 }

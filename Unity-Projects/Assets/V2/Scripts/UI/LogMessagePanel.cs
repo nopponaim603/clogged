@@ -35,14 +35,6 @@ public class LogMessagePanel : MonoBehaviour
     [Tooltip("Panel height while collapsed - enough for the header plus one line.")]
     [SerializeField] private float collapsedHeight = 64f;
 
-    [Header("Colours")]
-    [SerializeField] private Color actionColor = new Color(0.78f, 0.82f, 0.88f);
-    [SerializeField] private Color successColor = new Color(0.42f, 0.85f, 0.45f);
-    [SerializeField] private Color failColor = new Color(0.91f, 0.38f, 0.38f);
-    [SerializeField] private Color warningColor = new Color(1f, 0.72f, 0.25f);
-    [SerializeField] private Color dayEndColor = new Color(0.55f, 0.75f, 1f);
-    [SerializeField] private Color systemColor = new Color(0.60f, 0.63f, 0.68f);
-
     private readonly List<TextMeshProUGUI> rows = new List<TextMeshProUGUI>();
     private bool expanded = true;
 
@@ -88,7 +80,7 @@ public class LogMessagePanel : MonoBehaviour
 
             var entry = entries[first + i];
             row.text = Format(entry);
-            row.color = ColorFor(entry.Kind);
+            row.color = UiPalette.For(entry.Kind);
             row.gameObject.SetActive(true);
         }
 
@@ -124,19 +116,6 @@ public class LogMessagePanel : MonoBehaviour
     {
         string day = entry.Day > 0 ? $"<color=#6E7A8A>[D{entry.Day}]</color> " : "";
         return day + entry.Text;
-    }
-
-    private Color ColorFor(LogKind kind)
-    {
-        switch (kind)
-        {
-            case LogKind.Success: return successColor;
-            case LogKind.Fail: return failColor;
-            case LogKind.Warning: return warningColor;
-            case LogKind.DayEnd: return dayEndColor;
-            case LogKind.System: return systemColor;
-            default: return actionColor;
-        }
     }
 
     private void ToggleExpanded()

@@ -168,7 +168,7 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 | `StatusBar/TopBar` | กลางบน | Food / Medicine / CookingMaterial / Materials | `StatusBarView` |
 | `Warning` | กลางจอ 620×120, anchor (0.5,0.5), pivot (1,1), pos (300,60) | กลุ่มแบนเนอร์เตือน — ถือ CanvasGroup ตัวเดียวและ `WarningView` | `WarningView` |
 | `Warning/WarningBackdrop` | stretch เต็ม group (pivot .5, offset 0) | แผงดำโปร่ง 85% หลังข้อความ (ปิด raycast) | — (ลูกของ group) |
-| `Warning/WarningText` | stretch, inset 8/6, pivot .5 | ข้อความเตือน: outline เปลี่ยนสีตามระดับ | `WarningView.label` |
+| `Warning/WarningText` | stretch, inset 8/6, pivot .5 | ข้อความเตือน: สีตาม `UiPalette.For(kind)` — ตัวเดียวกับที่ log ใช้ | `WarningView.label` |
 | `CharacterHandPanel` | ล่างกลาง (0.5,0) +190, 830×300 | มือไพ่ 4 ใบ — dispatch เลือก 2, สกิล 1, heal target เฉพาะคน Hurt | `CharacterHandPanel` + `UnitRosterView` |
 | `DispatchActionPanel` | ล่างขวา 300×200 | ปุ่มยืนยันตัวเดียว; ซ่อนตอน `Awake`, label ตามบริบท | `DispatchActionPanel` → `GatherDispatchPanel` / `SkillFlowController` |
 | `LogPanel` | ล่างซ้าย (24,24) 700×300 | log 16 entry, ย่อเหลือบรรทัดเดียว (สูง 64) | `LogMessagePanel` |

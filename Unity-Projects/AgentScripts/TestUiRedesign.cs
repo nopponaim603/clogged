@@ -51,6 +51,7 @@ public static class TestUiRedesign
         CheckCoreItemSlots(canvas);
         Check("Day frame carries EndDayTrigger", dayFrame.GetComponent<EndDayTrigger>() != null);
         CheckWarningGroup(canvas);
+        CheckWarningColour(canvas);
         CheckFont(canvas);
 
         // --- 2. clickability ----------------------------------------------
@@ -227,6 +228,57 @@ public static class TestUiRedesign
     /// inside the backdrop, centred. A stretched child that keeps its old pivot
     /// or offset drifts away from the parent, which is what happened before.
     /// </summary>
+    /// <summary>
+    /// A message must look the same in the log and on the banner. Both read
+    /// UiPalette, so this compares the colours actually rendered by each: add a
+    /// log entry, show the same text on the banner, then diff the two.
+    ///
+    /// Show() paints the first message synchronously (StartCoroutine runs to its
+    /// first yield), so this works inside one frame.
+    /// </summary>
+    static void CheckWarningColour(GameObject canvas)
+    {
+        var view = canvas.GetComponentInChildren<WarningView>(true);
+        var logPanel = canvas.GetComponentInChildren<LogMessagePanel>(true);
+        if (view == null || logPanel == null)
+        {
+            Check("log panel and warning banner exist", false,
+                $"view={(view != null)} log={(logPanel != null)}");
+            return;
+        }
+
+        const string probe = "Colour probe.";
+
+        foreach (var kind in new[] { LogKind.Warning, LogKind.Fail, LogKind.Success })
+        {
+            RunLog.Clear();
+            RunLog.Add(kind, probe);
+            view.Show(probe, kind);
+
+            var row = FindText(logPanel.gameObject, probe);
+            var banner = view.GetComponentInChildren<TMPro.TMP_Text>(true);
+
+            bool ok = row != null && banner != null && SameRgb(row.color, banner.color);
+            Check($"banner colour matches the log row ({kind})", ok,
+                $"log={(row != null ? row.color.ToString() : "not found")} " +
+                $"banner={(banner != null ? banner.color.ToString() : "none")}");
+
+            view.Clear();
+        }
+
+        RunLog.Clear();
+    }
+
+    static TMPro.TMP_Text FindText(GameObject root, string contains)
+    {
+        foreach (var text in root.GetComponentsInChildren<TMPro.TMP_Text>(true))
+            if (text.text != null && text.text.Contains(contains)) return text;
+        return null;
+    }
+
+    static bool SameRgb(Color a, Color b) =>
+        Mathf.Abs(a.r - b.r) < 0.004f && Mathf.Abs(a.g - b.g) < 0.004f && Mathf.Abs(a.b - b.b) < 0.004f;
+
     static void CheckWarningGroup(GameObject canvas)
     {
         var rootT = canvas.transform.Find("Warning");
