@@ -21,7 +21,6 @@
 - [System Test Guideline](guidelines/system-test-guideline.md)
 
 ### 🤖 Agentic AI
-- [Unity MCP Setup Guide](agentic-ai/unity-mcp-setup.md) — คู่มือการตั้งค่า Unity MCP Server/Bridge เพื่อใช้งาน AI ร่วมกับ Unity Editor
 - [Naplab AI Provider Setup](agentic-ai/ai-provider-naplab.md) — ค่า config ของ AI Provider "Naplab AI" (local vLLM, model ornith-1.0-35b) สำหรับ Kilo
 - [Agent Skills Guide](agentic-ai/agent-skills-guide.md)
 

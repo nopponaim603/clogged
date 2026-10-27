@@ -1,5 +1,14 @@
 # Documentation Changelog — clogged
 
+## 2026-10-27
+
+- **ถอด MCP Unity ออกทั้งหมด** (เลิกใช้ MCP bridge, ใช้ `unity` CLI / unity-pipeline แทน):
+  - ลบ `mcp-unity/` (README + `setup.ps1` / `setup.cmd` / `setup.sh` + `cloned/` ~375 MB), `com.gamelovers.mcp-unity` ถูกถอดออกจาก `Unity-Projects/Packages/manifest.json` แล้วโดย commit `53a2807`.
+  - ลบ `.agents/skills/unity-mcp-tools/`, `Unity-Projects/ProjectSettings/McpUnitySettings.json`, `Unity-Projects/AgentScripts/RestartMcp.cs`, `Unity-Projects/opencode.json`.
+  - ลบ `mcp` block ออกจาก `.kilo/kilo.json` และกฎ ignore ของ `mcp-unity/cloned/` ออกจาก `.gitignore`.
+  - ลบ `docs/wiki/agentic-ai/unity-mcp-setup.md` และลิงก์อ้างอิงใน [wiki hub](./wiki/wiki.md), [Naplab AI Provider](./wiki/agentic-ai/ai-provider-naplab.md).
+  - อัปเดต skill `unity-csharp-conventions` และ `unity-scene-workflow` ให้ใช้คำสั่ง `unity command …` แทนเครื่องมือ MCP เดิม.
+
 ## 2026-08-08
 
 - **Task & Progress Tracker Weekly Report (W32)**:

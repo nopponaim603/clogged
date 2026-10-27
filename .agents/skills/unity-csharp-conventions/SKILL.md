@@ -5,15 +5,15 @@ description: >
   Use whenever creating or editing a .cs file under Unity-Projects/Assets, deciding where a
   new script or MonoBehaviour should live, naming fields/methods/classes in Unity C#, or
   deciding whether an assembly definition (.asmdef) is warranted. Also use when a script edit
-  needs to be verified against Unity's compiler (via the MCP recompile_scripts tool — see
-  unity-mcp-tools) before continuing scene work.
+  needs to be verified against Unity's compiler (via the `unity` CLI — `unity command
+  script.recompile`) before continuing scene work.
 ---
 
 # Unity C# Conventions
 
-Unity-Projects/ is a **quick spike/prototype** to validate the MCP Unity ↔ Editor bridge
-(see [mcp-unity/README.md](file:///c:/Users/noppon/source/01-DG/clogged/mcp-unity/README.md)),
-not the shipping game — the real game is `prototype_resource_game/` (Phaser+TS, see
+Unity-Projects/ is a **quick spike/prototype** used to validate driving the Unity Editor from an
+AI agent through the `unity` CLI (the `com.unity.pipeline` package), not the shipping game — the
+real game is `prototype_resource_game/` (Phaser+TS, see
 [AGENT.md](file:///c:/Users/noppon/source/01-DG/clogged/AGENT.md)). Per the project owner: this
 Unity work will **not** be developed further once the workflow is proven out. Conventions below
 are deliberately lightweight — enough to keep scripts readable and compiling cleanly, not an
@@ -78,11 +78,13 @@ further for a prototype this size.
 
 ## After every script edit
 
-A `.cs` file edit (whether made directly or via an MCP Unity tool) is not verified until Unity's
-compiler has run. Before doing any further scene/prefab work that depends on the script:
+A `.cs` file edit (whether made directly or via a `unity command` tool) is not verified until
+Unity's compiler has run. Before doing any further scene/prefab work that depends on the script:
 
-1. Trigger `recompile_scripts` (see [unity-mcp-tools](../unity-mcp-tools/SKILL.md)).
-2. Check `get_console_logs` for compiler errors.
-3. Fix and repeat before touching the scene — see
+1. Trigger `unity command script.recompile` (run it from `Unity-Projects/`).
+2. Poll `unity command script.recompile_status` until `completed` / `up_to_date`; a `failed`
+   status carries an `errors` array — fix those before continuing.
+3. Check `unity command console.get --level error` for compiler errors.
+4. Fix and repeat before touching the scene — see
    [unity-scene-workflow](../unity-scene-workflow/SKILL.md) for why this ordering matters for
-   `save_scene`.
+   saving a scene.

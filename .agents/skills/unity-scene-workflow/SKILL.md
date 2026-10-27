@@ -2,17 +2,21 @@
 name: unity-scene-workflow
 description: >
   Safe sequencing for editing Unity scenes, prefabs, and GameObjects in Unity-Projects/ via the
-  MCP Unity bridge or direct file edits. Use whenever a task involves save_scene, create_scene,
-  create_prefab, editing a .unity/.prefab file, adding/removing GameObjects or components, or
-  git-staging/committing any Unity asset. Covers two failure modes specific to Unity: saving a
-  scene while a script referenced by it fails to compile, and committing an asset without its
-  paired .meta file (which breaks GUID references project-wide).
+  `unity` CLI (unity-pipeline) or direct file edits. Use whenever a task involves saving/creating
+  scenes, prefabs, or materials, editing a .unity/.prefab file, adding/removing GameObjects or
+  components, or git-staging/committing any Unity asset. Covers two failure modes specific to
+  Unity: saving a scene while a script referenced by it fails to compile, and committing an asset
+  without its paired .meta file (which breaks GUID references project-wide).
 ---
 
 # Unity Scene / Prefab Workflow
 
 Applies to `Unity-Projects/` — the Unity spike, not the Phaser game in
 `prototype_resource_game/` (see [AGENT.md](file:///c:/Users/noppon/source/01-DG/clogged/AGENT.md)).
+
+Drive the Editor through the `unity` CLI run from `Unity-Projects/`. Discover what the running
+Editor exposes with `unity command --query <term>`; commands are namespaced by group
+(`scene.save`, `script.recompile`, `console.get`, …).
 
 ## Rule 1 — never save a scene with an unverified script
 
@@ -23,45 +27,47 @@ degrade (missing script warnings) and the save may capture broken state.
 **Sequence when a change touches both a `.cs` script and a scene/prefab:**
 
 1. Make the C# edit (see [unity-csharp-conventions](../unity-csharp-conventions/SKILL.md)).
-2. Call `recompile_scripts`.
-3. Call `get_console_logs` and confirm there are **zero compiler errors** (warnings are fine).
-   If errors exist, fix the script and repeat from step 2 — do not proceed.
-4. Only now make the GameObject/component edits (`update_gameobject`, `update_component`,
-   `add_asset_to_scene`, `create_prefab`, transform/material tools, etc.).
-5. Call `save_scene` (or let `create_prefab`/`create_scene` persist it).
-6. Optionally confirm with `get_scene_info` that the scene is no longer dirty after save.
+2. Run `unity command script.recompile`, then poll `unity command script.recompile_status`
+   until it reports `completed` or `up_to_date`.
+3. Run `unity command console.get --level error` and confirm there are **zero compiler errors**
+   (warnings are fine). If errors exist, fix the script and repeat from step 2 — do not proceed.
+4. Only now make the GameObject/component edits (`gameobject.*`, `component.*`, `set_field`,
+   `prefab.instantiate`, transform/material commands, etc.).
+5. Save with `unity command scene.save --path Assets/.../X.unity` (or let `scene.create` /
+   `prefab.create` persist it).
+6. Confirm with `unity command scene.list_open` that `isDirty` is `false` for the scene.
 
 If a change is scene-only (no script touched), steps 1–3 are unnecessary — go straight to the
 edit + save.
 
-Prefer `batch_execute` when a single logical change requires several GameObject/component/
-material calls in a row — it reduces round-trips and can roll back atomically on failure, which
-keeps the scene from being left half-edited if step N of a multi-step change errors out.
+Prefer `unity command job.batch --operations '[...]'` when a single logical change requires
+several GameObject/component/material calls in a row — it reduces round-trips and rolls back
+atomically on failure, which keeps the scene from being left half-edited if step N of a
+multi-step change errors out.
 
 ## Rule 2 — `.meta` files travel with their asset, always
 
 Every asset in `Unity-Projects/Assets/` has a sibling `.meta` file holding its GUID
-(`BlueMat.mat` + `BlueMat.mat.meta`, `Box.prefab` + `Box.prefab.meta`,
-`Sample Scene.unity` + `Sample Scene.unity.meta`). Unity resolves all cross-asset references
-(materials on prefabs, scripts on prefabs, scenes in Build Settings) by GUID, not by path or
-name. A `.meta` desynced from its asset breaks those references project-wide, often silently.
+(`BlueMat.mat` + `BlueMat.mat.meta`, `Box.prefab` + `Box.prefab.meta`, `Core.unity` + `Core.unity.meta`). Unity resolves all
+cross-asset references (materials on prefabs, scripts on prefabs, scenes in Build Settings) by
+GUID, not by path or name. A `.meta` desynced from its asset breaks those references
+project-wide, often silently.
 
 - **Never `git add`/commit an asset without its `.meta`, or vice versa.** When staging Unity
   changes, check `git status` includes both paths for every new/modified asset before
   committing.
 - **Never manually delete or rename an asset file outside Unity** (e.g. via `rm`/`mv` or a raw
-  file edit) without also handling its `.meta`. Prefer doing deletes/renames through Unity
-  itself — the `delete_scene` tool for scenes, or the Unity Editor — so the `.meta` is cleaned
-  up automatically. If a manual filesystem delete is unavoidable, delete the `.meta` in the same
-  step.
-- New assets created via `create_scene` / `create_prefab` / `create_material` will get their
-  `.meta` generated by Unity automatically on the next domain refresh — don't hand-author one.
+  file edit) without also handling its `.meta`. Prefer the CLI, which goes through the
+  AssetDatabase so the `.meta` is handled automatically — `asset.delete --confirm true` for
+  assets/scenes, `asset.move` / `asset.rename` for moves and renames.
+- New assets created via `scene.create` / `prefab.create` / `asset.create` get their `.meta`
+  generated by Unity automatically on the next domain refresh — don't hand-author one.
 
 ## Quick checklist before committing Unity asset changes
 
-- [ ] Any touched `.cs` script recompiles clean (`recompile_scripts` → `get_console_logs`, no
-      errors).
-- [ ] Scene saved (`save_scene`) and `get_scene_info` shows it's not dirty.
+- [ ] Any touched `.cs` script recompiles clean (`script.recompile` → `script.recompile_status`
+      → `console.get --level error`, no errors).
+- [ ] Scene saved (`scene.save`) and `scene.list_open` shows `isDirty: false`.
 - [ ] Every new/changed asset has its `.meta` staged alongside it.
 - [ ] No orphaned `.meta` (asset deleted but `.meta` left behind) or orphaned asset (`.meta`
       deleted but asset left behind).
