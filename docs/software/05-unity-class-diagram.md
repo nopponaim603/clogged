@@ -1,7 +1,8 @@
 # clogged (Unity V2) — Class Diagram
 
-**Version:** 2.0 | **Last Updated:** 2026-10-14
+**Version:** 3.0 | **Last Updated:** 2026-10-28
 > สร้างจากโค้ดจริงใน `Unity-Projects/Assets/V2/Scripts/` — ภาพรวมระบบและ flow ดูที่ [Unity V2 System Design](04-unity-system-design.md)
+> **v3.0:** อัปเดตหลัง UI redesign P0–P5 — `BaseWorkPanel`/`ScoutWalkerView` ถูกลบแล้ว, เพิ่ม `SkillTriggerPanel`/`SkillFlowController`/`CharacterHandPanel`/`DispatchActionPanel`/`LogMessagePanel`/`RunLogNarrator`/`EndDayTrigger`/`RunLog`
 
 ## 1. Layer Overview
 
@@ -9,11 +10,17 @@
 flowchart TD
     subgraph UI["UI/ — แสดงผล + input"]
         SBV[StatusBarView]
+        EDT[EndDayTrigger]
         URV[UnitRosterView] --> UIV[UnitIconView]
+        CHP[CharacterHandPanel]
         GDP[GatherDispatchPanel]
-        BWP[BaseWorkPanel]
+        DAP[DispatchActionPanel]
+        STP[SkillTriggerPanel]
+        SFC[SkillFlowController]
+        LMP[LogMessagePanel]
+        RLN[RunLogNarrator]
         MNV[MapNodeView]
-        SWV[ScoutWalkerView]
+        RCH[RightClickHandler]
     end
 
     subgraph CTRL["Controllers/ — กฎของเกม"]
@@ -28,6 +35,7 @@ flowchart TD
         UM[UnitManager]
         RR[RunResources]
         GZD[GatherZoneDatabase]
+        LOG["RunLog «static»"]
         GR["GatherResolver «static»"]
         TL["TraitLibrary «static»"]
     end
@@ -38,11 +46,24 @@ flowchart TD
         MND[MapNodeData]
     end
 
+    CHP --> URV
+    URV --> CHP
+    EDT --> DM
     GDP --> GMC
     GDP --> GDC
-    BWP --> BWC
+    GDP --> DAP
+    STP --> SFC
+    SFC --> BWC
+    SFC --> URV
+    SFC --> DAP
+    SFC --> STP
+    LMP --> LOG
+    RLN --> LOG
+    RLN --> BWC
+    RLN --> DM
+    RLN --> GDC
     MNV -. OnAnyNodeClicked .-> GMC
-    GMC --> SWV
+    RCH --> STP
     GMC --> MNV
     GMC --> GDC
     GDC --> GR
@@ -291,7 +312,6 @@ classDiagram
         -List~MapNodeView~ nodeViews
         -MapNodeView selectedNode
         +MapNodeView SelectedNode
-        +bool TripInProgress
         +event OnTripResolved(GatherDispatchResult)
         +event OnSelectionChanged(MapNodeView)
         +ConfirmTrip(units) void
@@ -299,7 +319,6 @@ classDiagram
         -HandleNodeClicked(view) void
         -SetupDefaultNodes() void
         -FindScatterPosition(min, max) Vector2
-        -ReturnToBase(result) void
     }
 
     class BaseWorkController {
@@ -471,21 +490,82 @@ classDiagram
         +Apply() void
     }
 
-    class ScoutWalkerView {
-        <<MonoBehaviour>>
-        -float moveDuration = 0.6
-        +MoveTo(pos, onArrived) void
-        +SnapTo(pos) void
+    class EndDayTrigger {
+        <<MonoBehaviour, IPointerClickHandler>>
+        +OnPointerClick(eventData) void
     }
 
-    class BaseWorkPanel {
+    class CharacterHandPanel {
         <<MonoBehaviour>>
-        -BaseWorkType? job
-        -int rounds
-        -TMP_Dropdown workerDropdown, patientDropdown
-        -SelectJob(type) void
-        -RefreshPreview() void
-        -OnConfirm() void
+        +SelectionMode Mode
+        +int MaxSelection
+        +bool CanSelect(unit) bool
+        +SetMode(mode) void
+        +event OnModeChanged
+    }
+
+    class DispatchActionPanel {
+        <<MonoBehaviour>>
+        +string CurrentLabel
+        +bool IsVisible
+        +Show(label, interactable) void
+        +ShowDispatch(interactable) void
+        +Hide() void
+        +event Clicked
+    }
+
+    class SkillTriggerPanel {
+        <<MonoBehaviour>>
+        -int hideCountBelow = 1
+        +SetCookCount(n) void
+        +SetCraftCount(n) void
+        +SetArmed(kind) void
+        +SetHealAvailable(ok) void
+        +SetHealMode(useMedicine, hasMedicine) void
+        +event CookClicked / CraftClicked / HealClicked
+        +event CookCleared / CraftCleared / HealCancelled / HealModeToggled
+    }
+
+    class SkillFlowController {
+        <<MonoBehaviour>>
+        +SkillKind Armed
+        +bool IsSkillActive
+        -int pendingRounds
+        -bool healUseMedicine
+        -QueueRound(kind) void
+        -ArmHeal() void
+        -HandleConfirm() void
+        +event StateChanged
+    }
+
+    class LogMessagePanel {
+        <<MonoBehaviour>>
+        -int capacity = 16
+        -float expandedHeight = 300
+        -float collapsedHeight = 64
+        -Render() void
+    }
+
+    class RunLogNarrator {
+        <<MonoBehaviour>>
+        -HandleBaseWork(result) void
+        -HandleDayEnded(report) void
+        -HandleGatherResolved(result) void
+        -HandleRunEnded(outcome) void
+    }
+
+    class RightClickHandler {
+        <<MonoBehaviour, IPointerClickHandler>>
+        +event Clicked
+    }
+
+    class RunLog {
+        <<static>>
+        +int Capacity = 16
+        +IReadOnlyList~LogEntry~ Entries
+        +Add(kind, message) void
+        +Clear() void
+        +event OnEntryAdded / OnCleared
     }
 
     class DiceRollView {
@@ -495,20 +575,32 @@ classDiagram
     UnitRosterView "1" *-- "*" UnitIconView : spawns
     UnitIconView ..> UnitCharacter
     UnitRosterView ..> UnitCharacter : selection
+    UnitRosterView ..> CharacterHandPanel : mode + card layout
+    CharacterHandPanel ..> UnitRosterView : pick rule
     StatusBarView ..> DayManager
     StatusBarView ..> RunResources
+    EndDayTrigger ..> DayManager : EndDay()
     GatherDispatchPanel ..> GatherMapController : ConfirmTrip / OnTripResolved
     GatherDispatchPanel ..> GatherDispatchController : CanDispatch
     GatherDispatchPanel ..> DayManager : OnDayStarted
     GatherDispatchPanel ..> WarningView : warns
     GatherDispatchPanel ..> UnitRosterView : selection
+    GatherDispatchPanel ..> DispatchActionPanel : confirm button
+    GatherDispatchPanel ..> SkillFlowController : stands down while armed
+    SkillTriggerPanel ..> SkillFlowController : raises input
+    SkillFlowController ..> BaseWorkController : Cook / Heal / UseWorkshop
+    SkillFlowController ..> UnitRosterView : mode + selection
+    SkillFlowController ..> DispatchActionPanel : confirm button
+    SkillFlowController ..> WarningView : warns
+    RightClickHandler ..> SkillTriggerPanel : right-click events
+    LogMessagePanel ..> RunLog
+    RunLogNarrator ..> RunLog : Add()
+    RunLogNarrator ..> BaseWorkController : OnBaseWorkCompleted
+    RunLogNarrator ..> DayManager : OnDayEnded / OnRunEnded
+    RunLogNarrator ..> GatherDispatchController : OnGatherResolved
     MapNodeView ..> TmpOutlineUtil : label outline
     WarningView ..> TmpOutlineUtil : text outline
-    BaseWorkPanel ..> BaseWorkController
-    BaseWorkPanel ..> GatherMapController : TripInProgress / OnTripResolved
-    BaseWorkPanel ..> DayManager : OnDayStarted
     GatherMapController "1" o-- "*" MapNodeView : spawns
-    GatherMapController --> ScoutWalkerView
 ```
 
 ## Notes
@@ -517,6 +609,9 @@ classDiagram
 - ระบบทั้งหมดสื่อสารผ่าน **singleton `Instance`** + **C# event** — ไม่มี dependency injection หรือ ScriptableObject event channel
 - `GatherResolver` เป็น pure function (ไม่มี side effect) — จุดที่ทำ unit test ได้ง่ายที่สุดในโปรเจกต์
 - `*Result` class (`GatherDispatchResult`, `BaseWorkResult`, `FeedResult`) เป็นรายงานสำหรับ UI เท่านั้น ไม่มี logic
+- **ไม่มี `TripInProgress` แล้ว** — `GatherMapController.ConfirmTrip` เรียก `Dispatch()` แล้วยิง `OnTripResolved` ในเฟรมเดียวกัน
+- `RunLog` เป็น **static** (ไม่ใช่ singleton) เพื่อให้ทุกระบบเขียน log ได้โดยไม่ต้องมี inspector reference — `LogMessagePanel` เป็น renderer ตัวเดียว, `RunLogNarrator` เป็นที่เดียวที่แปลง event เป็นข้อความ
+- `SkillFlowController` เป็นเจ้าของ state ของ flow สกิล (armed kind, queue count, heal mode, ผู้ป่วย) — `SkillTriggerPanel` เป็นแค่ view ที่ยิง event, `DispatchActionPanel` เป็นปุ่มเดียวที่ทั้ง 2 flow แชร์กันโดยดูจาก `IsSkillActive()`
 
 ## Related Documents
 - [Unity V2 System Design](04-unity-system-design.md)

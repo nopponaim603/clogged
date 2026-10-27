@@ -1,6 +1,6 @@
 # User Story: US-V2-SCENE-01 - ระบบฉากและ Feedback ภายในเกม
 
-**Status:** ⬜ To Do
+**Status:** 🔵 In Progress
 **Epic:** [Product Backlog](../01-product-backlog.md) · [V2 Task Overview](V2-TASK-OVERVIEW.md)
 **Owner:** Dev B — _TBD_ (กลุ่ม 2)
 **Estimate:** L
@@ -25,9 +25,9 @@
 ### ต้องอ่านให้เข้าใจ (เจ้าของ = กลุ่มนี้)
 | ไฟล์ | สิ่งที่ต้องรู้ |
 |---|---|
-| `Assets/V2/Scripts/Controllers/GatherMapController.cs` | สุ่มวางถ้ำ (`SetupDefaultNodes`, `FindScatterPosition`, margin/`baseClearRadius`), เลือกถ้ำผ่าน `MapNodeView.OnAnyNodeClicked`, **ลำดับทริปใน `ConfirmTrip` → `ReturnToBase`**, `TripInProgress`, `OnTripResolved` |
+| `Assets/V2/Scripts/Controllers/GatherMapController.cs` | สุ่มวางถ้ำ (`SetupDefaultNodes`, `FindScatterPosition`, margin L150/R360/T150/B420, `baseClearRadius`), เลือกถ้ำผ่าน `MapNodeView.OnAnyNodeClicked`, **`ConfirmTrip` resolve ทันทีแล้วยิง `OnTripResolved`** — ไม่มี `ReturnToBase`/`TripInProgress` (ลบแล้ว 2026-10-28) |
 | `Assets/V2/Scripts/UI/MapNodeView.cs` | สีตาม zone, `SetSelected`, static event `OnAnyNodeClicked` |
-| `Assets/V2/Scripts/UI/ScoutWalkerView.cs` | `MoveTo(pos, onArrived)` / `SnapTo` — contract ที่ต้องคงไว้เมื่อเปลี่ยนเป็น sprite animation |
+| ~~`Assets/V2/Scripts/UI/ScoutWalkerView.cs`~~ | ~~`MoveTo` / `SnapTo`~~ **ลบแล้ว (2026-10-28)** — เกมไม่มีเวลาเดินทาง ทริป resolve ในเฟรมเดียว; `Core.unity` ไม่มี `MapPanel/ScoutIcon` แล้ว |
 | `Assets/V2/Scripts/Entities/MapNodeData.cs` | `nodeId`, `zone`, `anchoredPosition` |
 | `Assets/V2/Scripts/DiceRollView.cs` | stub ว่าง — จะ implement |
 
@@ -44,9 +44,9 @@
 ### Scene / Prefab / Settings
 | ไฟล์ | ส่วนที่เกี่ยว |
 |---|---|
-| `Assets/V2/Scenes/Core.unity` | **เจ้าของ scene** — root objects, `GameSystem`, `Canvas/MapPanel` (ถ้ำ, `ScoutIcon`); ค่า Inspector ของ `GatherMapController` (marginRight = 420 กันชน BaseWorkPanel) |
+| `Assets/V2/Scenes/Core.unity` | **เจ้าของ scene** — root objects, `GameSystem`, `Canvas/MapPanel` (เหลือแค่พื้นหลัง + ถ้ำ); ค่า Inspector ของ `GatherMapController` = margin L150 / R360 / T150 / B420 (กันชน panel ใหม่) |
 | `Assets/V2/Prefabs/Dungeon Prefab.prefab` | `MapNodeView` + `SelectedHighlight` |
-| `Assets/V2/Prefabs/ScoutIcon.prefab` | ตอนนี้มีทั้ง `ScoutWalkerView` **และ** `UnitIconView` (ใช้เป็นการ์ดยูนิตด้วย) — ต้องแยก (contract C6) |
+| `Assets/V2/Prefabs/ScoutIcon.prefab` | เหลือแค่ `UnitIconView` + `CanvasGroup` (ถอด `ScoutWalkerView` ออกแล้ว) — ยังใช้เป็นการ์ดยูนิตในมือ |
 | `ProjectSettings/EditorBuildSettings.asset` | รายชื่อ scene ใน build |
 | `Assets/Day/Sprites/tilemap_packed*.png` | tileset 16 px ที่ prefab ใช้อยู่ |
 | `Assets/V2/Prefabs/Feedback/` (สร้างใหม่) | DiceRoll, popup, effect |
@@ -73,10 +73,10 @@
 - [ ] Contract C6: ลบ `UnitIconView` ออกจาก `ScoutIcon.prefab` หลังกลุ่ม 3 สร้าง `UnitCard.prefab`
 - [ ] Scout เดินแบบ sprite sheet / ease แทน linear — **คง signature `MoveTo(Vector2, Action)` เดิม**
 
-### S3 — DiceRollView: ทอยเต๋า D100 (M) — Contract C3
+### S3 — DiceRollView: ทอยเต๋า D100 (M) — Contract C3 *(ลำดับทริปถูกยกเลิก — เหลือแค่ animation)*
 - [ ] Implement `DiceRollView` เป็น MonoBehaviour + prefab `Feedback/DiceRoll.prefab`: แถบ/หน้าปัด 1–100 แสดงช่วง Hard Success / Regular / Failure / Fumble ตาม `successValue`, ตัวเลขหมุนแล้วหยุดที่ `rollValue`, ป้ายผล 4 แบบ
 - [ ] API: `Play(GatherDispatchResult result, Action onDone)` + กดข้ามได้
-- [ ] `GatherMapController.ReturnToBase` — แทรก `DiceRollView.Play(...)` ก่อนเดินกลับ ให้ลำดับเป็น เดินถึง → `Dispatch()` → **ทอย** → เดินกลับ → `OnTripResolved` (`TripInProgress` ต้อง true ตลอดช่วงนี้)
+- [ ] ~~`GatherMapController.ReturnToBase` — แทรก `DiceRollView.Play(...)` ก่อนเดินกลับ~~ **ยกเลิก (2026-10-27):** ไม่มีเวลาเดินทาง ทริป resolve ในเฟรมเดียว จึงต้องหาที่แสดงผลแบบอื่น (เช่น overlay บน `DispatchActionPanel` หรือแยก panel) และ **ห้าม** ผูกกับลำดับ `ConfirmTrip → OnTripResolved`
 - [ ] ถ้า `DiceRollView` ไม่ถูก assign ให้ข้ามไปเดินกลับเลย (ไม่พังเกม)
 
 ### S4 — Feedback, เสียง และ transition (M)

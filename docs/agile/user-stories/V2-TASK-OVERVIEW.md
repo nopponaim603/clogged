@@ -12,13 +12,14 @@
 | **2. ระบบฉาก + Feedback ในเกม** | [US-V2-SCENE-01](US-V2-SCENE-01.md) | Scene flow / Build Settings, ภาพแมป + ถ้ำ + Scout, ทอยเต๋า D100, effect/เสียง, transition ระหว่างวัน | Dev B — _TBD_ |
 | **3. UI หลักของเกม** | [US-V2-UI-01](US-V2-UI-01.md) | StatusBar, การ์ดยูนิต (+ ปุ่มให้อาหาร), panel ส่งสำรวจ, ผลการสำรวจ, ปุ่ม End Day, หน้าจอจบเกม | Dev C — _TBD_ |
 
-> "โรงงาน" ในเอกสารนี้หมายถึงระบบ **Base Work** ของ V2 (`BaseWorkController` / `BaseWorkPanel`) ซึ่งเป็นระบบผลิตเพียงระบบเดียวในเกมตอนนี้
+> "โรงงาน" ในเอกสารนี้หมายถึงระบบ **Base Work** ของ V2 (`BaseWorkController` / `SkillTriggerPanel` + `SkillFlowController`) ซึ่งเป็นระบบผลิตเพียงระบบเดียวในเกมตอนนี้
+> **อัปเดต 2026-10-28:** UI ของระบบนี้ถูก redesign ครบ P0–P5 — `BaseWorkPanel` (dropdown) ถูกลบแล้ว ดู [UI Layout Redesign §7.10](../../software/07-unity-v2-ui-layout-redesign.md)
 
 ```mermaid
 flowchart LR
     subgraph G1["กลุ่ม 1 — โรงงาน"]
         BWC[BaseWorkController]
-        BWP[BaseWorkPanel → FactoryPanel]
+        BWP[SkillTriggerPanel → FactoryPanel]
     end
     subgraph G2["กลุ่ม 2 — ฉาก + Feedback"]
         GMC[GatherMapController]
@@ -57,9 +58,9 @@ flowchart LR
 |---|:-:|:-:|:-:|
 | `Controllers/BaseWorkController.cs` | **O** | R | — |
 | `BaseWorkType.cs`, `BaseWorkResult.cs` | **O** | R | — |
-| `UI/BaseWorkPanel.cs` | **O** | — | — |
+| `UI/SkillTriggerPanel.cs`, `UI/SkillFlowController.cs` | **O** | — | — |
 | `Controllers/GatherMapController.cs` | R | **O** | R |
-| `UI/MapNodeView.cs`, `UI/ScoutWalkerView.cs` | — | **O** | — |
+| `UI/MapNodeView.cs` | — | **O** | — |
 | `Entities/MapNodeData.cs` | — | **O** | — |
 | `DiceRollView.cs` | — | **O** | — |
 | `UI/StatusBarView.cs` | — | — | **O** |
@@ -78,7 +79,7 @@ flowchart LR
 
 | ไฟล์ | G1 | G2 | G3 |
 |---|:-:|:-:|:-:|
-| `V2/Scenes/Core.unity` | E (subtree `BaseWorkPanel`) | **O** (root, `MapPanel`, `GameSystem`) | E (`StatusBar`, `CharCard`, `EndDay button`, `TestDispatch`, toggles) |
+| `V2/Scenes/Core.unity` | E (subtree `SkillTriggerPanel`) | **O** (root, `MapPanel`, `GameSystem`) | E (`StatusBar`, `CharacterHandPanel`, `DispatchActionPanel`, `LogPanel`, `SkillTriggerPanel`, `WarningText`, `GatherUI`) |
 | `V2/Prefabs/Dungeon Prefab.prefab`, `ScoutIcon.prefab` | — | **O** | R |
 | `V2/Prefabs/Factory/*` (ใหม่) | **O** | — | — |
 | `V2/Prefabs/Feedback/*` (ใหม่) | — | **O** | — |
@@ -95,7 +96,7 @@ flowchart LR
 | [gdd/04-audio-direction.md](../../gdd/04-audio-direction.md) | — | §1, §3 | — |
 | [software/04-unity-system-design.md](../../software/04-unity-system-design.md) | BaseWorkController, §4.2 | §2 Scene Flow, §4.1, §5 Event Map | UI Layer, §4.3, §6 |
 | [software/05-unity-class-diagram.md](../../software/05-unity-class-diagram.md) | class ใหม่ของโรงงาน | class ใหม่ฉาก/feedback | class ใหม่ UI |
-| [software/06-unity-core-scene-hierarchy.md](../../software/06-unity-core-scene-hierarchy.md) | `BaseWorkPanel` subtree | root + `MapPanel` | `Canvas` ส่วนอื่น |
+| [software/06-unity-core-scene-hierarchy.md](../../software/06-unity-core-scene-hierarchy.md) | `SkillTriggerPanel` subtree | root + `MapPanel` | `Canvas` ส่วนอื่น |
 
 ## 3. Interface Contracts (ตกลงกันก่อนเริ่มเขียน)
 
@@ -105,7 +106,7 @@ flowchart LR
 |---|---|---|---|---|
 | C1 | `BaseWorkController.OnBaseWorkCompleted : event Action<BaseWorkResult>` | G1 | G2 (SFX/effect), G3 (refresh ถ้าต้องการ) | ยิงท้าย `Cook` / `Heal` / `UseWorkshop` ทุกครั้ง รวมถึงกรณี `blocked` |
 | C2 | `GatherMapController.OnNodeSelected : event Action<MapNodeData>` | G2 | G3 (แสดงข้อมูลถ้ำ + odds ใน panel ส่งสำรวจ) | ยิงใน `HandleNodeClicked` |
-| C3 | ลำดับทริปใหม่: เดินถึงถ้ำ → `Dispatch()` → **`DiceRollView.Play(result, onDone)`** → เดินกลับ → `OnTripResolved` | G2 | G3 (`GatherResultPanel` เปิดหลัง `OnTripResolved`) | G3 **ไม่** subscribe `OnGatherResolved` เพื่อแสดงผล (ไม่งั้นผลจะโผล่ก่อนเต๋าหมุน) |
+| C3 | ~~ลำดับทริปใหม่: เดินถึงถ้ำ → Dispatch → DiceRollView → เดินกลับ → OnTripResolved~~ **ยกเลิกแล้ว (2026-10-27)** — ทริป resolve ในเฟรมเดียว: `ConfirmTrip()` → `Dispatch()` → `OnTripResolved` ทันที ไม่มีเวลาเดินทาง | G2 | G3 (`GatherDispatchPanel` แสดงผลทันที + `RunLogNarrator` เขียน log) | ไม่มี `TripInProgress` ให้ gate แล้ว |
 | C4 | `DayManager.OnDayEnded : event Action<DayEndReport>` + `DayManager.PreviewFeeding() : DayEndReport` | G3 | G2 (transition "Day N" + เสียงกิน/หิว), G3 (dialog ยืนยัน End Day) | `DayEndReport` = วันก่อน/หลัง, รายชื่อคนที่ได้กิน, คนที่ได้ stack, คนที่ Lost Signal |
 | C5 | `SceneFlowController.RestartRun()` / `GoToTitle()` | G2 | G3 (ปุ่มใน `RunEndPanel`) | reload `Core.unity` ผ่าน `SceneManager` (singleton ทุกตัวจะถูกสร้างใหม่) |
 | C6 | `UnitCard.prefab` (มี `UnitIconView`) แยกจาก `ScoutIcon.prefab` | G3 สร้าง `UnitCard`, G2 ลบ `UnitIconView` ออกจาก `ScoutIcon` | G2, G3 | ทำพร้อมกันใน PR เดียว หรือ G3 ก่อนแล้ว G2 ตาม |

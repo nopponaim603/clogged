@@ -1,0 +1,729 @@
+# clogged (Unity V2) — UI Layout Redesign Spec
+
+**Version:** 0.14 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click แล้ว (§7.11) · รอ final review
+**ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
+> เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
+> ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
+
+---
+
+## 1. ที่มาและปัญหาที่ต้องแก้
+
+| # | ปัญหา | รายละเอียด |
+|---|---|---|
+| P-1 | **ตำแหน่ง UI สลับกันในบิลด์ที่นำเสนอ** | `WarningText` ไปแสดงข้าง `CharCard` และ `MessageUi` ไปแสดงกลางจอ (ที่ถูก: warning กลางจอ, message ช่องว่างด้านขวาของการ์ด) |
+| P-2 | **คำสั่งซ้ำซ้อน 2 ระบบ** | `BaseWorkPanel` (ปุ่มงาน + dropdown + Confirm) ทำงานซ้ำกับ flow การส่งสำรวจ (เลือกการ์ด → ยืนยัน) ผู้เล่นต้องเรียนรู้ 2 ภาษา interaction |
+| P-3 | **ไม่มีประวัติการกระทำ** | ผลของทริป/งานในฐาน/การแจ้งเตือน เขียนทับกันใน `MessageUi` บรรทัดเดียว ผู้เล่นย้อนดูไม่ได้ |
+| P-4 | **ปุ่มหลักจม** | `Dispatch` / `EndDay` ถูกย้ายไปมุมขวาล่างชั่วคราว ขนาดเล็ก ไม่มีที่ใส่ภาพ |
+| **P-5** | **Core Item มีชิ้นเดียวในโค้ด + บังคับลำดับดรอป** | ดีไซน์ต้องการ 2 ชิ้น (A = ใช้ escape, B = key) แต่ `RunResources` มีแค่ flag เดี่ยว `hasCoreItemUnlock` + `hasCoreItem` และต้องได้ key ก่อนจึงจะดรอปชิ้นหลักได้ |
+
+---
+
+## 2. ขอบเขต
+
+**อยู่ในขอบเขต**
+
+- Layout ใหม่ทั้งจอ (Canvas) ตามแบบร่าง B
+- WarningText / Log / CoreItemGroup / DayFrame / CharacterCard / Dispatch / SkillTriggerPanel
+- Interaction model ใหม่: คลิกซ้าย = select/เพิ่มจำนวน, คลิกขวา = ล้างจำนวน
+- เปลี่ยน `BaseWorkPanel` → **Skill Trigger** (Cook / Heal / Craft)
+- โมเดล Core Item 2 ชิ้น + เงื่อนไขชนะ/แพ้
+
+**ไม่อยู่ในขอบเขต (คงเดิม)**
+
+- ระบบทอยเต๋า `DiceRollView` (ยกเว้นข้อความที่ส่งเข้า log)
+- ตรรกะ `GatherResolver`, `GatherDispatchController`, `GatherZoneDatabase`
+- ภาพศิลป์/เสียง (ใช้ placeholder ไปก่อน)
+- หน้าจอจบเกม `RunEndPanel` (มีอยู่ใน [US-V2-UI-01](../agile/user-stories/US-V2-UI-01.md) แล้ว — สเปกนี้แค่ผูก event)
+
+---
+
+## 3. Layout ใหม่
+
+### 3.1 แผนผังโซน (อ้างอิง Canvas 1920×1080)
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│ [CoreItemA][CoreItemB]   [Food][Med][CM][Mat] (กลางบน คงเดิม)  [ DAY 3 / 7 ]│
+│        (บนซ้าย)                                 (บนขวา, คลิกที่ Day = จบวัน) │
+│                                                                          │
+│                    ┌────────────────────────────┐                        │
+│                    │   ⚠ Warning (กลางจอ)        │                       │
+│                    └────────────────────────────┘                        │
+│                                                                          │
+│            ┌───────────────────────────────────────┐                     │
+│            │        MAP AREA (เดิม)                 │   ┌───────────────┐ │
+│            │         แผนที่ + ถ้ำเท่านั้น            │   │ Cook      [2] │ │
+│            └───────────────────────────────────────┘   │ Heal [MED]    │ │
+│  ┌──────────────┐                                      │ Craft     [1] │ │
+│  │ LOG   [–]    │      ┌────┐┌────┐┌────┐┌────┐        │               │ │
+│  │ ...          │      │card││card││card││card│        │  ┌─────────┐  │ │
+│  │ บรรทัดล่าสุด  │      └────┘└────┘└────┘└────┘        │  │DISPATCH │  │ │
+│  └──────────────┘        CharacterCard (มือไพ่)         │  └─────────┘  │ │
+│   (ล่างซ้าย — ห้ามสูง    (ล่างกลาง)                      │    (ขวา/ล่างขวา) │
+│    ล้ำเข้า MAP AREA)                                                     │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.3 ตัวเลข layout ที่ล็อกไว้ (อ้างอิง Canvas 1920×1080)
+
+| Panel | anchorMin/Max | pivot | anchoredPosition | size |
+|---|---|---|---|---|
+| `LogPanel` | (0,0) | (0,0) | (24, 24) | 700 × 300 |
+| `CharacterHandPanel` | (0.5, 0) | (0.5, 0) | (**190**, 20) | **830** × 300 |
+| `SkillTriggerPanel` | (1, 0) | (1, 0) | (−24, 244) | 236 × 300 |
+| `DispatchActionPanel` | (1, 0) | (1, 0) | (−24, 24) | 300 × 200 |
+| `WarningText` | (0.5, 0.5) | (0.5, 0.5) | เดิม (กลางจอ) | เดิม |
+
+- การ์ดในมือ: **195 × 265**, spacing **12** → 4 ใบ = 816 px พอดีกับพื้นที่ 830 px
+- เหตุผลที่ hand เยื้อง +190: พื้นที่ว่างจริงคือระหว่าง Log (จบที่ x = 724) กับ Dispatch (เริ่มที่ x = 1596) → จุดกึ่งกลาง = 1148 = 960 + 188, ปัดเป็น +190 ให้เหลือขอบเท่ากันสองข้าง
+- ช่องไฟ: Log→การ์ด 24 px · การ์ด→Dispatch 48 px → ไม่มีอะไรทับกัน
+- **MAP AREA:** `GatherMapController` กัน node ไว้ด้วย margin L150 / R**400** / T**300** / B420 (นับครึ่งความสูงของ portal ~65 px แล้ว) → ไม่มีถ้ำไปอยู่ใต้ Log / มือการ์ด / คอลัมน์สกิล / DayFrame · ค่า R400/T300 ปรับเพิ่มใน §7.11 เพราะ rect ของถ้ำยังคาบเกี่ยวกรอบ DAY
+
+### 3.4 ป้ายบนปุ่มสลับโหมด Heal
+
+ใช้ข้อความ **`MED`** (ใช้ยา 1 + AP 1) / **`AP`** (ใช้ 2 AP) แทนไอคอนลูกศร เพราะ TMP atlas เริ่มต้นไม่มี glyph `⇄` (ทดสอบแล้วขึ้นเป็นสี่เหลี่ยมว่าง)
+
+### 3.2 ตารางเทียบกับของเดิม
+
+| โซนใหม่ | ของเดิม | สิ่งที่เปลี่ยน |
+|---|---|---|
+| บนซ้าย `CoreItemGroup` | `Canvas/StatusBar/CoreItemGroup/CoreItem` | **1 ช่อง → 2 ช่อง** (`CoreItemA`, `CoreItemB`) |
+| บนกลาง `ResourceStrip` | `Canvas/StatusBar/TopBar` (Food/Medicine/CookingMaterial/Materials) | **คงตำแหน่งเดิม (กลางบน)** ไม่ย้าย |
+| บนขวา `DayFrame` | `Canvas/StatusBar/DayFrame` + `Canvas/EndDay button` | รวมปุ่ม End Day เข้า DayFrame → **คลิกที่ Day = จบวัน** |
+| กลางจอ `WarningText` | `Canvas/WarningText` + `WarningBackdrop` | คงตำแหน่งกลางจอ, **แสดงเฉพาะ Error** |
+| ล่างซ้าย `LogMessagePanel` | `Canvas/MapPanel/MessageUi` | **ของใหม่** — log มี history, minimize ได้ |
+| ล่างกลาง `CharacterHandPanel` | `Canvas/CharCard` | ย้ายมาล่างกลาง, ทำเป็นมือไพ่ |
+| ขวา `SkillTriggerPanel` | `Canvas/BaseWorkPanel` | **Rework** เป็นปุ่มสกิล + queue |
+| ล่างขวา `DispatchActionPanel` | `Canvas/MapPanel/Dispatch`, root `TestDispatch` | ขยายใหญ่ขึ้น, มีที่ใส่รูป, **ซ่อนเมื่อยังไม่ใช้งาน** |
+| กลาง-บน `MapPanel` | `Canvas/MapPanel` | คงไว้ — เหลือแค่พื้นหลัง + ถ้ำ (ลบ `MessageUi`/`Dispatch`/`ScoutIcon` ออกแล้ว) |
+
+---
+
+## 4. สเปกองค์ประกอบ
+
+### 4.1 `WarningText` — เตือนเฉพาะที่ทำไม่ได้
+
+| หัวข้อ | สเปก |
+|---|---|
+| ตำแหน่ง | กลางจอ (เหนือ map area) |
+| แสดงเมื่อ | **เฉพาะ `WarningKind.Error`** — การกระทำที่ทำไม่ได้ |
+| ตัวอย่าง | เลือกการ์ดตัวที่ 3 (เกิน limit), AP ไม่พอ, Cooking Material / Materials ไม่พอ, กด Heal ตอนไม่มีคนบาดเจ็บ, ยืนยันโดยยังไม่เลือกผู้ป่วย |
+| ข้อความทั่วไป/ข้อมูล | **ไม่ขึ้น warning** → ลง log เท่านั้น |
+| พร้อม log | ทุกครั้งที่ขึ้น warning ต้องมี log entry ชนิดเดียวกันด้วย |
+| Animation | **คงของเดิม** — fade in 0.3s → hold 2.5s → fade out 0.3s, คิวทีละข้อความ (`WarningView` เดิม) |
+| ต้องแก้ | `WarningView.Show*` callers: จัดประเภท `Warning`/`Error`/`Info` ใหม่ให้เหลือเฉพาะ Error ที่เด้งกลางจอ |
+
+### 4.2 `LogMessagePanel` — ประวัติการกระทำ (ล่างซ้าย)
+
+| หัวข้อ | สเปก |
+|---|---|
+| ตำแหน่ง | **มุมล่างซ้ายเท่านั้น** — ขอบบนของ panel **ต้องไม่สูงล้ำเข้าเขต MAP AREA** |
+| ความสูง | ล็อกด้วยพื้นที่ว่างที่เหลือใต้ MAP AREA (ไม่ใช่จำนวนบรรทัดคงที่) |
+| ลำดับ | **ใหม่สุดอยู่บรรทัดล่างสุด** แล้วดันของเก่าขึ้น (chat style), auto-scroll ลงล่าง |
+| ความจุ (memory) | เก็บ **16 entry ล่าสุด** (`RunLog.Capacity` = 16) |
+| แสดงผล | **แสดงเท่าที่ช่องใส่ได้จริง** — ถ้าพื้นที่ใส่ได้ 6 บรรทัด ก็แสดง 6 บรรทัดล่าสุด ที่เหลือเลื่อนดูด้วย scroll |
+| Minimize | ปุ่มย่อ → เหลือ **บรรทัดล่าสุดบรรทัดเดียว**; กางกลับได้ |
+| เนื้อหา | ทุก action ของผู้เล่น + ผลลัพธ์ + warning + เหตุการณ์วันเปลี่ยน |
+| รูปแบบบรรทัด | `[วันที่] [ไอคอน] ข้อความ` — สีตามชนิด (ปกติ/สำเร็จ/ล้มเหลว/เตือน) |
+| ชนิด entry | `LogKind { Action, Success, Fail, Warning, DayEnd, System }` |
+
+**แหล่งข้อมูลที่ต้องต่อเข้า log**
+
+| แหล่ง | event/จุดเรียก | สถานะปัจจุบัน |
+|---|---|---|
+| งานในฐาน (Cook/Heal/Craft) | `BaseWorkController.OnBaseWorkCompleted` (contract C1) | ✅ ต่อแล้ว (P2) |
+| ทริปสำรวจ | `GatherDispatchController.OnGatherResolved` | ✅ ต่อแล้ว — loot/tier/hurt/missing/Core Item |
+| ข้อมูลถ้ำที่เลือก | `GatherMapController.OnSelectionChanged` | ✅ ต่อแล้ว (P5) — AP/unit, success value, loot |
+| trait ที่ได้จากทริป | `GatherDispatchPanel` เทียบ traits ก่อน/หลัง | ✅ ต่อแล้ว (P5) |
+| Warning | `WarningView.Show*` | ✅ เรียกคู่กับ `RunLog.Add(LogKind.Warning, …)` ทุกจุด |
+| จบวัน/กินอาหาร/อดอาหาร | `DayManager.OnDayEnded` (contract C4) | ✅ ต่อแล้ว (P2) |
+| Core Item ได้รับ | `RunResources` (C7 `OnChanged` หรือ method ใหม่) | ✅ ผ่าน `GatherDispatchResult.coreItemsObtained` |
+
+### 4.3 `CoreItemGroup` — 2 ช่อง
+
+| ช่อง | ชื่อ field ใหม่ | ความหมาย | ที่มา |
+|---|---|---|---|
+| ช่องที่ 1 | `CoreItemA` | **ชิ้นที่ใช้ escape** | drop จาก dungeon (อิสระ) |
+| ช่องที่ 2 | `CoreItemB` | **key** (ต้องมีครบทั้งคู่จึงใช้ escape ได้) | drop จาก dungeon (อิสระ) |
+
+- **2 สถานะต่อช่อง** (ตัด `Unlocked` ออก เพราะไม่มีการดรอปแบบมีเงื่อนไขแล้ว): `NotObtained` / `Obtained`
+- ไฮไลต์เมื่อได้ครบทั้ง 2 (แจ้งเตือนภาวะชนะ)
+- **Win = มีครบ A + B**
+- **ไม่มีลำดับการดรอป** — A และ B สุ่มแยกกัน อันไหนก่อนก็ได้ (B ไม่ใช่เงื่อนไขให้ A ดรอป)
+
+### 4.4 `DayFrame` — รวม End Day
+
+| หัวข้อ | สเปก |
+|---|---|
+| เนื้อหา | `DAY n / deadline` + จำนวนวันเหลือ (เหมือน `StatusBarView.RefreshDay`) |
+| อินพุต | **คลิกที่ frame = `DayManager.EndDay()`** (ไม่มีปุ่ม End Day แยก) — implement ด้วย `EndDayTrigger` (`IPointerClickHandler`) บน `DayFrame` |
+| **พื้นผิวที่กดได้** | **ต้องมี Graphic ที่ `raycastTarget = true` อยู่ใต้ `DayFrame`** — ตัวที่ใช้คือ `DayBackground` (ปิด `Day`/border ไม่ให้แย่งคลิก) · `EndDayTrigger.EnsureClickSurface()` เติม transparent hit area ให้เองถ้าไม่มี และเตือนใน console |
+| **ห้ามมีถ้ำอยู่ใต้ frame** | `GatherMapController` margin ต้องกัน rect ของ node (160×30) ออกจากกรอบ — ปัจจุบัน `marginRight = 400`, `marginTop = 300` |
+| สถานะปิด | **run จบแล้วเท่านั้น** (ไม่มีสถานะ "ระหว่างทริป" เพราะทริป resolve ทันที) — `EndDayTrigger` เช็ค `DayManager.Outcome != InProgress` แล้วขึ้น warning "The run is already over." + log |
+| คำเตือนก่อนจบวัน | **ไม่มี confirm dialog** — คลิกเดียวจบวันทันที (ผลการกิน/AWOL ลง log หลังจบวัน) |
+
+### 4.5 `CharacterHandPanel` — การ์ดตัวละครล่างกลาง
+
+| หัวข้อ | สเปก |
+|---|---|
+| รูปแบบ | "มือไพ่" เรียงแนวนอนกลางจอ |
+| ข้อมูลบนการ์ด | ชื่อ + พอร์เทรต, **AP (pips/ตัวเลข)**, สถานะ, ความหิว, ป้าย "ออกสำรวจแล้ววันนี้" |
+| อินพุต | **คลิกซ้าย = เลือก** (ไฮไลต์กรอบ), คลิกซ้ายซ้ำ = ยกเลิก |
+| ใช้ร่วม | ทั้ง flow **dispatch** และ **skill trigger** (ภาษา interaction เดียวกัน) |
+| จำนวนที่เลือกได้ | dispatch = **2** · skill = **1 ใบ** |
+| **เงื่อนไขเลือกได้ขึ้นกับโหมด** | **Dispatch / Skill ใช้กฎเดียวกัน: `CanBeDispatched` (`state == Idle`)** — ต่างกันแค่จำนวนที่เลือกได้ · **unit ที่ "busy" (ออกสำรวจแล้ววันนี้) จึงยังเลือกทำสกิลได้ถ้ามี AP เหลือ** · **HealTarget:** เฉพาะ `UnitState.Hurt` (โหมดที่ 3 เกิดหลังกด Heal) — เหตุผลที่เปลี่ยนจากเดิมดู §7.8 |
+| แสดงสถานะ Busy | การ์ดที่ `HasGatheredToday == true` ติดป้าย "ออกสำรวจแล้ววันนี้" (สีต่างจากปกติ) แม้ยังมี AP |
+| ปุ่มให้อาหาร | คงไว้ตาม [US-V2-UI-01](../agile/user-stories/US-V2-UI-01.md) U1 (ไม่กระทบสเปกนี้) |
+| ของเดิมที่ใช้ต่อ | `UnitRosterView` / `UnitIconView` (การ์ด 195×265 — ปรับขนาดเป็นไพ่) |
+
+### 4.6 `DispatchActionPanel` — ปุ่มยืนยัน (ล่างขวา)
+
+| หัวข้อ | สเปก |
+|---|---|
+| ขนาด | ใหญ่ขึ้น มีช่องใส่ภาพ/ไอคอน |
+| **ซ่อนเมื่อยังไม่ใช้งาน** | ซ่อนเมื่อไม่มีการ์ดถูกเลือกเลย (queue เดี่ยว ๆ ไม่มีอยู่จริง เพราะ counter ผูกกับการ์ดที่เลือก) |
+| แสดงเมื่อ | มีการ์ดที่เลือกอย่างน้อย 1 ใบ — โหมดสำรวจ = `DISPATCH`, โหมดสกิล = `COOK` / `CRAFT` / `HEAL` |
+| Label | เปลี่ยนตามบริบท: `Dispatch` (โหมดสำรวจ) / `Cook` / `Heal` / `Craft` (โหมดสกิล) |
+| ปิดการใช้งาน | เงื่อนไขไม่ครบเท่านั้น (Heal ยังไม่เลือกผู้ป่วย, ไม่มีถ้ำที่เลือก, AP ไม่พอ) — **ไม่มี `TripInProgress` แล้ว** |
+| ข้อความ/ไอคอน | ใช้ `ButtonVisual` เดิมสลับข้อความ ↔ sprite |
+
+### 4.7 `SkillTriggerPanel` — แทน `BaseWorkPanel` (คอลัมน์ขวา)
+
+| ปุ่ม | พฤติกรรม |
+|---|---|
+| **Cook** | คลิกซ้าย = queue +1 รอบ (1 AP); คลิกซ้ำ = เพิ่มจำนวน · **คลิกขวา = ล้างจำนวน** |
+| **Craft** | เหมือน Cook ทุกข้อ |
+| **Heal** | **ไม่มี queue** — คลิกซ้ายครั้งเดียว = เลือกสกิล Heal แล้วรอเลือกผู้ป่วย · **disabled ทั้งปุ่มถ้าไม่มีคนบาดเจ็บเลย** |
+
+| หัวข้อ | สเปก |
+|---|---|
+| ตำแหน่ง | คอลัมน์ขวา **แสดงตลอด** (ไม่ซ่อนตามบริบท) |
+| ตัวเลข queue | **แสดงบนปุ่ม Cook / Craft เท่านั้น** — ปุ่ม Heal ไม่มีตัวเลข (ไม่มีการนับรอบ) |
+| เพดานจำนวน | **จน AP ของตัวละครที่เลือกหมด** (ไม่ใช้ค่าคงที่รายรอบ) + หยุดเมื่อวัตถุดิบหมด |
+| วัตถุดิบไม่พอ | **หยุด queue** (ไม่เพิ่ม) + warning + log |
+| Heal — 2 โหมด | ปุ่มเล็กข้างปุ่ม Heal สลับ `ยา 1 + AP 1` ↔ `AP 2` (ปุ่มเดียว ไม่มี queue) |
+| Heal — ผู้ป่วย | หลังกด Heal **ต้องเลือกผู้ป่วย 1 คน** จาก `CharacterHandPanel` (**เฉพาะตัวที่ `UnitState.Hurt`**) |
+| Heal — จำนวน | **1 ครั้งต่อ 1 การยืนยัน** (ไม่มีรอบ/ไม่มีคิว) |
+| ไม่มี state "สกิลที่เลือก" | เก็บแค่ **การ์ดที่เลือก** + counter ของ Cook/Craft (Heal ไม่มี counter) |
+| ของเดิมที่นำกลับมาใช้ | ตัวเลข/เงื่อนไขทั้งหมดอ่านจาก `BaseWorkController` (`CookApPerRound`, `GetMaxCookRounds`, `GetHealPlan`, `WorkshopApPerRound`, …) — ห้าม hard-code ใน UI |
+
+> **ต้องแก้ `BaseWorkController` เพิ่ม (P4):** ตอนนี้ `GetHealPlan` / `Heal` เลือกยาให้อัตโนมัติถ้ามียาในคลัง — แต่ UI มี toggle ให้ผู้เล่นเลือกโหมด จึงต้องเพิ่ม overload ที่รับ mode ชัดเจน เช่น
+> `GetHealPlan(UnitCharacter healer, bool useMedicine, out int apCost)`, `CanHeal(healer, patient, bool useMedicine)`, `Heal(healer, patient, bool useMedicine)` โดยคง signature เดิมไว้เป็น wrapper
+
+---
+
+## 5. Interaction Model (normalize ทั้งเกม)
+
+| อินพุต | บนการ์ดตัวละคร | บนปุ่ม Cook / Craft | บนปุ่ม Heal | บนปุ่ม Dispatch |
+|---|---|---|---|---|
+| **คลิกซ้าย** | เลือก / ยกเลิกการเลือก | เพิ่มจำนวน +1 | เลือกโหมด Heal (ครั้งเดียว) | ยืนยันการกระทำ |
+| **คลิกซ้ายซ้ำ** | สลับ selected | เพิ่มจำนวนต่อ | — | — |
+| **คลิกขวา** | (ไม่กระทำ) | **ล้างจำนวน** | ยกเลิกโหมด Heal | (ไม่กระทำ) |
+
+> คลิกขวา **ไม่** ล้างการ์ดที่เลือก — ล้างเฉพาะจำนวน (Cook/Craft) หรือยกเลิกโหมด Heal
+
+---
+
+## 6. Flow
+
+### 6.1 โหมด Cook / Craft (มี queue)
+
+```mermaid
+flowchart TD
+    A["1. คลิกซ้ายการ์ดตัวละคร<br/>(เลือกได้ 1 ใบ)"] --> B["2. คลิกซ้าย Cook หรือ Craft"]
+    B -->|"คลิกซ้ายซ้ำ"| B2["+1 รอบ<br/>(จน AP หมด / วัตถุดิบหมด)"]
+    B -->|"คลิกขวา"| B3["ล้างจำนวน<br/>(เก็บการ์ดที่เลือกไว้)"]
+    B2 --> E["ปุ่ม Dispatch ปรากฏ<br/>label = Cook / Craft"]
+    B3 --> E
+    E --> F["ยืนยัน → BaseWorkController<br/>→ OnBaseWorkCompleted → Log"]
+```
+
+### 6.2 โหมด Heal (ไม่มี queue)
+
+```mermaid
+flowchart TD
+    A["1. คลิกซ้ายการ์ดตัวละคร<br/>(ผู้รักษา 1 ใบ)"] --> B["2. คลิกซ้าย Heal"]
+    B --> C["3. เลือกการ์ดผู้ป่วย 1 ใบ<br/>(เฉพาะ UnitState.Hurt)"]
+    C --> D["ปุ่ม Dispatch ปรากฏ<br/>label = Heal"]
+    B -.->|"ปุ่มเล็กข้าง Heal"| T["สลับโหมด<br/>ยา 1 + AP 1 ↔ AP 2"]
+    D --> F["ยืนยัน → BaseWorkController.Heal<br/>→ OnBaseWorkCompleted → Log"]
+```
+
+> ปุ่ม Heal ไม่มีตัวเลข/ไม่มีการนับรอบ — 1 การยืนยัน = 1 ครั้ง
+
+### 6.3 โหมดสำรวจ (ไม่มีเวลาเดินทาง)
+
+```mermaid
+flowchart LR
+    A["1. คลิกถ้ำบนแผนที่<br/>(ไม่มีฐานบน map แล้ว)"] --> B["2. เลือกการ์ด 1-2 ใบ<br/>(CanBeSentGathering)"]
+    B --> C["3. ปุ่ม Dispatch"]
+    C --> D["resolve ทันที:<br/>AP ถูกหัก, ทอย, loot, hurt/missing,<br/>Core Item, trait"]
+    D --> E["log ขึ้นทันที<br/>(ผลลัพธ์ + สถานะใหม่)"]
+    D --> F["ตัวละคร → Busy<br/>(HasGatheredToday = true)"]
+    F --> G["ยังทำสกิลได้ถ้ามี AP เหลือ<br/>(CanBeDispatched == Idle)"]
+    G --> H["End Day → รีเซ็ตสถานะ + คืน AP เต็ม"]
+```
+
+**กติกาที่ล็อกแล้ว**
+
+| ข้อ | กติกา |
+|---|---|
+| เวลาทริป | **0** — ไม่มีเดินทางไป-กลับ, ไม่มีอนิเมชันกัน UI |
+| ลำดับ | คลิกยืนยัน → คำนวณผลทั้งหมด → เขียน log **ในเฟรมเดียวกัน** |
+| สถานะหลัง dispatch | `HasGatheredToday = true` (busy) · `state` กลับเป็น `Idle` ถ้ายังมี AP, `Resting` ถ้า AP หมด |
+| ส่งซ้ำวันเดียว | ไม่ได้ (`CanBeSentGathering` false) |
+| ใช้สกิลต่อ | **ได้** ถ้า `state == Idle` และ AP พอ |
+| End Day | กดได้ทุกเมื่อ ไม่ผูกกับทริป — รีเซ็ต `HasGatheredToday`, คืน AP, ปลด `Resting` |
+| `TripInProgress` | **ไม่มีแล้ว** — ลบออกจาก `GatherMapController` และ UI ทั้งหมด |
+
+> **ต้องประสานกับกลุ่ม 2 (contract C3):** `GatherMapController.ConfirmTrip` ต้องเรียก `Dispatch()` แล้วยิง `OnTripResolved` ทันที (ไม่ผ่าน `ScoutWalkerView`) · `ScoutIcon` บน `MapPanel` และ `ScoutWalkerView` ไม่มีบทบาทแล้ว (ลบตอน P5) · ต้องอัปเดต C3 ใน [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md)
+
+---
+
+## 7. การเปลี่ยนข้อมูลและตรรกะ
+
+### 7.1 `RunResources` — Core Item 2 ชิ้น
+
+| เดิม | ใหม่ |
+|---|---|
+| `bool hasCoreItemUnlock` (key) | `bool coreItemB` |
+| `bool hasCoreItem` (escape item) | `bool coreItemA` |
+| `HasCoreItemUnlock`, `HasCoreItem` | `HasCoreItemA`, `HasCoreItemB`, **`HasBothCoreItems`** |
+| `UnlockCoreItemMaterial()` | `ObtainCoreItemB()` |
+| `ObtainCoreItem()` (เฉพาะ `coreItemB` ได้แล้ว ไม่มีเงื่อนไขลำดับ) | `ObtainCoreItemA()` (เฉพาะ `coreItemA` ยังไม่มี ไม่มีเงื่อนไขลำดับ) |
+
+> **ไม่มีลำดับการดรอป:** ทั้ง A และ B สุ่มดรอปได้อิสระจากกัน อันไหนก่อนก็ได้ ไม่มี precondition ต่อกัน
+> การดรอปย้ายไปเป็น **ตารางข้อมูลในโซน** — ดู §7.2
+> `GatherDispatchResult` มี field `unlockedCoreItemMaterial` / `obtainedCoreItem` → เปลี่ยนเป็น **`List<CoreItemKind> coreItemsObtained`** (ทริปเดียวอาจได้ทั้ง 2 ชิ้น) เพื่อให้ log เขียนถูกชิ้น
+
+### 7.2 `GatherZoneConfig` — Core Item chance (แบบ 2)
+
+ย้ายจุดดรอปจาก `if/else` ผูกโซนใน `GatherDispatchController.HandleCoreItemProgress()` มาเป็น **ตัวเลขใน config ของโซน** — ปรับใน Inspector ได้ และทำให้ Hard มีโอกาสมากกว่า Normal ตามที่ต้องการ
+
+> **อ้างอิง:** main loot ของแต่ละโซนคือ `CookingMaterial` (Easy) / `Medicine` (Normal) / `Materials` (Hard) + `hardSuccessBonusPool` — **Core Item เป็นของแยกจาก main loot** ไม่ได้อยู่ใน loot pool
+
+```csharp
+public enum CoreItemKind { A, B }
+
+public class GatherZoneConfig
+{
+    // ...ของเดิม...
+
+    [Range(0, 100)]
+    [Tooltip("โอกาส (%) ที่จะเจอ Core Item 1 ชิ้น เมื่อทริปจบด้วย HardSuccess")]
+    public int coreItemChancePercent;
+}
+```
+
+#### ค่าเริ่มต้นที่เสนอ (tunable)
+
+| Zone | `coreItemChancePercent` | หมายเหตุ |
+|---|---|---|
+| Easy | **0%** | โซนง่าย ไม่ให้ของสำคัญ |
+| **Normal** | **5%** | ต้องพึ่งดวง |
+| **Hard** | **15%** | **สูงกว่า Normal 3 เท่า** แลกกับ SV ต่ำ + Fumble เสียยูนิต |
+
+> ตัวเลขนี้คือ **"โอกาสเมื่อทอยได้ HardSuccess"** ไม่ใช่โอกาสต่อทริปตรง ๆ — เพราะ Core Item ดรอปเฉพาะ HardSuccess เท่านั้น (ดูตารางถัดไป)
+
+#### อัตราจริงต่อทริป (ส่ง 2 คนถนัดโซน, ยังไม่มี trait)
+
+| Zone | SV | P(HardSuccess) | ยังไม่มีทั้ง A,B | มีอยู่แล้ว 1 ชิ้น | ได้อย่างน้อย 1 ชิ้น/ทริป |
+|---|---|---|---|---|---|
+| Normal | 90 | 45% | 9.75% | 5% | 45% × 9.75% ≈ **4.4%** |
+| Hard | 65 | 32% | 27.75% | 15% | 32% × 27.75% ≈ **8.9%** |
+
+- คอลัมน์ "ยังไม่มีทั้ง A,B" = `1 − (1 − p)²` เพราะ **ทอยแยกอิสระต่อชิ้น**
+- คอลัมน์สุดท้ายคือตัวเลขที่ผู้เล่นรู้สึกจริง = **Hard ≈ 8.9% > Normal ≈ 4.4%** (ประมาณ 2 เท่า)
+
+#### กติกาการทอย (ตกลงแล้ว)
+
+| ข้อ | กติกา |
+|---|---|
+| **ทอยเมื่อไหร่** | **เฉพาะ tier `HardSuccess`** — `Regular` / `Failure` / `Fumble` **ไม่ดรอป** |
+| จำนวนครั้ง | ทอยแยก **ต่อชิ้น** (A 1 ครั้ง, B 1 ครั้ง) ต่อ 1 ทริป — ไม่ทอยซ้ำถ้าทริปเดียวมีหลายยูนิต |
+| ยังไม่มีทั้ง A และ B | **ทอยทั้ง A และ B** |
+| มี A แล้ว ไม่มี B | **ทอยเฉพาะ B** (ข้าม A) |
+| มี B แล้ว ไม่มี A | **ทอยเฉพาะ A** (ข้าม B) |
+| มีครบทั้ง A และ B | **ไม่ทอยเลย** |
+| จำนวนที่ได้ | 1 ชิ้นต่อชิ้นต่อทริป (ทริปเดียวได้มากสุด 2 ชิ้น = ครบพอดี) |
+| หลังทอย | ถ้าครบทั้ง 2 → `DayManager.CheckImmediateWin()` **ครั้งเดียว** (ไม่ใช่ต่อชิ้น) |
+| log | เขียน 1 บรรทัดต่อชิ้นที่ได้ เช่น `ได้รับ Core Item A` |
+
+#### จุดแก้ใน `ApplyOutcome`
+
+```text
+เดิม  : case HardSuccess: ... HandleCoreItemProgress(zone, result);
+ใหม่  : case HardSuccess: ... TryRollCoreItems(config, result);   // ไม่รับ tier แล้ว เพราะRegular ไม่ดรอป
+        (ลบ HandleCoreItemProgress ทั้ง method)
+```
+
+```csharp
+private void TryRollCoreItems(GatherZoneConfig config, GatherDispatchResult result)
+{
+    foreach (CoreItemKind kind in new[] { CoreItemKind.A, CoreItemKind.B })
+    {
+        if (RunResources.Instance.HasCoreItem(kind)) continue;          // ข้ามชิ้นที่มีแล้ว
+
+        if (UnityEngine.Random.Range(0, 100) >= config.coreItemChancePercent) continue;
+
+        RunResources.Instance.ObtainCoreItem(kind);
+        result.coreItemsObtained.Add(kind);
+    }
+
+    if (result.coreItemsObtained.Count > 0) DayManager.Instance?.CheckImmediateWin();
+}
+```
+
+### 7.3 `DayManager` — เงื่อนไขชนะ/แพ้
+
+| จุด | เดิม | ใหม่ |
+|---|---|---|
+| `EndDay()` ก่อนกินอาหาร | `HasCoreItem` → Win | `HasBothCoreItems` → Win |
+| หลัง `day++` | `day > deadline && !HasCoreItem` → `LoseDeadline` | `day > deadline && !HasBothCoreItems` → `LoseDeadline` |
+| `CheckImmediateWin()` | `HasCoreItem && day <= deadline` | `HasBothCoreItems` |
+| `RunOutcome` | คงเดิม (`Win` / `LoseDeadline` / `LoseAllUnitsLost`) | คงเดิม |
+
+### 7.4 Log — คลาสที่ใช้จริง
+
+```text
+LogKind   { Action, Success, Fail, Warning, DayEnd, System }
+LogEntry  { readonly LogKind Kind; readonly string Text; readonly int Day; }
+RunLog    static class
+          + event Action<LogEntry> OnEntryAdded
+          + event Action OnCleared
+          + void Add(LogKind, string)       // stamp Day จาก DayManager.CurrentDay
+          + void Clear()
+          + IReadOnlyList<LogEntry> Entries
+          + int Capacity { get; set; } = 16
+          + [RuntimeInitializeOnLoadMethod] ResetStatics()   // ล้างทุกครั้งที่เข้า play mode
+LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render, minimize/expand
+```
+
+**ทำไมเป็น static:** ทุกกลุ่มต้องเขียน log ได้โดยไม่ต้องมี Inspector reference และไม่ต้องเพิ่ม GameObject ลงใน `Core.unity` (ไฟล์ที่กลุ่ม 2 เป็นเจ้าของ) — static ถูกล้างอัตโนมัติเมื่อเข้า play mode ด้วย `RuntimeInitializeOnLoadMethod`
+
+---
+
+## 7.5 สถานะการลงมือ (Implementation Status)
+
+| Phase | สถานะ | หมายเหตุ |
+|---|---|---|
+| **P0 — Data & logic** | ✅ **เสร็จ (2026-10-27)** | ดูรายการไฟล์ด้านล่าง |
+| **P1 — โครง prefab** | ✅ **เสร็จ** (สร้าง prefab 4/4) | ดู §7.6 |
+| **P2 — LogPanel + wiring** | ✅ **เสร็จ (2026-10-27)** | ดู §7.7 |
+| **P3 — CharacterHand + Dispatch panel** | ✅ **เสร็จ (2026-10-27)** | ดู §7.8 |
+| **P4 — SkillTriggerPanel** | ✅ **เสร็จ (2026-10-27)** | ดู §7.9 |
+| **P5 — ลบของเดิม + DayFrame** | ✅ **เสร็จ (2026-10-28)** | ดู §7.10 |
+
+### 7.6 P1 — Prefab ที่สร้างแล้ว
+
+สร้างด้วย `AgentScripts/BuildUIPrefabs.cs` (เรียกผ่าน `unity command script.run`, ไม่แตะ `Core.unity`)
+
+| Prefab | Root component | ลูกที่สำคัญ |
+|---|---|---|
+| `Assets/V2/Prefabs/UI/LogPanel.prefab` | `LogMessagePanel` | `Header` (Title + MinMaxButton), `Expanded` (ScrollRect → Viewport → Content → EntryTemplate), `Collapsed` (บรรทัดเดียว) |
+| `Assets/V2/Prefabs/UI/CharacterHandPanel.prefab` | `CharacterHandPanel` | `Cards` (HorizontalLayoutGroup) + `CardPlaceholder` |
+| `Assets/V2/Prefabs/UI/DispatchActionPanel.prefab` | `DispatchActionPanel` | `Icon` (placeholder 120×120), `Label` (TMP "DISPATCH"), Button บน root |
+| `Assets/V2/Prefabs/UI/SkillTriggerPanel.prefab` | `SkillTriggerPanel` | `CookButton` (+Count), `HealRow` (`HealButton` + `HealModeButton` MED/AP), `CraftButton` (+Count) |
+
+**ตรวจด้วยภาพแล้ว** (render ผ่าน Canvas ชั่วคราว 1920×1080) — พบและแก้ 2 ปัญหา:
+1. การ์ด 4 ใบกว้าง 1040 ทับ `LogPanel` → ลด hand เป็น 800 px, การ์ด 190 px, เยื้อง +188
+2. ปุ่มสลับโหมดใช้ glyph `⇄` ไม่มีใน TMP atlas → เปลี่ยนเป็นข้อความ `MED` / `AP`
+
+> scene ชั่วคราว `UIPreview.unity` ถูกลบแล้ว · `Core.unity` ไม่ถูกแก้ (`isDirty: false`)
+
+### 7.7 P2 — Log wiring (เสร็จ)
+
+| ไฟล์ | สิ่งที่ทำ |
+|---|---|
+| `Scripts/UI/LogMessagePanel.cs` | render จาก `RunLog` ด้วย **row pool** (clone template ไม่เกิน `capacity` แล้ว reuse), ใหม่สุดล่าง, auto-scroll, ย่อ/กางพร้อมเปลี่ยนความสูง panel (`expandedHeight` 300 → `collapsedHeight` 64) |
+| `Scripts/UI/RunLogNarrator.cs` **(ใหม่)** | แปลง event เกมเป็น log: `OnBaseWorkCompleted`, `OnDayEnded`, `OnGatherResolved`, `OnRunEnded` — เลือก `LogKind` ให้เอง (blocked/อดอาหาร = `Warning`, ผลลัพธ์ = `Success`/`Fail`) |
+| `Scripts/Controllers/BaseWorkController.cs` | เพิ่ม `OnBaseWorkCompleted` (ยิงทุก path ผ่าน `Emit()`), เพิ่ม overload `GetHealPlan(healer, useMedicine, out apCost)` / `CanHeal(..., bool? useMedicine)` / `Heal(..., bool? useMedicine)` สำหรับ toggle โหมด Heal |
+| `Scripts/Controllers/DayManager.cs` | เพิ่ม `DayEndReport` (dayBefore/dayAfter/fed/starved/lostSignal), `PreviewFeeding()` (dry-run) และ `OnDayEnded` |
+
+**ตรวจสอบแล้ว (play mode, Core scene)**
+
+| การทดสอบ | ผล |
+|---|---|
+| log 9 entry (ผสมทุก kind) | แสดงครบ, สีถูก, ใหม่สุดล่าง |
+| 20 entry (เกิน capacity) | `RunLog` เก็บ 16, panel มี 16 row active + template, scroll ไปล่างสุด (`verticalNormalizedPosition = 0`) |
+| กดย่อ | `Expanded=false`, `Collapsed=true`, panel height **300 → 64**, บรรทัดล่าสุดอัปเดตสด |
+| `Cook(unit, 2)` | narrator เขียน 1 บรรทัด: `Ann cooked 2x — +2 Food, -2 Cooking Material.` |
+| `DayManager.EndDay()` | narrator เขียน `Day 2 — everyone ate (4 fed).` |
+| `PreviewFeeding()` | คืน fed/starved/lostSignal ถูกต้องโดยไม่แก้ state |
+| Console | 0 error / 0 warning หลังล้าง (ตัด `CS0414` ของ skeleton ด้วย `#pragma warning disable 0414`) |
+
+**ข้อควรรู้:** `RunLog` เป็น static → ระหว่าง play mode การเรียก `RunLog.Clear()` ในเทสต์จะล้างของจริง (ใช้เฉพาะตอน debug)
+
+### 7.8 P3 — CharacterHandPanel + DispatchActionPanel (เสร็จ)
+
+| ไฟล์ | สิ่งที่ทำ |
+|---|---|
+| `Scripts/UI/CharacterHandPanel.cs` | `SelectionMode { Dispatch, Skill, HealTarget }` · `MaxSelection` ตามโหมด (2 / 1 / 1) · `CanSelect` · `CardSize` / `CardSpacing` · `OnModeChanged` |
+| `Scripts/UI/DispatchActionPanel.cs` | ปุ่มยืนยันตัวเดียว: `Show(label)` / `ShowDispatch()` / `SetInteractable()` / `Hide()` / `Clicked` — ซ่อนตัวเองใน `Awake` |
+| `Scripts/UI/UnitRosterView.cs` | ต่อกับ hand (`handPanel`), `CanPick` ตามโหมด, single-select replacement, `TrimSelectionToMax()`, `SelectedUnit`, และ **คำนวณ selectability ใหม่ทุกเฟรม** ใน `Update()` |
+| `Scripts/UI/UnitIconView.cs` | `Refresh()` ไม่เขียนทับ `selectable` ที่คนอื่นตั้งไว้ + ป้าย `Out today` |
+| `Scripts/Controllers/GatherMapController.cs` | `ConfirmTrip` resolve ทันทีและยิง `OnTripResolved` ในเฟรมเดียว · `TripInProgress` = `[Obsolete]` และคืน `false` เสมอ · `PlayScoutFlourish` เป็นของประดับเท่านั้น |
+| `Scripts/UI/GatherDispatchPanel.cs` | ใช้ `DispatchActionPanel`, ไม่ล็อกระหว่างทริป, `interactable` มาจาก `CanDispatch()` dry-run + บอกเหตุผลใน `MessageUi` |
+| `Scenes/Core.unity` | เพิ่ม `CharacterHandPanel` / `DispatchActionPanel` / `LogPanel`, ปิด `CharCard` และ `MapPanel/Dispatch`, ต่อ `RunLogNarrator` ที่ `GameSystem` |
+
+**การตัดสินใจที่ล็อกเพิ่ม (P3)**
+
+| ข้อ | กติกา | เหตุผล |
+|---|---|---|
+| กติกาเลือกการ์ด | **`Dispatch` และ `Skill` ใช้กฎเดียวกัน: `unit.CanBeDispatched` (Idle)** — ต่างกันแค่ `MaxSelection` | ถ้าใช้ `CanBeSentGathering` การ์ดของคนที่ออกสำรวจแล้ววันนี้จะกดไม่ได้ ทำให้ "เลือกตัวละคร → กดสกิล" ของคนที่ busy ทำไม่ได้เลย (สเปก §4.5 เดิมขัดกับ §6.3) |
+| ความถูกต้องของการกระทำ | ตัดสินที่ **ปุ่มยืนยัน** ไม่ใช่ที่การ์ด: `CanDispatch()` / `CanCook()` / `CanHeal()` เป็นคนบอก แล้วปุ่มจะเทา + `MessageUi`/`WarningText` บอกเหตุผล | ผู้เล่นเลือก "ใคร" ก่อน แล้วระบบบอกว่าทำอะไรได้ — ไม่ต้องเดาโหมด |
+| ปุ่มยืนยันโผล่เมื่อไร | **เมื่อมีการ์ดถูกเลือกอย่างน้อย 1 ใบ** (ไม่มีถ้ำ → ปุ่มเทา + "Pick a cave on the map first.") | ตรงกับ §4.6 "ซ่อนเมื่อยังไม่ใช้งาน" และไม่เหลือปุ่มตายกลางจอ |
+| `HealTarget` | โหมดที่ 3 ใช้เฉพาะตอนกด Heal แล้ว — การ์ดที่เลือกได้เหลือแค่ `UnitState.Hurt` | ผู้รักษาถูกจำไว้ใน controller ทำให้ช่องเลือก 1 ใบยกให้ผู้ป่วยได้ |
+
+### 7.9 P4 — SkillTriggerPanel + SkillFlowController (เสร็จ)
+
+| ไฟล์ | สิ่งที่ทำ |
+|---|---|
+| `Scripts/UI/SkillTriggerPanel.cs` | `SkillKind { None, Cook, Heal, Craft }` · event `CookClicked/CookCleared/CraftClicked/CraftCleared/HealClicked/HealCancelled/HealModeToggled` · `SetCookCount()` / `SetCraftCount()` / `SetArmed()` (ไฮไลต์ปุ่มที่ active) / `SetHealAvailable()` / `SetHealMode()` |
+| `Scripts/UI/RightClickHandler.cs` **(ใหม่)** | `IPointerClickHandler` ที่ยิง event เฉพาะคลิกขวา (Unity `Button` มีแต่คลิกซ้าย) — ประกอบเข้าปุ่มอัตโนมัติใน `Awake` |
+| `Scripts/UI/SkillFlowController.cs` **(ใหม่)** | เจ้าของ flow ทั้งหมด: counter ของ Cook/Craft, โหมด Heal, การเลือกผู้ป่วย, `IsSkillActive` + `StateChanged` ให้ gather flow รู้ว่าใครถือปุ่มอยู่ |
+| `Scripts/UI/GatherDispatchPanel.cs` | gate ด้วย `IsSkillActive()` ทั้งตอนกดและตอน `RefreshActionPanel()` + กลับมาใช้ปุ่มเองเมื่อ `StateChanged` |
+
+**กติกาที่ลงมือตามสเปก §4.7 / §6.1 / §6.2**
+
+| ข้อ | ผลลัพธ์ |
+|---|---|
+| Cook / Craft | คลิกซ้าย +1 รอบ (เพดาน = `GetMaxCookRounds` / `GetMaxWorkshopRounds` = AP และวัตถุดิบที่จ่ายได้จริง) · คลิกขวาล้างจำนวน (การ์ดยังเลือกอยู่) · เปลี่ยนสกิลกลางทาง = counter ของอีกอันถูกล้าง |
+| เกินเพดาน | ไม่เพิ่ม + `WarningText` + `Debug.LogWarning` ("No AP or cooking material left for another round.") |
+| Heal | คลิกซ้าย = arm (ไม่มี counter) · **ต้องเลือกผู้ป่วยก่อนปุ่ม HEAL จึงโผล่** · คลิกขวา = ยกเลิกโหมด Heal |
+| Heal disabled | เทาปุ่มทั้งปุ่มเมื่อไม่มีใคร `UnitState.Hurt` |
+| Heal 2 โหมด | ปุ่มเล็ก `MED` (ยา 1 + AP 1) ↔ `AP` (AP 2) · ไม่มี medication ในคลัง = บังคับ `AP` และปุ่ม toggle ตาย |
+| ตัวเลขบนปุ่ม | แสดงเฉพาะ Cook / Craft (Heal ไม่มี) |
+
+**ตรวจสอบแล้ว (play mode, Core scene — `AgentScripts/TestSkillFlow.cs` 35/35 ผ่าน)**
+
+| การทดสอบ | ผล |
+|---|---|
+| เริ่มเกม | ไม่มีสกิลถูก arm, ปุ่มยืนยันซ่อน, hand = `Dispatch` (max 2) |
+| เลือกการ์ด → Cook ×2 | arm = Cook, counter 1 → 2, hand หดเหลือ 1 ใบ, ปุ่มขึ้น `COOK` |
+| คลิกขวา Cook | counter = 0, arm = None, **การ์ดยังเลือกอยู่** |
+| ยืนยัน Cook | AP ถูกหัก, Food เพิ่ม, log มีบรรทัด cook, disarm |
+| สลับไป Craft | counter ของ Cook ถูกล้าง, Craft เริ่มที่ 1, ยืนยันแล้ว Materials ลด |
+| Heal (มี Hurt 1 คน) | arm = Heal, `healer` ถูกจำไว้, hand เปลี่ยนเป็น `HealTarget`, ปุ่มยืนยันซ่อนจนเลือกผู้ป่วย |
+| เลือกผู้ป่วย | เฉพาะคน Hurt กดได้, ปุ่มขึ้น `HEAL`, ยืนยันแล้วหาย Hurt + Medicine ลด 1 |
+| Heal โหมด `AP` | ไม่แตะ Medicine, AP ลด 2, ผู้ป่วยหาย |
+| ไม่มีใคร Hurt | ปุ่ม Heal เทา |
+
+**ตรวจ regression การสำรวจ (`AgentScripts/TestDispatchGating.cs` 16/16 ผ่าน)**
+
+| การทดสอบ | ผล |
+|---|---|
+| ไม่เลือกอะไร | ปุ่มซ่อน |
+| เลือกถ้ำอย่างเดียว | ปุ่มยังซ่อน |
+| เลือกการ์ด 1 ใบ | ปุ่มขึ้น `DISPATCH` |
+| arm Cook | label เปลี่ยนเป็น `COOK` (gather flow ไม่แย่ง) |
+| คลิกขวาล้าง Cook | label กลับเป็น `DISPATCH` |
+| ยืนยันสำรวจ | resolve ทันที: `HasGatheredToday = true`, AP ลด, selection ถูกล้าง, ปุ่มซ่อน, log มีบรรทัดทริป |
+| คนที่ busy | ยังกดการ์ดได้ (ทำสกิลต่อได้) |
+
+> **ข้อควรรู้:** `script.run` ของ pipeline compile ทีละไฟล์ → helper ที่อยู่ในไฟล์อื่น (เช่น `ViewLayout`) เรียกจากสคริปต์อื่นไม่ได้<br/>
+> **ข้อควรรู้:** `FindAnyObjectByType<T>()` ไม่คืน object ที่ inactive → ต้องระวังตอน `CharCard` (roster เก่า) ยังอยู่ในซีน
+
+### 7.10 P5 — ลบของเดิม + DayFrame = End Day (เสร็จ)
+
+| สิ่งที่ทำ | รายละเอียด |
+|---|---|
+| **`DayFrame` = ปุ่มจบวัน** | เพิ่ม `Scripts/UI/EndDayTrigger.cs` (`IPointerClickHandler`) บน `StatusBar/DayFrame` — คลิกซ้าย = `DayManager.EndDay()` ไม่มี confirm dialog, ไม่ทำงานซ้ำถ้า run จบแล้ว · คลิกที่ `DayBackground`/ตัวเลข DAY ถูก bubble ขึ้นมาที่ `DayFrame` เอง (พฤติกรรมเดียวกับ EventSystem จริง) |
+| **ลบ `EndDay button`** | ออกจากซีน (แทนที่ด้วย DayFrame) |
+| **ลบ `BaseWorkPanel`** | ออกจากซีน + ลบไฟล์ `Scripts/UI/BaseWorkPanel.cs` (ทับด้วย `SkillTriggerPanel` + `SkillFlowController`) |
+| **ลบ `CharCard`** | roster เก่าที่ปิดไว้ — เหลือ `CharacterHandPanel` ตัวเดียว (กำจัดปัญหา `FindAnyObjectByType<UnitRosterView>` คืนตัวผิด) |
+| **ลบ `MapPanel/MessageUi`** | ข้อความย้ายไป log: เลือกถ้ำ → `LogKind.Action` บอก AP/unit, success value, loot · ข้อความที่บล็อก → `WarningText` + `LogKind.Warning` (ลบ field `messageText`/`dispatchButton` ออกจาก `GatherDispatchPanel`) |
+| **ลบ `MapPanel/Dispatch`** | ปุ่มเดิม (inactive) — แทนที่ด้วย `DispatchActionPanel` |
+| **ลบ `MapPanel/ScoutIcon`** | ของประดับจากยุคที่มีเวลาเดินทาง · **`ScoutIcon.prefab` ยังอยู่** (การ์ดในมือใช้ prefab นี้) · ลบ `ScoutWalkerView.cs`, ถอด field `scoutWalker`/`PlayScoutFlourish` และ property `TripInProgress` ออกจาก `GatherMapController` |
+| **Core Item 2 ช่อง** | โคลน `CoreItemFrame` → `CoreItemFrameB` (icon ภายในชื่อ `CoreItemBIcon`) แล้วผูกเข้า `StatusBarView.coreItemBIcon` · เปลี่ยนชื่อ text สรุปเป็น `CoreItemStatus` |
+| **Missing script** | ถอด component ที่ script ถูกลบออกจาก `ScoutIcon.prefab` (เดิมเตือน console ทุกครั้งที่ instantiate) — `AgentScripts/FixMissingScripts.cs` |
+| **Glyph ที่ฟอนต์ไม่มี** | `✓` (U+2713) ไม่มีใน LiberationSans SDF → เปลี่ยน `CoreItemStatus` เป็น ASCII `Core A +` / `Core B -` |
+| **สี idle ของปุ่มสกิล** | `SkillTriggerPanel` ดึง `normalColor` จาก Cook แล้วใช้กับทั้ง Heal และ Craft เพื่อให้คอลัมน์ขวาเป็นชุดเดียวกัน |
+| **Map area** | ปรับ `marginLeft/Right/Top/Bottom` ของ `GatherMapController` (150/360/150/420) เพื่อไม่ให้ถ้ำไปอยู่ใต้ LogPanel / มือการ์ด / คอลัมน์สกิล / DayFrame (เดิมมีถ้ำที่มองไม่เห็นและกดไม่ได้) |
+| **LogPanel ทึบ** | `LogPanel` background alpha 0.94 → **1** (เดิมถ้ำที่อยู่ข้างหลังทะลุขึ้นมาเห็นผ่านหัว panel) แก้ทั้งในซีนและ prefab |
+
+**ตรวจสอบแล้ว (play mode, Core scene)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestCleanup.cs` — P5 (19 ข้อ) | **19/19 ผ่าน**: ไม่มี `EndDay button`/`BaseWorkPanel`/`CharCard`/`MessageUi`/`ScoutIcon`/`Dispatch` เหลือ, มี 2 ช่อง Core Item และไม่ทับกัน, `coreItemBIcon` ถูกผูกและเปลี่ยนสีเมื่อได้ B, `DayFrame` มี `EndDayTrigger`, คลิกแล้ว day เดินหน้า + log ขึ้น, เลือกถ้ำแล้ว log บอกต้นทุน |
+| `AgentScripts/TestSkillFlow.cs` — P4 (35 ข้อ) | **35/35 ผ่าน** (ไม่ regress หลังลบของเดิม) |
+| `AgentScripts/TestDispatchGating.cs` — P3 (17 ข้อ) | **17/17 ผ่าน** |
+| Console (play mode) | **0 error / 0 warning** ที่ไม่ใช่ของ Unity Account API |
+
+> **หมายเหตุ:** `script.run` ที่เรียก `EditorSceneManager.SaveScene` ใช้ได้เฉพาะตอน **ไม่** อยู่ใน play mode · `unity` CLI จะ timeout ทันทีหลัง domain reload — ต้อง `unity status --until-ready` ก่อนเรียกซ้ำ
+
+### 7.11 P5 ตามด้วยการแก้ bug "กด DayFrame ไม่ได้" (2026-10-28)
+
+**อาการ:** คลิกที่กรอบ DAY แล้วไม่มีอะไรเกิดขึ้น
+
+**สาเหตุ (2 ชั้น):**
+
+| # | ปัญหา | หลักฐาน |
+|---|---|---|
+| 1 | **ทุก Graphic ใต้ `DayFrame` มี `raycastTarget = false`** (`DayBackground`, `Day`, border ทั้ง 4) → raycast ทะลุลงไปโดน `MapPanel` ที่อยู่ข้างหลัง แล้วไม่มี handler ให้เรียก | raycast ที่กลาง frame ได้ผลลัพธ์เดียวคือ `MapPanel`, `GetEventHandler<IPointerClickHandler>` คืน `NONE` |
+| 2 | **ถ้ำ 1 ใบอยู่ใต้ frame** (Normal ที่ x≈1535, y≈904 — rect 160×30 คาบเกี่ยวกับขอบซ้ายของ frame) → ถ้าเปิด raycast เฉย ๆ ถ้ำใบนั้นจะเสียพื้นที่คลิก | `overlap = True` จาก `DiagnoseNodeOverlap` |
+
+**วิธีแก้:**
+
+| ไฟล์/ที่ | สิ่งที่ทำ |
+|---|---|
+| `Scenes/Core.unity` → `StatusBar/DayFrame/DayBackground` | `raycastTarget = true` (พื้นผิวคลิกคือพื้นหลังของกรอบ) |
+| `StatusBar/DayFrame/Day` (TMP) | `raycastTarget = false` (ไม่แย่งคลิกจากพื้นหลัง) |
+| `Scripts/UI/EndDayTrigger.cs` | เพิ่ม `EnsureClickSurface()` — ถ้าไม่มี raycast target ใน subtree จะเพิ่ม transparent `Image` ให้เอง + `Debug.LogWarning` (กัน bug นี้กลับมาแบบเงียบ ๆ) และเพิ่ม warning + log "The run is already over." เมื่อกดหลัง run จบ |
+| `GatherMapController` | `marginRight` 360 → **400**, `marginTop` 150 → **300** → rect ของถ้ำไม่ทับกรอบ DAY อีก |
+| `AgentScripts/TestClickTargets.cs` **(ใหม่)** | audit ทุก interactive element บน Canvas ด้วย **raycast จริง** (ไม่ใช่เรียก handler ตรง ๆ) — 40 elements ผ่านหมด |
+| `AgentScripts/TestCleanup.cs` | เปลี่ยนข้อทดสอบ DayFrame ให้ raycast ก่อนแล้วจึง bubble + เพิ่มข้อ "no cave node sits under the Day frame" |
+
+**ตรวจสอบแล้ว (play mode)**
+
+| การทดสอบ | ผล |
+|---|---|
+| `TestClickTargets` (audit 40 elements) | **ALL PASS** — DayFrame, การ์ด 4 ใบ, ปุ่ม Cook/Heal/HealMode/Craft, MinMax, ถ้ำ 6 ใบ |
+| `TestCleanup` (22 ข้อ) | **22/22 ผ่าน** รวม raycast ที่กลาง frame → hit `DayFrame` → handler = `EndDayTrigger` → คลิกแล้ว day เดินหน้า |
+| `TestSkillFlow` / `TestDispatchGating` | 35/35 · 17/17 ผ่าน (ไม่ regress) |
+| Console | 0 error / 0 warning |
+
+> **บทเรียน:** การทดสอบที่เรียก `button.onClick.Invoke()` หรือ `ExecuteEvents.ExecuteHierarchy()` ตรง ๆ จะ **ไม่** จับ bug นี้ เพราะข้าม raycast ไปเลย — ต้อง `EventSystem.RaycastAll` ก่อนเสมอถ้าอยากรู้ว่าผู้เล่นกดได้จริงหรือไม่
+
+**ไฟล์ที่แก้ใน P0 (compile ผ่าน, รัน play mode ไม่มี error)**
+
+| ไฟล์ | สิ่งที่ทำ |
+|---|---|
+| `Scripts/CoreItemKind.cs` **(ใหม่)** | enum `CoreItemKind { A, B }` |
+| `Scripts/System/RunLog.cs` **(ใหม่)** | `LogKind` / `LogEntry` / `RunLog` (static, capacity 16) |
+| `Scripts/System/RunResources.cs` | `coreItemA` / `coreItemB` + `HasCoreItemA/B` / `HasBothCoreItems` / `HasCoreItem(kind)` / `ObtainCoreItem(kind)` + `event OnChanged` |
+| `Scripts/Entities/GatherZoneData.cs` | `coreItemChancePercent` (0–100) |
+| `Scripts/System/GatherZoneDatabase.cs` | ค่าเริ่มต้น Easy 0 · Normal 5 · Hard 15 |
+| `Scripts/Controllers/GatherDispatchController.cs` | ลบ `HandleCoreItemProgress` → `TryRollCoreItems` (เฉพาะ HardSuccess); `coreItemsObtained : List<CoreItemKind>` |
+| `Scripts/Controllers/DayManager.cs` | ชนะ/แพ้จาก `HasBothCoreItems` (3 จุด) |
+| `Scripts/UI/StatusBarView.cs` | ช่อง A/B (2 ช่อง) + สีตามสถานะ — *โครงชั่วคราวก่อนทำ P1* |
+| `Scripts/UI/GatherDispatchPanel.cs` | แสดง Core Item ที่ได้จาก `coreItemsObtained` |
+
+**ตรวจสอบแล้วใน Editor (Unity 6000.5.4f1)**
+
+| การทดสอบ | ผล |
+|---|---|
+| `script.recompile` | `completed`, `failed: false`, 0 error |
+| `GatherZoneDatabase` ค่าจริง | `Easy=0 Normal=5 Hard=15` |
+| `ObtainCoreItem(A)` → `HasBothCoreItems` | `false` (ถูกต้อง) |
+| `ObtainCoreItem(B)` → `HasBothCoreItems` | `true` (ถูกต้อง) |
+| `RunLog.Add` → `Entries.Count` | `1`, stamp day ตรงกับ `DayManager` |
+| Console ระหว่าง play mode | ไม่มี error (มีแค่ warning ของ Unity Account API) |
+
+---
+
+## 8. Contracts ที่ต้องเพิ่ม (ต่อยอดจากข้อ 3 ใน Overview)
+
+| # | API | เจ้าของ | ผู้ใช้ | หมายเหตุ |
+|---|---|---|---|---|
+| **L1** | `RunLog.OnEntryAdded : event Action<LogEntry>` + `Add(LogKind, string)` | กลุ่ม 3 | ทุกกลุ่ม | แหล่ง log กลาง |
+| **L2** | `BaseWorkController.OnBaseWorkCompleted : event Action<BaseWorkResult>` | กลุ่ม 1 | กลุ่ม 3 (log), กลุ่ม 2 (SFX) | = C1 เดิม — ✅ **มีแล้ว** (P2) |
+| **L3** | `RunResources.OnChanged : event Action` | กลุ่ม 3 | กลุ่ม 1 | = C7 เดิม — ✅ **มีแล้ว** (P0) |
+| **L4** | `DayManager.OnDayEnded : event Action<DayEndReport>` + `PreviewFeeding()` | กลุ่ม 3 | กลุ่ม 1/2 | = C4 เดิม — ✅ **มีแล้ว** (P2) |
+| **L5** | `RunResources.HasBothCoreItems` / `HasCoreItem(CoreItemKind)` + `ObtainCoreItem(CoreItemKind)` + enum `CoreItemKind { A, B }` | กลุ่ม 3 (แตะ shared) | กลุ่ม 1, กลุ่ม 2 | ✅ **มีแล้ว** (P0) — **ต้องแจ้งก่อนแก้** |
+| **L6** | `GatherZoneConfig.coreItemChancePercent` (0–100, ทอยเฉพาะ HardSuccess) + `GatherDispatchResult.coreItemsObtained : List<CoreItemKind>` | กลุ่ม 2 (เจ้าของ `GatherZoneData`/`GatherDispatchController`) | กลุ่ม 3 (log) | ✅ **มีแล้ว** (P0) |
+| **L7** | `GatherDispatchController.OnGatherResolved` ยิง **ทันที** หลัง resolve (ไม่ผ่าน walker) + ลบ `GatherMapController.TripInProgress` | กลุ่ม 2 | กลุ่ม 3 (log) | **C3 เดิมล้าสมัย — ต้องแก้** |
+| **L8** | `UnitCharacter.HasGatheredToday` (busy) เปิดให้ UI อ่านตรง ๆ | มีอยู่แล้ว | กลุ่ม 3 | ใช้ตัดสิน selectability ตามโหมด |
+
+---
+
+## 9. ผลกระทบรายไฟล์ (Draft)
+
+| ไฟล์ | การเปลี่ยนแปลง | ระดับ |
+|---|---|---|
+| `Scripts/UI/WarningView.cs` | จำกัดการเด้งกลางจอเฉพาะ Error + ส่งเข้า log | M |
+| `Scripts/UI/StatusBarView.cs` | แยก CoreItem 2 ช่อง, ย้าย End Day ไป DayFrame, เลิก poll ทุกเฟรม (ใช้ C7) | M |
+| `Scripts/UI/UnitRosterView.cs`, `UnitIconView.cs` | ปรับเป็นมือไพ่ล่างกลาง + รองรับ selection ร่วมกับ skill | M |
+| `Scripts/UI/GatherDispatchPanel.cs` | ย้าย/ขยาย panel, ซ่อนเมื่อว่าง, label ตามบริบท | M |
+| `Scripts/UI/BaseWorkPanel.cs` | **แทนที่**ด้วย `SkillTriggerPanel` (หรือ refactor ตัวเดิม) | L |
+| `Scripts/UI/LogMessagePanel.cs` **(ใหม่)** | log list + minimize | M |
+| `Scripts/System/RunLog.cs` **(ใหม่)** | buffer + event | S |
+| `Scripts/System/RunResources.cs` | CoreItem A/B (ดรอปอิสระ ไม่มีลำดับ) + `HasBothCoreItems` + `ObtainCoreItem(CoreItemKind)` | S |
+| `Scripts/Entities/GatherZoneData.cs` | เพิ่ม enum `CoreItemKind` + field `coreItemChancePercent` ใน `GatherZoneConfig` — **เจ้าของกลุ่ม 2** | S |
+| `Scripts/System/GatherZoneDatabase.cs` | ใส่ค่าเริ่มต้น chance: Easy 0% · Normal 5% · Hard 15% — **เจ้าของกลุ่ม 2** | S |
+| `Scripts/Controllers/GatherDispatchController.cs` | ลบ `HandleCoreItemProgress` → `TryRollCoreItems(config, result)` (เรียกเฉพาะ `HardSuccess`, ทอยแยกต่อชิ้น, ข้ามชิ้นที่มีแล้ว); `GatherDispatchResult.unlockedCoreItemMaterial/obtainedCoreItem` → `coreItemsObtained` — **เจ้าของกลุ่ม 2** | M |
+| `Scripts/Controllers/GatherMapController.cs` | **ลบ `TripInProgress` + walker callbacks** → `ConfirmTrip` เรียก `Dispatch()` แล้วยิง `OnTripResolved` ทันที — **เจ้าของกลุ่ม 2** | M |
+| `Scripts/UI/ScoutWalkerView.cs`, `DiceRollView.cs` | ไม่มีบทบาท (ลบตอน P5) — **เจ้าของกลุ่ม 2** | S |
+| `Scripts/Controllers/DayManager.cs` | เงื่อนไขชนะ/แพ้จาก A+B | S |
+| `Scripts/Controllers/BaseWorkController.cs` | เพิ่ม event C1 (ถ้าต้องการ) | S |
+| `Scenes/Core.unity` | ย้าย/ลบ subtree ตาม §3.2 — **ทำหลัง prefab เสร็จ** | L |
+| `Prefabs/UI/*` (ใหม่) | `CharacterCard`, `LogPanel`, `DispatchPanel`, `SkillTriggerPanel`, `WarningPanel` | L |
+
+---
+
+## 10. ลำดับงาน (Draft Phases)
+
+| Phase | งาน | ผลลัพธ์ที่ตรวจได้ |
+|---|---|---|
+| **P0** | Data & logic: `CoreItemA/B` + `coreItemChancePercent` ใน `GatherZoneConfig`, `HasBothCoreItems`, `DayManager` win/lose, `RunLog` | ✅ **เสร็จ** — ดรอปจาก HardSuccess ได้จริง, Hard 15% > Normal 5%, Win เมื่อครบ 2 ชิ้น, แพ้เมื่อเกินวันที่ 7 |
+| **P1** | โครง prefab เปล่า: Log / SkillTrigger / Dispatch / CharacterHand วางใน Canvas ใหม่ (ยังไม่ผูก logic) | ภาพ layout ตรงกับแบบร่าง |
+| **P2** | `LogMessagePanel` + ต่อ event (C1/C4/L1) + minimize | ผลงาน/ทริป/วันเปลี่ยนขึ้น log ครบ |
+| **P3** | `CharacterHandPanel` (ย้ายการ์ดล่างกลาง) + `DispatchActionPanel` (ซ่อนเมื่อว่าง) | dispatch เดิมยังเล่นได้ |
+| **P4** | `SkillTriggerPanel` + queue (Cook/Craft) + heal toggle (ไม่มี queue) + right-click clear + `BaseWorkController` overload รับ `useMedicine` | ✅ **เสร็จ** — Cook/Craft/Heal ทำงานครบ, ไม่มี dropdown |
+| **P5** | ลบของเดิม: `BaseWorkPanel`, `EndDay button`, `MessageUi`, `CharCard`, `ScoutIcon`, `CoreItem` เดี่ยว + `DayFrame` = End Day | ✅ **เสร็จ** — hierarchy ไม่มี dead object, console 0 warning, 2 ช่อง Core Item |
+
+> **กติกา:** ทุก phase ทำ prefab ก่อน แล้วค่อยลากเข้า `Core.unity` (ตาม Overview §4) · แก้ `Core.unity` ทีละคน
+
+---
+
+## 11. คำถามที่ปิดแล้ว (Decisions)
+
+| # | คำถาม | คำตอบที่ยืนยันแล้ว |
+|---|---|---|
+| Q1 | `ResourceStrip` อยู่ตรงไหน | **กลางบน เหมือนเดิม** (ไม่ย้าย) |
+| Q2 | โหมดสกิลเลือกการ์ดได้กี่ใบ | **1 ใบ** |
+| Q3 | `SkillTriggerPanel` แสดงตลอดไหม | **แสดงตลอด** |
+| Q4 | พื้นที่ MapPanel / Log | **Log อยู่มุมซ้ายล่างเท่านั้น** และ **ห้ามสูงล้ำเข้าเขต MAP AREA** → MAP คงพื้นที่เดิม |
+| Q5 | Heal มี queue ไหม | **ไม่มี queue** — เลือกผู้ทำ → กด Heal → เลือกผู้ป่วย → ยืนยัน (1 ครั้งต่อ 1 การยืนยัน) |
+| Q6 | Log capacity | เก็บ **16** entry, **แสดงเท่าที่ช่องใส่ได้จริง** |
+| Q7 | End Day ต้องมี confirm dialog ไหม | **ไม่ต้องมี** |
+| Q8 | Warning ระหว่าง `TripInProgress` | **ไม่มีคำถามนี้แล้ว** — เกมไม่มีช่วง in-progress: dispatch resolve ทันที และ End Day กดได้ทุกเมื่อ |
+| Q9 | Easy zone ดรอป Core Item ไหม | **ไม่มี** (0%) |
+
+### ยังเปิดอยู่
+
+ไม่มี — ทุกข้อปิดแล้ว (2026-10-27)
+
+> **หมายเหตุสำคัญ:** เอกสาร sprint/contract เวอร์ชันก่อน (C3, `TripInProgress`, `ScoutWalkerView`) อ้างระบบ **time-unit** ที่เลิกใช้แล้ว — ปัจจุบันใช้ **AP** และ **ไม่มีเวลาเดินทาง/ฐานบน map** ต้องอัปเดต [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) §3 C3 ด้วย
+
+---
+
+## 12. Acceptance Criteria (Draft)
+
+1. [ ] warning ทุกกรณีที่ "ทำไม่ได้" ขึ้นกลางจอ **และ** มี log entry คู่กัน
+2. [ ] ข้อความข้อมูล/ผลลัพธ์ทั่วไป **ไม่** เด้ง warning — ลง log เท่านั้น
+3. [ ] log อยู่มุมล่างซ้าย **ไม่ล้ำเข้าเขต MAP AREA**, ใหม่สุดล่าง, ย่อเหลือบรรทัดเดียวได้, แสดงเท่าที่ช่องใส่ได้
+4. [ ] CoreItem 2 ช่องแสดงสถานะแยกกัน, **ดรอปได้อิสระจากกัน (ไม่มีลำดับ)** และ **ชนะเมื่อมีครบทั้ง 2**
+5. [ ] **ดรอปเฉพาะ HardSuccess**: `Regular` / `Failure` / `Fumble` ไม่ดรอป; ทอยแยกต่อชิ้น (A, B) และข้ามชิ้นที่มีอยู่แล้ว — มีครบทั้งคู่ = ไม่ทอย
+6. [ ] **Hard มีโอกาสดรอปมากกว่า Normal** (ค่าเริ่มต้น Normal 5% · Hard 15% ต่อ HardSuccess → จริงต่อทริป ≈ 4.4% vs 8.9%) และปรับได้ใน Inspector
+7. [ ] ยังไม่มีครบทั้ง 2 และวันที่เกิน deadline → **แพ้**
+8. [ ] คลิกที่ DayFrame = จบวันทันที (ไม่มีปุ่มแยก, **ไม่มี confirm dialog**)
+9. [ ] Cook/Craft: เลือกการ์ด 1 ใบ → คลิกเพิ่มจำนวนได้จน AP หมด → คลิกขวาล้างจำนวนโดยการ์ดยังเลือกอยู่
+10. [ ] **Dispatch resolve ทันที** ไม่มีช่วงล็อก UI, ผลขึ้น log ในเฟรมเดียวกัน, ไม่มี `TripInProgress`
+11. [ ] ตัวละครที่ dispatch แล้วเป็น **Busy** — ส่งซ้ำไม่ได้ แต่ **เลือกทำสกิลได้ถ้ามี AP เหลือ**
+12. [ ] **End Day กดได้ทุกเมื่อ** และรีเซ็ต Busy + คืน AP เต็ม
+13. [ ] Heal: เลือกผู้ทำ → กด Heal → เลือกผู้ป่วย (Hurt) → ยืนยัน · **ไม่มี queue/ตัวเลขบนปุ่ม** · กดไม่ได้เมื่อไม่มีคนบาดเจ็บ
+14. [ ] ปุ่มสลับโหมด Heal (ยา ↔ AP) ทำงานและตัวเลข AP ที่แสดงตรงกับโหมด
+15. [ ] ปุ่ม Dispatch ซ่อนเมื่อยังไม่ใช้งาน และ label เปลี่ยนตามสกิล
+16. [ ] เลือกการ์ดในโหมดสกิลได้ **1 ใบ** และ panel สกิลแสดงตลอดเวลา
+17. [ ] `ResourceStrip` ยังอยู่กลางบน
+18. [ ] ไม่มีตัวเลข balance hard-code ใน UI — อ่านจาก Controller ทุกค่า
+19. [ ] hierarchy ไม่มี object ของ flow เก่าค้าง (`BaseWorkPanel`, `EndDay button`, `MessageUi`, `ScoutIcon`)
+20. [ ] **คลิกที่ `DayFrame` = จบวัน** (ไม่มีปุ่ม End Day แยก, ไม่มี confirm dialog)
+21. [ ] ไม่มีถ้ำ (node) อยู่ใต้ panel ใด ๆ — ทุกใบมองเห็นและกดได้
+22. [ ] ไม่มี console warning จาก missing script / glyph ที่ฟอนต์ไม่มี
+23. [ ] **ทุก interactive element ผ่าน raycast จริง** — `EventSystem.RaycastAll` ที่กลาง element ต้อง hit element นั้น (ไม่ใช่ panel ข้างหลัง) · ตรวจด้วย `AgentScripts/TestClickTargets.cs`
+
+> **สถานะ AC (2026-10-28):** ข้อ 1–19 ผ่านการตรวจด้วยสคริปต์ใน play mode (ดู §7.8–§7.10) · ข้อ 20–23 ผ่านในชุด `TestCleanup` + `TestClickTargets` (§7.11)
+
+---
+
+## Related Documents
+- [Unity V2 System Design](04-unity-system-design.md)
+- [Unity V2 Class Diagram](05-unity-class-diagram.md)
+- [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md)
+- [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md)
+- [US-V2-UI-01 UI หลัก](../agile/user-stories/US-V2-UI-01.md) · [US-V2-FACTORY-01 โรงงาน](../agile/user-stories/US-V2-FACTORY-01.md)
+- [GDD §5 Base Work](../gdd/01-mechanics.md) · [Art Direction §4 Layout](../gdd/03-art-direction.md)

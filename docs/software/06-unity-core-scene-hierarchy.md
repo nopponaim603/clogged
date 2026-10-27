@@ -1,8 +1,8 @@
 # clogged (Unity V2) — Core Scene Hierarchy
 
-**Version:** 2.0 | **Last Updated:** 2026-10-14
-> อธิบาย Hierarchy ทั้งหมดของ `Unity-Projects/Assets/V2/Scenes/Core.unity` — สร้างจากการ parse ไฟล์ scene จริง (GameObject, component, การอ้างอิงใน Inspector, prefab)
-> ตรรกะของแต่ละระบบดู [Unity V2 System Design](04-unity-system-design.md) · class ดู [Unity V2 Class Diagram](05-unity-class-diagram.md)
+**Version:** 3.0 | **Last Updated:** 2026-10-28
+> อธิบาย Hierarchy ทั้งหมดของ `Unity-Projects/Assets/V2/Scenes/Core.unity` — ตรวจจาก `unity command scene.get_hierarchy` ของ scene จริง
+> ตรรกะของแต่ละระบบดู [Unity V2 System Design](04-unity-system-design.md) · class ดู [Unity V2 Class Diagram](05-unity-class-diagram.md) · layout/UI ล่าสุดดู [UI Layout Redesign](07-unity-v2-ui-layout-redesign.md)
 
 ## 1. ภาพรวม
 
@@ -12,166 +12,167 @@ Root object 6 ตัว แบ่งเป็น 3 กลุ่ม:
 |---|---|---|
 | `Main Camera` | Rendering | กล้อง URP + AudioListener |
 | `Directional Light` | Rendering | แสง URP (UI ล้วน จึงแทบไม่มีผล) |
-| `GameSystem` | **Logic** | ที่รวม manager/controller ทั้งหมด (ไม่มีภาพ) |
+| `GameSystem` | **Logic** | ที่รวม manager/controller ทั้งหมด (ไม่มีภาพ) + `RunLogNarrator` + `SkillFlowController` |
 | `Canvas` | **UI** | ทุกอย่างที่ผู้เล่นเห็นและกด |
 | `EventSystem` | Input | ส่ง click ให้ UI (ใช้ **Input System package** — `InputSystemUIInputModule`) |
-| `TestDispatch` | Logic ↔ UI | ถือ `GatherDispatchPanel` (UI controller ของการส่งสำรวจ) |
+| `GatherUI` | Logic ↔ UI | ถือ `GatherDispatchPanel` (UI controller ของการส่งสำรวจ) |
 
 ```mermaid
 flowchart TD
     Scene["Core.unity"]
     Scene --> Cam["Main Camera"]
     Scene --> Light["Directional Light"]
-    Scene --> GS["GameSystem<br/>(8 managers)"]
-    Scene --> Canvas["Canvas<br/>1920×1080 Scale With Screen Size"]
+    Scene --> GS["GameSystem<br/>8 managers + narrator + skill flow"]
+    Scene --> Canvas["Canvas<br/>1920x1080 Scale With Screen Size"]
     Scene --> ES["EventSystem"]
-    Scene --> TD["TestDispatch<br/>GatherDispatchPanel"]
+    Scene --> GUI["GatherUI<br/>GatherDispatchPanel"]
 
-    Canvas --> Map["MapPanel<br/>แมป + ถ้ำ + ScoutIcon + Dispatch"]
-    Canvas --> End["EndDay button"]
-    Canvas --> Card["CharCard<br/>การ์ดยูนิต (spawn ตอนเล่น) + เลือกยูนิต"]
-    Canvas --> SB["StatusBar<br/>Day (กรอบขวา) + CoreItem (กรอบซ้าย) + TopBar (กลาง)"]
-    Canvas --> BW["BaseWorkPanel<br/>งานในฐาน"]
+    Canvas --> Map["MapPanel<br/>พื้นแมป + ถ้ำ spawn ตอนเล่น"]
+    Canvas --> SB["StatusBar<br/>CoreItemGroup + TopBar + DayFrame"]
+    Canvas --> WB["WarningBackdrop + WarningText"]
+    Canvas --> Hand["CharacterHandPanel<br/>มือไพ่ล่างกลาง"]
+    Canvas --> Act["DispatchActionPanel<br/>ปุ่มยืนยันล่างขวา"]
+    Canvas --> Log["LogPanel<br/>ประวัติล่างซ้าย"]
+    Canvas --> Skill["SkillTriggerPanel<br/>Cook / Heal / Craft"]
 ```
 
 ## 2. Hierarchy เต็ม
 
-สัญลักษณ์: **ตัวหนา** = มี script ของ V2 · `[inactive]` = ปิดไว้ใน scene · `[PREFAB]` = prefab instance · ⟳ = ถูก spawn เพิ่มตอน runtime (ไม่อยู่ในไฟล์ scene)
+สัญลักษณ์: **ตัวหนา** = มี script ของ V2 · `[inactive]` = ปิดไว้ใน scene · ⟳ = ถูก spawn เพิ่มตอน runtime (ไม่อยู่ในไฟล์ scene)
 
 ```
 Core.unity
 ├── Main Camera                      Camera, UniversalAdditionalCameraData, AudioListener
 ├── Directional Light                Light, UniversalAdditionalLightData
-├── GameSystem                       (Transform เปล่า — ใช้จัดกลุ่ม)
+├── GameSystem                       (Transform เปล่า) **RunLogNarrator**, **SkillFlowController**
 │   ├── UnitManager                  **UnitManager**
 │   ├── RunResources                 **RunResources**
 │   ├── DayManager                   **DayManager**
 │   ├── GatherDispatchController     **GatherDispatchController**
 │   ├── GatherZoneDatabase           **GatherZoneDatabase**
-│   ├── GatherMapController          **GatherMapController**
+│   ├── GatherMapController          **GatherMapController**  (RectTransform)
 │   ├── BaseworkController           **BaseWorkController**
 │   └── StavingController            **StarvationController**
 ├── Canvas                           Canvas (Screen Space - Overlay), CanvasScaler, GraphicRaycaster
-│   ├── MapPanel                     Image  (เต็มจอ — พื้นที่แมป)
-│   │   ├── [PREFAB] ScoutIcon       ← ScoutIcon.prefab  (**ScoutWalkerView**, UnitIconView, CanvasGroup)
-│   │   ├── ⟳ Dungeon Prefab ×6      ← spawn โดย GatherMapController (**MapNodeView**) → ลูก `ZoneLabel` (สร้างตอน runtime)
-│   │   ├── MessageUi                TextMeshProUGUI  (ข้อความผลการสำรวจ — ย้ายไปล่างกลางแล้ว)
-│   │   └── Dispatch                 Button, Image, **ButtonVisual**   (ขวาล่าง)
-│   │       ├── Text (TMP)           "Dispatch"
-│   │       └── Icon                 Image [disabled]  (เตรียมไว้สลับเป็นรูป)
-│   ├── EndDay button                Button → DayManager.EndDay(), Image, **ButtonVisual**  (ขวาล่าง)
-│   │   ├── Text (TMP)               "EndDay"
-│   │   └── Icon                     Image [disabled]  (เตรียมไว้สลับเป็นรูป)
-│   ├── CharCard                     **UnitRosterView** (HorizontalLayoutGroup ถูกปิดตอน runtime)
-│   │   └── ⟳ ScoutIcon(Clone) ×4    ← spawn โดย UnitRosterView (**UnitIconView**)
-│   │       ├── Portrait             Image (สร้างตอน runtime)
-│   │       ├── nametext             TextMeshProUGUI
-│   │       ├── statustest           TextMeshProUGUI
-│   │       └── Frame0..3            Image ×4 (กรอบสีแดง/เหลือง/เขียว/น้ำเงิน)
-│   ├── StatusBar                    **StatusBarView** (HorizontalLayoutGroup เดิมปิดการใช้งาน — วางด้วย anchor)
-│   │   ├── DayFrame                 (ขวาบน) กรอบดำ 4 เส้น 176×92
-│   │   │   ├── DayBackground        Image ขาวโปร่ง 50%
-│   │   │   ├── Day                  TextMeshProUGUI "DAY / 1 / 7 (n left)"
-│   │   │   └── BorderTop/Bottom/Left/Right   Image ดำ 3px
-│   │   ├── CoreItemGroup            (ซ้าย) 160×140
-│   │   │   ├── CoreItem             TextMeshProUGUI "Core Item" + สถานะ
-│   │   │   └── CoreItemFrame        กรอบดำ 4 เส้น 88×88
-│   │   │       ├── CoreItemIcon     Image (placeholder สำหรับ sprite จริง)
-│   │   │       └── BorderTop/Bottom/Left/Right   Image ดำ 3px
+│   ├── MapPanel                     Image (เต็มจอ — พื้นที่แมป)
+│   │   └── ⟳ Dungeon Prefab ×6      ← spawn โดย GatherMapController (**MapNodeView**) → ลูก ZoneLabel (runtime)
+│   ├── StatusBar                    **StatusBarView**, HorizontalLayoutGroup
+│   │   ├── DayFrame                 **EndDayTrigger**  (คลิก = จบวัน)
+│   │   │   ├── DayBackground        Image ขาวโปร่ง
+│   │   │   ├── Day                  TextMeshProUGUI "DAY / n / 7 (x left)"
+│   │   │   └── BorderTop/Bottom/Left/Right   Image ดำ
+│   │   ├── CoreItemGroup            380×140
+│   │   │   ├── CoreItemStatus       TextMeshProUGUI "Core A +/-" + "Core B +/-", LayoutElement
+│   │   │   ├── CoreItemFrame        กรอบดำ 120×120  (ช่อง A)
+│   │   │   │   ├── CoreItemIcon     Image (placeholder สำหรับ sprite จริง)
+│   │   │   │   └── BorderTop/Bottom/Left/Right   Image ดำ
+│   │   │   └── CoreItemFrameB       กรอบดำ 120×120  (ช่อง B, เยื้อง +236)
+│   │   │       ├── CoreItemBIcon    Image
+│   │   │       └── BorderTop/Bottom/Left/Right   Image ดำ
 │   │   └── TopBar                   HorizontalLayoutGroup (กลาง)
 │   │       ├── Food                 TextMeshProUGUI
 │   │       ├── Medicine             TextMeshProUGUI
 │   │       ├── CookingMaterial      TextMeshProUGUI
 │   │       └── Materials            TextMeshProUGUI
-│   ├── BaseWorkPanel                **BaseWorkPanel**, VerticalLayoutGroup, Image
-│       ├── JobRow                   HorizontalLayoutGroup
-│       │   ├── CookButton           Button → "Cook"
-│       │   ├── HealButton           Button → "Heal"
-│       │   └── WorkshopButton       Button → "Craft"
-│       ├── WorkerLabel              TextMeshProUGUI "Worker"
-│       ├── WorkerDropdown           TMP_Dropdown, LayoutElement
-│       │   ├── Label, Arrow
-│       │   └── Template [inactive]  ScrollRect (โครง dropdown มาตรฐานของ TMP)
-│       │       ├── Viewport/Content/Item (Toggle + Item Background/Checkmark/Label)
-│       │       └── Scrollbar/Sliding Area/Handle
-│       ├── PatientRoot              VerticalLayoutGroup  (แสดงเฉพาะงาน Heal)
-│       │   ├── PatientLabel         TextMeshProUGUI "Patient"
-│       │   └── PatientDropdown      TMP_Dropdown (โครงเดียวกับ WorkerDropdown)
-│       ├── RoundsRoot               HorizontalLayoutGroup  (แสดงเฉพาะ Cook/Craft)
-│       │   ├── RoundsMinusButton    Button "-"
-│       │   ├── RoundsText           TextMeshProUGUI "1"
-│       │   └── RoundsPlusButton     Button "+"
-│       ├── PreviewText              TextMeshProUGUI, LayoutElement  (ต้นทุน/ผลได้)
-│       ├── ConfirmButton            Button "Confirm", LayoutElement
-│       ├── MessageText              TextMeshProUGUI "Ready"  (ผลหลัง Confirm)
-│   ├── WarningBackdrop              Image (ดำ a0.85), CanvasGroup  (ฉากหลังให้ WarningText อ่านง่าย)
-│   └── WarningText                  **WarningView**, CanvasGroup, TextMeshProUGUI  (แบนเนอร์เตือนในเกม)
+│   ├── WarningBackdrop              Image (ดำ a0.85), CanvasGroup
+│   ├── WarningText                  **WarningView**, CanvasGroup, TextMeshProUGUI
+│   ├── CharacterHandPanel           **CharacterHandPanel**, **UnitRosterView**
+│   │   └── Cards                    HorizontalLayoutGroup
+│   │       └── ⟳ ScoutIcon(Clone) ×4  ← spawn โดย UnitRosterView (**UnitIconView**)
+│   │           ├── Portrait         Image (runtime)
+│   │           ├── nametext         TextMeshProUGUI
+│   │           ├── statustest       TextMeshProUGUI
+│   │           └── Frame0..3        Image ×4 (กรอบสีประจำตัว)
+│   ├── DispatchActionPanel          **DispatchActionPanel**, Button, Image  (ซ่อนตอน Awake)
+│   │   ├── Icon                     Image (placeholder ไอคอนการกระทำ)
+│   │   └── Label                    TextMeshProUGUI "DISPATCH" / "COOK" / "HEAL" / "CRAFT"
+│   ├── LogPanel                     **LogMessagePanel**, Image (ทึบ)
+│   │   ├── Header                   Image
+│   │   │   ├── Title                TextMeshProUGUI "LOG"
+│   │   │   └── MinMaxButton         Button → ย่อ/กาง
+│   │   │       └── Label            TextMeshProUGUI "–"
+│   │   ├── Expanded                 ScrollRect
+│   │   │   └── Viewport             RectMask2D, Image
+│   │   │       └── Content          VerticalLayoutGroup, ContentSizeFitter
+│   │   │           └── EntryTemplate [inactive]  TMP + LayoutElement (ต้นแบบ row)
+│   │   └── Collapsed [inactive]     TextMeshProUGUI (บรรทัดล่าสุดตอนย่อ)
+│   └── SkillTriggerPanel            **SkillTriggerPanel**, VerticalLayoutGroup
+│       ├── CookButton               Button, LayoutElement
+│       │   ├── Label                TextMeshProUGUI "Cook"
+│       │   └── Count                TextMeshProUGUI (จำนวนรอบที่ queue)
+│       ├── HealRow                  HorizontalLayoutGroup
+│       │   ├── HealButton           Button, LayoutElement  (ไม่มี queue)
+│       │   │   ├── Label            TextMeshProUGUI "Heal"
+│       │   │   └── Count            TextMeshProUGUI (ไม่ถูกใช้)
+│       │   └── HealModeButton       Button → "MED" / "AP"
+│       │       └── Label            TextMeshProUGUI
+│       └── CraftButton              Button, LayoutElement
+│           ├── Label                TextMeshProUGUI "Craft"
+│           └── Count                TextMeshProUGUI
 ├── EventSystem                      EventSystem, InputSystemUIInputModule
-└── TestDispatch                     **GatherDispatchPanel**
+└── GatherUI                         **GatherDispatchPanel**
 ```
-
-> หมายเหตุชื่อ: `BaseWorkPanel ` และ `JobRow ` ในไฟล์ scene มี **ช่องว่างท้ายชื่อ** ถ้าจะหาด้วย `GameObject.Find` ต้องระวัง (โค้ดปัจจุบันไม่ได้ใช้ `Find` จึงไม่มีผล)
 
 ## 3. รายละเอียดแต่ละส่วน
 
 ### 3.1 `GameSystem` — Logic layer
 
-GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไม่มีภาพ ไม่มีลูก ค่าใน Inspector ณ ปัจจุบัน:
+GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไม่มีภาพ ไม่มีลูก:
 
 | GameObject | Component | ค่าใน Inspector | อ้างถึง |
 |---|---|---|---|
+| `GameSystem` | `RunLogNarrator` | — | อ่าน `Instance` เองทั้งหมด |
+| `GameSystem` | `SkillFlowController` | — | `rosterView` → `CharacterHandPanel`, `actionPanel` → `DispatchActionPanel`, `skillPanel` → `SkillTriggerPanel`, `warningView` → `WarningText` |
 | `UnitManager` | `UnitManager` | `units: []` → ใช้ roster default ในโค้ด (Ann, Boon, Cia, Dan) | — |
-| `RunResources` | `RunResources` | food 8, cookingMaterial 2, medicine 1, materials 0, core item ปิดทั้งคู่ | — |
+| `RunResources` | `RunResources` | food 8, cookingMaterial 2, medicine 1, materials 0, coreItemA/B ปิดทั้งคู่ | — |
 | `DayManager` | `DayManager` | currentDay 1, deadlineDay 7 | — |
 | `GatherDispatchController` | `GatherDispatchController` | (ไม่มี field) | — |
-| `GatherZoneDatabase` | `GatherZoneDatabase` | `zones: []` → ใช้ 3 zone default ในโค้ด | — |
-| `GatherMapController` | `GatherMapController` | baseOffset (0, 10), nodesPerDifficulty 2, margin L120 / **R420** / **T200** / B330, baseClearRadius 180, candidatesPerNode 60 | `mapPanel` → `MapPanel`, `nodeViewPrefab` → `Dungeon Prefab.prefab`, `scoutWalker` → `ScoutIcon` (prefab instance) |
+| `GatherZoneDatabase` | `GatherZoneDatabase` | `zones: []` → ใช้ 3 zone default (Easy 0% · Normal 5% · Hard 15%) | — |
+| `GatherMapController` | `GatherMapController` | baseOffset (0, 10), nodesPerDifficulty 2, margin **L150 / R400 / T300 / B420**, baseClearRadius 180, candidatesPerNode 60 | `mapPanel` → `MapPanel`, `nodeViewPrefab` → `Dungeon Prefab.prefab` |
 | `BaseworkController` | `BaseWorkController` | cook 1 AP / 1 วัตถุดิบ → 1 Food (2 ถ้าถนัด); heal 1 AP+ยา หรือ 2 AP; workshop 1 AP + 2 Materials → 1 Medicine | — |
 | `StavingController` | `StarvationController` | foodCostPerFeed 1 | — (ยังไม่มี UI เรียก) |
 
-> `marginRight` ใน scene = **420** (โค้ด default 120) — กันไม่ให้ถ้ำไปทับ `BaseWorkPanel` ที่อยู่ขอบขวา
+> margin ของ `GatherMapController` ถูกขยายใน P5 + §7.11 เพื่อกันไม่ให้ถ้ำไปอยู่ใต้ `LogPanel` / `CharacterHandPanel` / `SkillTriggerPanel` / `DayFrame` (เดิมมีถ้ำที่มองไม่เห็นและกดไม่ได้ · R400/T300 คือค่าที่กัน rect 160×30 ของถ้ำออกจากกรอบ DAY จริง)
 
-ลำดับ `Awake` ของ singleton ไม่สำคัญ เพราะทุกตัวแค่ตั้ง `Instance` ใน `Awake` และ UI ไปอ่าน `Instance` ใน `Start` (ซึ่งรันหลัง `Awake` ทุกตัว)
+ลำดับ `Awake` ของ singleton ไม่สำคัญ เพราะทุกตัวแค่ตั้ง `Instance` ใน `Awake` และ UI ไปอ่าน `Instance` ใน `Start` (รันหลัง `Awake` ทุกตัว)
 
 ### 3.2 `Canvas` — UI layer
 
 - **Render Mode:** Screen Space - Overlay
-- **CanvasScaler:** Scale With Screen Size, reference **1920×1080**, match 0.5 (width/height)
-
-ตำแหน่งบนจอของแต่ละ panel (จาก anchor ของ RectTransform):
+- **CanvasScaler:** Scale With Screen Size, reference **1920×1080**, match 0.5
+- **ลำดับการวาด (หลัง→หน้า):** MapPanel → StatusBar → WarningBackdrop → WarningText → CharacterHandPanel → DispatchActionPanel → LogPanel → SkillTriggerPanel
 
 ```
-┌──────────────────── StatusBar (เต็มความกว้าง สูง 70) ─────────────┐
-│ Core Item          Food  Medicine  CookingMaterial  Material  ┌───┐│
-│ ┌──────┐                                                     │DAY││
-│ │      │  (กรอบดำรอใส่ sprite)                                │1/7││
-│ └──────┘                                                     └───┘│
-│                MapPanel (เต็มจอ)                   ┌────────────┐│
-│                                                    │BaseWorkPanel││
-│        ● ถ้ำ ×6 (สุ่มตำแหน่ง)                     │ 320×500    ││
-│                   ◆ ScoutIcon (กลางจอ = ฐาน)       │ ชิดขวา-กลาง ││
-│                                                    └────────────┘│
-│        [MessageUi]  ← ผลทอย/loot (ล่างกลาง y 306)                  │
-│ ┌Ann┐┌Boon┐┌Cia┐┌Dan┐   [WarningText]       [EndDay ]            │
-│ │   ││    ││   ││   │   (เตือน/error)       [Dispatch]           │
-│ └───┘└────┘└───┘└───┘                                            │
+┌──────────────────── StatusBar (เต็มความกว้าง) ────────────────────┐
+│ [A][B]            Food  Medicine  Cooking  Materials      ┌─────┐ │
+│ CoreItemGroup                                             │ DAY │ │
+│  (ซ้าย)                                                   │ 1/7 │ │
+│                    MapPanel (เต็มจอ)                      └─────┘ │
+│         ● ถ้ำ ×6 (สุ่มใน MAP AREA เท่านั้น)          ┌───────────┐ │
+│                                                      │ Cook   [2]│ │
+│                                                      │ Heal [MED]│ │
+│                                                      │ Craft     │ │
+│ ┌────────────┐   ┌Ann┐┌Boon┐┌Cia┐┌Dan┐               └───────────┘ │
+│ │ LOG    [–] │   │   ││    ││   ││   │    ┌──────────┐            │
+│ │ ...        │   └───┘└────┘└───┘└───┘    │ DISPATCH │            │
+│ └────────────┘    CharacterHandPanel      └──────────┘            │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 | GameObject | Anchor | หน้าที่ | ใครควบคุม |
 |---|---|---|---|
-| `MapPanel` | stretch เต็มจอ | พื้นแมป; เป็น parent ของถ้ำ, ScoutIcon, Dispatch, MessageUi | `GatherMapController` (spawn ถ้ำ, ใช้ rect คำนวณขอบเขตสุ่ม) |
-| `MapPanel/ScoutIcon` | — | ไอคอนเดินจากฐานไปถ้ำแล้วกลับ | `GatherMapController` → `ScoutWalkerView.MoveTo` |
-| `MapPanel/Dispatch` | ขวาล่าง (1,0) | ปุ่มส่งสำรวจ + `ButtonVisual` (สลับเป็นรูปได้) | `GatherDispatchPanel.dispatchButton` |
-| `MapPanel/MessageUi` | ล่าง-กลาง (y 306) | ข้อความผลทอย/loot/trait + ข้อความเลือกยูนิต | `GatherDispatchPanel.messageText` |
-| `EndDay button` | ขวาล่าง (1,0) y 104 | จบวัน + `ButtonVisual` (สลับเป็นรูปได้) | **ผูก onClick ใน Inspector** → `DayManager.EndDay()` (ปุ่มเดียวที่ผูกแบบนี้) |
-| `CharCard` | ล่างซ้าย (40, 32) | **การ์ดยูนิต 4 ใบ** (195×265) — คลิกการ์ดเพื่อเลือก/ยกเลิก (≤ 2) | `UnitRosterView` (container = ตัวเอง) |
-| `WarningBackdrop` | ล่าง-ขวา (x 880, y 60) 620×120 | แผงดำโปร่ง 85% หลังข้อความเตือน (fade พร้อมกัน) | `WarningView.backdropGroup` |
-| `WarningText` | ล่าง-ขวา (x 880, y 60) 620×120 | แบนเนอร์เตือน: ตัวอักษรขาว, outline เปลี่ยนสีตามระดับ (เหลือง/แดง/ฟ้า) | `WarningView` |
-| `StatusBar` | stretch เต็มความกว้าง (สูง 70) | HUD: `CoreItemGroup` (ซ้าย, มีกรอบดำรอใส่ sprite) / `TopBar` (กลาง: Food, Medicine, CookingMaterial, Materials) / `DayFrame` (ขวา, กรอบดำ) | `StatusBarView` |
-| `BaseWorkPanel` | ขวา-กลาง | panel งานในฐาน | `BaseWorkPanel` (13 reference) |
+| `MapPanel` | stretch เต็มจอ | พื้นแมป; parent ของถ้ำที่ spawn ตอนเล่นเท่านั้น | `GatherMapController` |
+| `StatusBar/DayFrame` | ขวาบน | `DAY n / 7 (x left)` — **คลิกที่กรอบ = จบวัน** (พื้นผิวคลิกคือ `DayBackground` ที่ `raycastTarget = true`; `Day`/border ปิด raycast) | `StatusBarView` (ข้อความ) + `EndDayTrigger` (คลิก) |
+| `StatusBar/CoreItemGroup` | ซ้ายบน | ช่อง Core Item A/B + ข้อความสถานะ | `StatusBarView` |
+| `StatusBar/TopBar` | กลางบน | Food / Medicine / CookingMaterial / Materials | `StatusBarView` |
+| `WarningBackdrop` | กลางจอ 620×120 | แผงดำโปร่ง 85% หลังข้อความเตือน (ปิด raycast) | `WarningView.backdropGroup` |
+| `WarningText` | กลางจอ 620×120 | แบนเนอร์เตือน: outline เปลี่ยนสีตามระดับ | `WarningView` |
+| `CharacterHandPanel` | ล่างกลาง (0.5,0) +190, 830×300 | มือไพ่ 4 ใบ — dispatch เลือก 2, สกิล 1, heal target เฉพาะคน Hurt | `CharacterHandPanel` + `UnitRosterView` |
+| `DispatchActionPanel` | ล่างขวา 300×200 | ปุ่มยืนยันตัวเดียว; ซ่อนตอน `Awake`, label ตามบริบท | `DispatchActionPanel` → `GatherDispatchPanel` / `SkillFlowController` |
+| `LogPanel` | ล่างซ้าย (24,24) 700×300 | log 16 entry, ย่อเหลือบรรทัดเดียว (สูง 64) | `LogMessagePanel` |
+| `SkillTriggerPanel` | ขวา (−24, 244) 236×300 | ปุ่ม Cook / Heal (+toggle MED/AP) / Craft | `SkillTriggerPanel` → `SkillFlowController` |
 
-ปุ่มอื่นทั้งหมด (`Dispatch`, `CookButton`, `HealButton`, `WorkshopButton`, `RoundsMinus/Plus`, `ConfirmButton`) **ไม่ได้ผูกใน Inspector** — script ผูกด้วย `onClick.AddListener` ใน `Start()`
+**ปุ่มทั้งหมดผูกด้วย `onClick.AddListener` ใน `Awake`/`Start`** — ไม่มีปุ่มไหนผูกใน Inspector (รวม `DayFrame` ที่ใช้ `IPointerClickHandler`)
 
 ### 3.3 การอ้างอิงใน Inspector ของ UI script
 
@@ -184,68 +185,125 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 | cookingMaterialText | `StatusBar/TopBar/CookingMaterial` |
 | medicineText | `StatusBar/TopBar/Medicine` |
 | materialsText | `StatusBar/TopBar/Materials` |
-| coreItemStatusText | `StatusBar/CoreItemGroup/CoreItem` |
-| coreItemIcon / coreItemSprite | `StatusBar/CoreItemGroup/CoreItemFrame/CoreItemIcon` (placeholder ในกรอบดำ) |
-| foodIcon / cookingMaterialIcon / medicineIcon / materialsIcon | ว่าง (0) — ยังไม่มีกรอบไอค่อนใน TopBar; ใส่ภายหลังได้โดยไม่ต้องแก้ layout |
-| hideResourceLabelWhenIconSet | true — ถ้าใส่ sprite + icon ให้ช่องไหน จะซ่อนข้อความของช่องนั้น |
+| coreItemStatusText | `StatusBar/CoreItemGroup/CoreItemStatus` |
+| coreItemIcon | `StatusBar/CoreItemGroup/CoreItemFrame/CoreItemIcon` |
+| **coreItemBIcon** | `StatusBar/CoreItemGroup/CoreItemFrameB/CoreItemBIcon` |
+| foodIcon / cookingMaterialIcon / medicineIcon / materialsIcon | ว่าง — ยังไม่มีกรอบไอคอนใน TopBar |
+| coreItemSprite / coreItemBSprite | ว่าง — รอใส่ art |
 
-**`UnitRosterView`** (บน `CharCard`): container → `CharCard`, iconPrefab → `ScoutIcon.prefab` (การ์ดถูก restyle เป็นการ์ดตอน `Bind`)
+**`CharacterHandPanel`** (บน `CharacterHandPanel`)
 
-**`GatherDispatchPanel`** (บน `TestDispatch`): dispatchButton → `MapPanel/Dispatch`, rosterView → `CharCard`, warningView → `WarningText`, messageText → `MapPanel/MessageUi`
+| Field | ค่า |
+|---|---|
+| handRoot / cardsContainer | `CharacterHandPanel` / `CharacterHandPanel/Cards` |
+| cardSpacing / cardWidth / cardHeight | 12 / 195 / 265 |
+| maxDispatchSelection / maxSkillSelection | 2 / 1 |
 
-**`WarningView`** (บน `WarningText`): label → `WarningText` (TMP), backdropGroup → `WarningBackdrop`, hold 2.5s / fade 0.3s; ตัวอักษรเป็นสีขาวคงที่ ส่วน outline (TMP material, width 0.28) เปลี่ยนสีตามระดับ — Warning เหลือง, Error แดง, Info ฟ้า
+**`UnitRosterView`** (บน `CharacterHandPanel`)
 
-**`ButtonVisual`** (บน `Dispatch` และ `EndDay button`): iconImage → `<ปุ่ม>/Icon`, label → `<ปุ่ม>/Text (TMP)`; ค่าเริ่มต้นเป็นโหมด Label (แสดงข้อความ) — ใส่ sprite แล้วสลับ `mode` เป็น `Icon` ได้ทันทีโดยไม่ต้องแก้ onClick
+| Field | ค่า |
+|---|---|
+| container | `CharacterHandPanel/Cards` |
+| iconPrefab | `Assets/V2/Prefabs/ScoutIcon.prefab` (**UnitIconView**) |
+| handPanel | `CharacterHandPanel` |
+| maxSelection / cardSpacing | 2 / 12 |
 
-**`BaseWorkPanel`** (บน `BaseWorkPanel`)
+**`LogMessagePanel`** (บน `LogPanel`)
+
+| Field | → GameObject / ค่า |
+|---|---|
+| panelRoot | `LogPanel` |
+| scrollRect | `LogPanel/Expanded` |
+| entriesContainer | `LogPanel/Expanded/Viewport/Content` |
+| entryTemplate | `…/Content/EntryTemplate` (inactive) |
+| expandedRoot / collapsedRoot / collapsedLine | `Expanded` / `Collapsed` / `Collapsed` (TMP) |
+| minMaxButton / minMaxLabel | `Header/MinMaxButton` / `Header/MinMaxButton/Label` |
+| capacity / expandedHeight / collapsedHeight | 16 / 300 / 64 |
+
+**`DispatchActionPanel`** (บน `DispatchActionPanel`)
 
 | Field | → GameObject |
 |---|---|
-| cookButton / healButton / workshopButton | `JobRow/CookButton` / `HealButton` / `WorkshopButton` |
-| workerDropdown | `WorkerDropdown` |
-| patientRoot / patientDropdown | `PatientRoot` / `PatientRoot/PatientDropdown` |
-| roundsRoot | `RoundsRoot` |
-| roundsMinusButton / roundsPlusButton / roundsText | `RoundsRoot/RoundsMinusButton` / `RoundsPlusButton` / `RoundsText` |
-| previewText / messageText / confirmButton | `PreviewText` / `MessageText` / `ConfirmButton` |
+| panelRoot / actionButton | `DispatchActionPanel` (ทั้งคู่) |
+| actionIcon / actionLabel | `Icon` / `Label` |
+| hideWhenIdle / dispatchLabel | true / `DISPATCH` |
 
-`BaseWorkPanel.Start()` ตรวจ reference ทั้ง 13 ช่อง ถ้าขาดตัวใดจะ log error แล้วไม่ทำงานทั้ง panel
+**`SkillTriggerPanel`** (บน `SkillTriggerPanel`)
 
-### 3.4 Prefab ที่ใช้ใน scene
+| Field | → GameObject |
+|---|---|
+| cookButton / cookCountLabel | `CookButton` / `CookButton/Count` |
+| healButton / healModeButton / healModeLabel | `HealRow/HealButton` / `HealRow/HealModeButton` / `HealRow/HealModeButton/Label` |
+| craftButton / craftCountLabel | `CraftButton` / `CraftButton/Count` |
+| hideCountBelow / armedTint | 1 / ฟ้า (ไฮไลต์ปุ่มที่ถือ action อยู่) |
 
-| Prefab | โครงสร้างภายใน | ใช้ที่ |
+**`SkillFlowController`** (บน `GameSystem`)
+
+| Field | → GameObject |
+|---|---|
+| rosterView | `CharacterHandPanel` (UnitRosterView) |
+| actionPanel | `DispatchActionPanel` |
+| skillPanel | `SkillTriggerPanel` |
+| warningView | `WarningText` |
+
+**`GatherDispatchPanel`** (บน `GatherUI`)
+
+| Field | → GameObject |
+|---|---|
+| actionPanel | `DispatchActionPanel` |
+| rosterView | `CharacterHandPanel` (UnitRosterView) |
+| warningView | `WarningText` |
+
+**`GatherMapController`** (บน `GameSystem/GatherMapController`)
+
+| Field | → |
+|---|---|
+| mapPanel | `Canvas/MapPanel` |
+| nodeViewPrefab | `Assets/V2/Prefabs/Dungeon Prefab.prefab` |
+
+**`EndDayTrigger`** (บน `StatusBar/DayFrame`)
+
+| Field | ค่า |
+|---|---|
+| hintLabel / hintText | ว่าง (ไม่ใช้ — ข้อความ DAY มีอยู่แล้ว) |
+| runOverMessage | `The run is already over.` (ขึ้น warning + log ถ้าคลิกหลัง run จบ) |
+
+> `EndDayTrigger.Awake()` เรียก `EnsureClickSurface()` — ถ้าไม่มี Graphic ที่ `raycastTarget` ใต้กรอบเลย จะเพิ่ม transparent `Image` ให้เองพร้อม warning (กัน bug §7.11 กลับมา)
+
+**`WarningView`** (บน `WarningText`)
+
+| Field | → GameObject |
+|---|---|
+| messageText | ตัวเอง (`WarningText`) |
+| backdropGroup | `WarningBackdrop` (CanvasGroup) |
+
+### 3.4 สิ่งที่ถูกลบไปแล้ว (P5, 2026-10-28)
+
+ของพวกนี้อยู่ในสเปกเดิมแต่ **ไม่มีในซีนแล้ว** — อย่าอ้างถึงในเอกสารอื่น:
+
+| ของเดิม | แทนที่ด้วย |
+|---|---|
+| `Canvas/EndDay button` | คลิกที่ `StatusBar/DayFrame` (`EndDayTrigger`) |
+| `Canvas/BaseWorkPanel` (+ `Scripts/UI/BaseWorkPanel.cs`) | `SkillTriggerPanel` + `SkillFlowController` |
+| `Canvas/CharCard` | `CharacterHandPanel` |
+| `Canvas/MapPanel/MessageUi` | `LogPanel` (ข้อมูลถ้ำ/คำเตือนไปที่ log + `WarningText`) |
+| `Canvas/MapPanel/Dispatch` | `DispatchActionPanel` |
+| `Canvas/MapPanel/ScoutIcon` + `Scripts/UI/ScoutWalkerView.cs` | ไม่มี — เกมไม่มีเวลาเดินทาง (`ScoutIcon.prefab` ยังอยู่ เพราะการ์ดใช้) |
+| `GatherMapController.TripInProgress` | ไม่มี — ทริป resolve ในเฟรมเดียว |
+
+### 3.5 Runtime-only objects
+
+| Object | สร้างโดย | หมายเหตุ |
 |---|---|---|
-| `V2/Prefabs/Dungeon Prefab.prefab` | `Dungeon Prefab` (Image, Button, **MapNodeView**) → ลูก `SelectedHighlight` (Image); `MapNodeView` สร้าง `ZoneLabel` (TMP) ตอน runtime แสดงชื่อโซน + AP กลางวงกลม (ชดเชย scale ที่ไม่เท่ากันของ prefab ด้วย localScale ผกผัน) | `GatherMapController` spawn 6 ตัวใต้ `MapPanel` ตอน `Start` (Easy/Normal/Hard อย่างละ 2, สีเขียว/เหลือง/แดง) |
-| `V2/Prefabs/ScoutIcon.prefab` | `ScoutIcon` (Image, **ScoutWalkerView**, **UnitIconView**, CanvasGroup) → ลูก `nametext`, `statustest` (TMP) | (1) instance ใน scene ใต้ `MapPanel` = ไอคอนเดินทาง (2) `UnitRosterView` spawn 4 ตัวใต้ `CharCard` = การ์ดยูนิต |
+| `Dungeon Prefab(Clone) ×6` | `GatherMapController.SpawnNodeViews()` | ตำแหน่งสุ่มในขอบเขต margin ที่เว้นให้ panel |
+| `ScoutIcon(Clone) ×4` | `UnitRosterView.BuildCards()` | การ์ดในมือ 1 ใบต่อยูนิต |
+| log row | `LogMessagePanel` (pool) | clone จาก `EntryTemplate` ไม่เกิน `capacity` แล้ว reuse |
 
-> `ScoutIcon.prefab` ถูกใช้ **สองบทบาท** — ตัวที่เป็นไอคอนเดินทางมี `UnitIconView` ติดมาด้วยแต่ไม่เคยถูก `Bind` (จึงแสดงข้อความ default ของ prefab) ส่วนการ์ดยูนิตจะถูกแปลงเป็น card layout ตอน `Bind` (`UnitIconView` สร้าง `Portrait` + `Frame0..3` และย้าย text ใหม่ตอน runtime) ถ้าจะทำกราฟิกจริง ควรแยกเป็น 2 prefab (`ScoutIcon` กับ `UnitCard`)
-> Frame สีประจำตัวเรียงตาม roster: **Ann = แดง, Boon = เหลือง, Cia = เขียว, Dan = น้ำเงิน** (แก้ได้ที่ `UnitRosterView.unitColors`)
-
-## 4. สิ่งที่เกิดใน Hierarchy ตอนกด Play
-
-```mermaid
-sequenceDiagram
-    participant GS as GameSystem/* (Awake)
-    participant GMC as GatherMapController (Start)
-    participant URV as UnitRosterView (Start)
-    participant UI as UI panels (Start)
-
-    GS->>GS: ตั้ง Instance ทุก singleton, UnitManager สร้าง roster 4 ตัว, GatherZoneDatabase สร้าง 3 zone
-    GMC->>GMC: สุ่มตำแหน่ง 6 จุด → Instantiate Dungeon Prefab ใต้ MapPanel
-    GMC->>GMC: ScoutIcon.SnapTo(ฐาน)
-    URV->>URV: Instantiate ScoutIcon.prefab ×4 ใต้ CharCard → Bind(unit, สีกรอบ) → จัดวางการ์ดเอง
-    UI->>UI: GatherDispatchPanel / BaseWorkPanel ผูก AddListener + subscribe event
-    Note over UI: StatusBarView refresh ทุกเฟรม; UnitRosterView.Refresh() อัปเดตการ์ด + ตัดยูนิตที่เลือกไว้แต่วิ่งไม่ได้ออกจาก selection
-```
-
-## 5. ข้อสังเกตเกี่ยวกับ Hierarchy
-
-- `TestDispatch` (ถือ `GatherDispatchPanel` ของจริง) ยังใช้ชื่อสมัยทดสอบและอยู่นอก `Canvas` ควรเปลี่ยนชื่อเป็น `GatherDispatchPanel` และย้ายไปไว้ใต้ `Canvas` หรือ `GameSystem` ให้เป็นกลุ่มเดียวกัน
-- `StavingController` สะกดผิด (ควรเป็น `StarvationController`)
-- Toggle `Ann…Dan` ถูก**ลบออกจาก scene แล้ว** — การเลือกยูนิตย้ายไปที่การ์ด `UnitIconView` ทั้งหมด
-- `Dispatch` / `EndDay button` ถูกย้ายไปมุมขวาล่างชั่วคราว (ตำแหน่งยังไม่ final)
-- `EndDay button` ไม่ถูกปิดเมื่อเกมจบ และไม่ถูกล็อกระหว่างทริป (ดู [04 §6](04-unity-system-design.md#6-known-gaps--technical-debt-สังเกตจากโค้ด-ณ-2026-10-14))
-- ยังไม่มี GameObject สำหรับ: หน้าจอจบเกม (Win/Lose), ปุ่มให้อาหาร (`StarvationController`), animation ทอยเต๋า (`DiceRollView`)
+---
 
 ## Related Documents
 - [Unity V2 System Design](04-unity-system-design.md)
 - [Unity V2 Class Diagram](05-unity-class-diagram.md)
+- [UI Layout Redesign (P0–P5)](07-unity-v2-ui-layout-redesign.md)
+- [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md)
+- [GDD Mechanics](../gdd/01-mechanics.md)
