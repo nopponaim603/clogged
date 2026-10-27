@@ -50,15 +50,17 @@ public class StatusBarView : MonoBehaviour
     private const string ObtainedHex = "#FFE68A";
     private const string PendingHex = "#9AA4B2";
 
-    /// <summary>One row of the Core Item art table: the box, the key that opens it, and what is inside.</summary>
+    /// <summary>One row of the Core Item art table: the box in both states, the key that opens it, and the crystal found inside.</summary>
     [System.Serializable]
     private class CoreItemArt
     {
-        [Tooltip("Closed box - the state the item is in while it is still sealed.")]
+        [Tooltip("Closed box - shown while the item is still sealed.")]
         public Sprite closedBox;
+        [Tooltip("Same box with the lid open - shown once both pieces are held.")]
+        public Sprite openBox;
         [Tooltip("The key that opens this box.")]
         public Sprite key;
-        [Tooltip("Shown in the box slot once both pieces are held: the box is open and this is inside.")]
+        [Tooltip("What was inside. Shown by CrystalRevealView, not in the HUD slot.")]
         public Sprite crystal;
     }
 
@@ -140,9 +142,9 @@ public class StatusBarView : MonoBehaviour
             bool hasKey = RunResources.Instance.HasCoreItemB;
             bool opened = RunResources.Instance.HasBothCoreItems;
 
-            // The box slot turns into the crystal the moment both pieces are
-            // held: that is the win condition, i.e. the box is open.
-            Sprite boxArt = opened && art.crystal != null ? art.crystal : art.closedBox;
+            // The box stays a box, just open, and the crystal inside gets its own
+            // reveal over the whole screen - so the HUD keeps reading as inventory.
+            Sprite boxArt = opened && art.openBox != null ? art.openBox : art.closedBox;
             ApplyCoreItemIcon(coreItemIcon, coreItemSprite, boxArt, hasBox || opened);
             ApplyCoreItemIcon(coreItemBIcon, coreItemBSprite, art.key, hasKey);
         }

@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.22 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
+**Version:** 0.23 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -881,18 +881,18 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 | กล่อง | กุญแจที่เปิดได้ | คริสตัลตอนชนะ |
 |---|---|---|
-| ส้ม — `coreitem_panel_orange` | **ส้ม** — `coreitem_key_lit` | `coreitem_crystal` (แบบมีแฉก) |
-| เหลือง — `coreitem_panel_yellow` | **เทา** — `coreitem_key_plain` | `coreitem_crystal_b` (ขอบมน) |
+| ส้ม — `coreitem_panel_orange` / เปิด `coreitem_panel_orange_bar` | **ส้ม** — `coreitem_key_lit` | `coreitem_crystal` (แบบมีแฉก) |
+| เหลือง — `coreitem_panel_yellow` / เปิด `coreitem_panel_yellow_bar` | **เทา** — `coreitem_key_plain` | `coreitem_crystal_b` (ขอบมน) |
 
 **ทำไมกุญแจไม่มีทางผิด:** `RunResources` ทอยคู่สี **ครั้งเดียวตอนเริ่ม run** (`CoreItemVariant` = Orange / Yellow, สลับได้ด้วย `randomiseVariant`) แล้วทั้งกล่องและกุญแจอ่านคู่เดียวกัน → กุญแจที่ได้เป็นดอกที่เปิดกล่องได้เสมอ ไม่มีทางที่ RNG จะทำให้ run ชนะไม่ได้
 
 **สถานะที่แสดง**
 
-| ถืออะไร | ช่องกล่อง (A) | ช่องกุญแจ (B) |
-|---|---|---|
-| ยังไม่พบ | เงามืดของกล่อง (`LockedColor`) | เงามืดของกุญแจ |
-| กล่อง | กล่อง**ปิด**สีตามคู่ | เงามืด |
-| กล่อง + กุญแจ | **คริสตัล** — ไอคอนกลางเท่ากับ "เปิดกล่องแล้ว" | กุญแจสีจริง |
+| ถืออะไร | ช่องกล่อง (A) | ช่องกุญแจ (B) | popup กลางจอ |
+|---|---|---|---|
+| ยังไม่พบ | เงามืดของกล่อง (`LockedColor`) | เงามืดของกุญแจ | — |
+| กล่อง | กล่อง**ปิด**สีตามคู่ | เงามืด | — |
+| กล่อง + กุญแจ | กล่องเดียวกันแต่ **ฝาเปิด** (`_bar`) | กุญแจสีจริง | **คริสตัล** + caption |
 
 `HasBothCoreItems` = เงื่อนไขชนะอยู่แล้ว → ใช้ค่านี้เป็นสวิตช์ "เปิดกล่อง" ตรง ๆ ไม่ต้องเพิ่ม state ใหม่
 
@@ -902,13 +902,34 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 |---|---|
 | `Scripts/CoreItemKind.cs` | enum `CoreItemVariant { Orange, Yellow }` + คำอธิบายใหม่ของ A (กล่อง) / B (กุญแจ) |
 | `Scripts/System/RunResources.cs` | field `variant` + `randomiseVariant` + `Variant` getter + `SetVariant()` (ปิด randomisation ให้ เทสต์/Inspector บังคับได้) · ทอยใน `Awake` |
-| `Scripts/UI/StatusBarView.cs` | inner class `CoreItemArt { closedBox, key, crystal }` + field `orangePair` / `yellowPair` · `ApplyCoreItemIcon(icon, placeholder, art, obtained)` เลือกสไปรต์ตามคู่และ tint `Color.white` เมื่อมี art (ของจริงมีสีของตัวเอง) · ข้อความ HUD เปลี่ยนเป็น `BOX` / `KEY` |
+| `Scripts/UI/StatusBarView.cs` | inner class `CoreItemArt { closedBox, openBox, key, crystal }` + field `orangePair` / `yellowPair` · `ApplyCoreItemIcon(icon, placeholder, art, obtained)` เลือกสไปรต์ตามคู่และ tint `Color.white` เมื่อมี art (ของจริงมีสีของตัวเอง) · ข้อความ HUD เปลี่ยนเป็น `BOX` / `KEY` |
+| `Scripts/UI/CrystalRevealView.cs` | popup กลางจอ (สร้าง UI เองในโค้ด) — ดู §7.21 |
 | `Scripts/UI/RunLogNarrator.cs` | log เปลี่ยนจาก `Found Core Item A!` เป็น `Found the sealed box!` / `Found the key!` |
-| `Core.unity` | ผูก 6 สไปรต์ในตาราง (`AgentScripts/WireCoreItemArt.cs`) และตั้งไอคอนทั้งสองช่องเป็น `96×96` กลางกรอบ (`AgentScripts/SizeCoreItemIcons.cs`) — 96 = 6× ของ 16×14/16×10 และ 8× ของ 12×12 จึงยังเป็นจำนวนเต็มเท่า พิกเซลไม่เพี้ยน |
-
-**สไปรต์ที่ยังไม่ใช้:** `coreitem_panel_orange_bar` / `coreitem_panel_yellow_bar` (กล่องที่แถบดำ = สภาพ "เปิดฝา" ในชุดต้นฉบับ) เก็บไว้เผื่อทำอนิเมชันเปิดกล่อง — ตอนนี้ใช้คริสตัลแทนตามที่กำหนด
+| `Core.unity` | ผูกสไปรต์ในตาราง (`AgentScripts/WireCoreItemArt.cs`, `AgentScripts/WireCrystalReveal.cs`), เพิ่ม object `Canvas/CrystalReveal`, และตั้งไอคอนทั้งสองช่องเป็น `96×96` กลางกรอบ (`AgentScripts/SizeCoreItemIcons.cs`) — 96 = 6× ของ 16×14/16×10 และ 8× ของ 12×12 จึงยังเป็นจำนวนเต็มเท่า พิกเซลไม่เพี้ยน |
 
 **ยืนยันแล้ว:** `TestUiRedesign` เพิ่ม 2 ข้อ → **ALL PASS 49 ข้อ** — "Orange pair shows its closed box, then the crystal once the key arrives" และคู่ Yellow ตรวจจาก **สไปรต์ที่ถูกเพนต์จริง** บน `Image` (ไม่ใช่ค่าคงที่) · ภาพหน้าจอ: กล่องส้มอย่างเดียว → กล่อง+กุญแจ = คริสตัล ทั้งคู่สีส้มและคู่สีเหลือง
+
+### 7.21 คริสตัลย้ายออกจาก HUD ไปเป็น popup กลางจอ (2026-10-28)
+
+**รีวิวรอบสอง:** การเอาคริสตัลไปแทนช่องกล่องทำให้ HUD อ่านไม่เป็น inventory อีกต่อไป (ของที่ถืออยู่หายไปแล้วกลายเป็นของอีกอย่าง) → เปลี่ยนเป็น **กล่องเดิมแต่ฝาเปิด** และย้ายคริสตัลไปเป็น popup กลางจอ
+
+**ลำดับที่เกิด:** `HasBothCoreItems` false → true (ทริปที่เก็บชิ้นที่สองสำเร็จ หรือ `CheckImmediateWin`) — `CrystalRevealView` เฝ้า edge นี้ใน `Update()`
+
+**`CrystalRevealView` — สร้าง UI เองทั้งหมดในโค้ด** (ซีนมีแค่ object ว่าง `Canvas/CrystalReveal` 1 ตัว) จึงไม่มีปัญหา prefab/scene ค้าง
+
+| ชิ้น | ค่า |
+|---|---|
+| root | stretch เต็มจอ + `CanvasGroup` (alpha 0, `blocksRaycasts` false ตอนปิด) |
+| `Backdrop` | `Image` สี `(0.04, 0.05, 0.08, 0.82)` เต็มจอ — ทำให้คริสตัลเด่นและกลืนคลิกไม่ให้ทะลุไปโดนบอร์ด |
+| `Crystal` | `Image` กลางจอ `192×192` (= 16× ของ 12×12, จำนวนเต็มเท่า) `preserveAspect` |
+| `Caption` | `TMP` "THE BOX IS OPEN" สีอำพันใต้คริสตัล (`TmpOutlineUtil.CreateLabel` → ได้ฟอนต์ pixel จาก default) |
+| ปิด | คลิกที่ไหนก็ได้ (`IPointerClickHandler`) → fade out ; run ยังชนะอยู่ |
+
+**ทำไมไม่มี Coroutine:** fade ทำใน `Update()` ด้วย `Mathf.MoveTowards(alpha, target, deltaTime / fadeSeconds)` — เล่นได้เหมือนเดิม แต่ทดสอบในเฟรมเดียวและกด pause แล้วยังได้ค่าที่คาดหวัง
+
+**`wasOpen` เริ่มจากค่าจริงตอน `Awake`** — ถ้าโหลดซีนซ้ำตอนชนะแล้ว จะไม่เด้ง popup ซ้ำ
+
+**ยืนยันแล้ว:** `TestUiRedesign` เพิ่ม 3 ข้อ → **ALL PASS 52 ข้อ** — "a crystal reveal exists under the canvas", "Orange pair reveals `coreitem_crystal` once the box is opened", "Yellow pair reveals `coreitem_crystal_b`..." · ตรวจว่า HUD **ไม่** เพนต์คริสตัลแล้ว (ต้องเป็น `_bar` ของคู่ตัวเอง) · ข้อ raycast ข้าม popup ตอนปิด (ไม่งั้นจะนับเป็น interactive element ที่กดไม่ถึง) · ภาพหน้าจอ: คู่ส้มและคู่เหลือง ขึ้น popup ถูกดอก คริสตัลคมระดับพิกเซล (คูณ 16 ลงตัว)
 
 ---
 
@@ -1022,9 +1043,10 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 30. [ ] **การ์ดแสดง AP เป็นไอคอน ไม่ใช่ตัวเลข** — 1 pip ต่อ 1 AP: `ap_45` = ยังมี, `ap_30` = action ที่กำลังจะยืนยันจะกิน pip นี้, `ap_15` = ใช้ไปแล้ว · จำนวน pip ตรงกับ `maxActionPoints` และอัปเดตทันทีที่ AP เปลี่ยน
 31. [ ] **พรีวิวต้นทุนอ่านจากระบบเจ้าของ** — Cave ที่เลือก (dispatch) หรือสกิลที่ queue ไว้ (cook/craft/heal) เป็นตัวกำหนดจำนวน pip สี `ap_30` และโหลด starvation ต่อคน (base + `starvationStacks`)
 32. [ ] **`ap_30` แสดงเฉพาะการ์ดที่เลือก** — ยังไม่เลือกตัวละคร = ไม่มี pip ส้มบนการ์ดใดเลย
-33. [ ] **ช่อง Core Item ใช้สไปรต์จริงตามคู่สีของ run** — กล่องส้ม↔กุญแจส้ม, กล่องเหลือง↔กุญแจเทา; ได้ครบทั้งคู่เมื่อไรช่องกล่องกลายเป็นคริสตัล (เปิดกล่องแล้ว) และกุญแจที่ได้เปิดกล่องได้เสมอ
+33. [ ] **ช่อง Core Item ใช้สไปรต์จริงตามคู่สีของ run** — กล่องส้ม↔กุญแจส้ม, กล่องเหลือง↔กุญแจเทา; ได้ครบทั้งคู่เมื่อไรช่องกล่อง**ยังเป็นกล่อง**แต่เปลี่ยนเป็นฝาเปิด (`_bar`) และกุญแจที่ได้เปิดกล่องได้เสมอ
+34. [ ] **คริสตัลเด้งเป็น popup กลางจอ** เมื่อเปิดกล่องได้ — แสดงคริสตัลของคู่สีนั้น ไม่โผล่ใน HUD, ไม่เด้งซ้ำเมื่อโหลดซีนตอนชนะแล้ว, และคลิกที่ไหนก็ปิดได้
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–33 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 49 ข้อ** (§7.12–§7.13, §7.15–§7.20) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15) · pip และ Core Item ตรวจด้วยภาพหน้าจอ (§7.19–§7.20)
+> **สถานะ AC (2026-10-28):** ข้อ 1–34 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 52 ข้อ** (§7.12–§7.13, §7.15–§7.21) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15) · pip และ Core Item ตรวจด้วยภาพหน้าจอ (§7.19–§7.21)
 
 ---
 

@@ -435,8 +435,9 @@ public static class TestUiRedesign
     }
 
     /// <summary>
-    /// The two slots show the run's box/key pair, and the box turns into the
-    /// crystal once both pieces are held (that is the win condition).
+    /// The two slots show the run's box/key pair. The box stays a box and only
+    /// opens when both pieces are held; the crystal is a separate reveal, so the
+    /// HUD must never paint it.
     /// </summary>
     static void CheckCoreItemArt(StatusBarView statusBar, Transform slotA, Transform slotB)
     {
@@ -452,29 +453,73 @@ public static class TestUiRedesign
 
         foreach (var pair in new[]
                  {
-                     (variant: CoreItemVariant.Orange, box: "coreitem_panel_orange", key: "coreitem_key_lit", crystal: "coreitem_crystal"),
-                     (variant: CoreItemVariant.Yellow, box: "coreitem_panel_yellow", key: "coreitem_key_plain", crystal: "coreitem_crystal_b")
+                     (variant: CoreItemVariant.Orange, closed: "coreitem_panel_orange", open: "coreitem_panel_orange_bar", key: "coreitem_key_lit", crystal: "coreitem_crystal"),
+                     (variant: CoreItemVariant.Yellow, closed: "coreitem_panel_yellow", open: "coreitem_panel_yellow_bar", key: "coreitem_key_plain", crystal: "coreitem_crystal_b")
                  })
         {
             res.SetVariant(pair.variant);
             ClearCoreItemFlags();
             res.ObtainCoreItem(CoreItemKind.A);
             InvokeUpdate(statusBar);
-            bool boxOk = iconA.sprite != null && iconA.sprite.name == pair.box;
-            bool noCrystalYet = iconA.sprite == null || iconA.sprite.name != pair.crystal;
+            bool closedOk = iconA.sprite != null && iconA.sprite.name == pair.closed;
 
             res.ObtainCoreItem(CoreItemKind.B);
             InvokeUpdate(statusBar);
+            bool openOk = iconA.sprite != null && iconA.sprite.name == pair.open;
+            bool noCrystalInHud = iconA.sprite == null || iconA.sprite.name != pair.crystal;
             bool keyOk = iconB.sprite != null && iconB.sprite.name == pair.key;
-            bool crystalOk = iconA.sprite != null && iconA.sprite.name == pair.crystal;
 
-            Check($"{pair.variant} pair shows its closed box, then the crystal once the key arrives",
-                boxOk && noCrystalYet && keyOk && crystalOk,
-                $"box={Name(iconA.sprite)} key={Name(iconB.sprite)} (expected {pair.box} / {pair.crystal} / {pair.key})");
+            Check($"{pair.variant} pair: closed box, then the same box open (crystal stays out of the HUD)",
+                closedOk && openOk && noCrystalInHud && keyOk,
+                $"box={Name(iconA.sprite)} key={Name(iconB.sprite)} (expected {pair.closed} -> {pair.open} / {pair.key})");
         }
+
+        CheckCrystalReveal();
 
         ClearCoreItemFlags();
         InvokeUpdate(statusBar);
+    }
+
+    /// <summary>The win opens a centre-screen reveal carrying the crystal for the run's pair.</summary>
+    static void CheckCrystalReveal()
+    {
+        var reveal = Object.FindAnyObjectByType<CrystalRevealView>(FindObjectsInactive.Include);
+        Check("a crystal reveal exists under the canvas", reveal != null);
+        if (reveal == null) return;
+
+        var res = RunResources.Instance;
+
+        foreach (var pair in new[]
+                 {
+                     (variant: CoreItemVariant.Orange, crystal: "coreitem_crystal"),
+                     (variant: CoreItemVariant.Yellow, crystal: "coreitem_crystal_b")
+                 })
+        {
+            res.SetVariant(pair.variant);
+            ClearCoreItemFlags();
+            reveal.Hide(true);
+            InvokeUpdate(reveal);
+
+            // Only the box: nothing to reveal yet.
+            res.ObtainCoreItem(CoreItemKind.A);
+            InvokeUpdate(reveal);
+            bool silentBeforeKey = !reveal.IsShowing;
+
+            // The key completes the pair -> the crystal appears.
+            res.ObtainCoreItem(CoreItemKind.B);
+            InvokeUpdate(reveal);
+            bool showingWithCrystal = reveal.IsShowing &&
+                                      reveal.CurrentCrystal != null &&
+                                      reveal.CurrentCrystal.name == pair.crystal;
+
+            Check($"{pair.variant} pair reveals {pair.crystal} once the box is opened",
+                silentBeforeKey && showingWithCrystal,
+                $"silent={silentBeforeKey} showing={reveal.IsShowing} crystal={Name(reveal.CurrentCrystal)}");
+        }
+
+        // Leave the game as it was: closed again, overlay hidden.
+        reveal.Hide(true);
+        InvokeUpdate(reveal);
     }
 
     static string Name(Sprite sprite) => sprite != null ? sprite.name : "null";
@@ -488,6 +533,9 @@ public static class TestUiRedesign
 
         foreach (var behaviour in canvas.GetComponentsInChildren<MonoBehaviour>(false))
         {
+            // The crystal reveal is a modal: while it is closed it must let every
+            // click through, so it is not an interactive surface.
+            if (behaviour is CrystalRevealView reveal && !reveal.IsShowing) continue;
             if (behaviour is IPointerClickHandler && behaviour.gameObject.activeInHierarchy && behaviour.isActiveAndEnabled)
                 targets.Add(behaviour.gameObject);
         }
@@ -581,9 +629,12 @@ public static class TestUiRedesign
         }
     }
 
-    static void InvokeUpdate(StatusBarView view)
+    /// <summary>Runs a private Update() once. UI that repaints per frame does not tick inside a single test frame.</summary>
+    static void InvokeUpdate<T>(T view) where T : MonoBehaviour
     {
-        var method = typeof(StatusBarView).GetMethod("Update",
+        if (view == null) return;
+
+        var method = typeof(T).GetMethod("Update",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         if (method != null) method.Invoke(view, null);
     }
