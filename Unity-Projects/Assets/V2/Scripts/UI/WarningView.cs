@@ -16,12 +16,14 @@ public enum WarningKind
 /// <summary>
 /// In-game warning banner that replaces raw debug text. Shows one queued
 /// message at a time, colored by severity, fades in, holds, then fades out.
-/// Attach to a Canvas object with a TMP_Text and a CanvasGroup.
+/// Attach to the banner root: one CanvasGroup there fades the backdrop art and
+/// the label together, so the two never drift apart.
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public class WarningView : MonoBehaviour
 {
     [SerializeField] private TMP_Text label;
+    [Tooltip("Optional separate group. Leave empty when the backdrop is a child of this object.")]
     [SerializeField] private CanvasGroup backdropGroup;
     [SerializeField] private float holdSeconds = 2.5f;
     [SerializeField] private float fadeSeconds = 0.3f;
@@ -131,7 +133,11 @@ public class WarningView : MonoBehaviour
     private void SetAlpha(float alpha)
     {
         if (group != null) group.alpha = alpha;
-        if (backdropGroup != null) backdropGroup.alpha = alpha;
+
+        // The backdrop is normally a child of this object, so the group above
+        // already fades it. Only a separately parented backdrop needs its own
+        // group driven.
+        if (backdropGroup != null && backdropGroup != group) backdropGroup.alpha = alpha;
     }
 
     private Color OutlineFor(WarningKind kind)

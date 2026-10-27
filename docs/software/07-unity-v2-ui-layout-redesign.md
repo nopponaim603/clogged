@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.17 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · รอ final review
+**Version:** 0.18 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -73,7 +73,9 @@
 | `CharacterHandPanel` | (0.5, 0) | (0.5, 0) | (**190**, 20) | **830** × 300 |
 | `SkillTriggerPanel` | (1, 0) | (1, 0) | (−24, 244) | 236 × 300 |
 | `DispatchActionPanel` | (1, 0) | (1, 0) | (−24, 24) | 300 × 200 |
-| `WarningText` | (0.5, 0.5) | (0.5, 0.5) | เดิม (กลางจอ) | เดิม |
+| `Warning` | (0.5, 0.5) | (1, 1) | (300, 60) | **620 × 120** |
+| `Warning/WarningBackdrop` | stretch | (0.5, 0.5) | (0, 0) | inset 0 |
+| `Warning/WarningText` | stretch | (0.5, 0.5) | (0, 0) | inset 8 / 6 |
 
 - การ์ดในมือ: **195 × 265**, spacing **12** → 4 ใบ = 816 px พอดีกับพื้นที่ 830 px
 - เหตุผลที่ hand เยื้อง +190: พื้นที่ว่างจริงคือระหว่าง Log (จบที่ x = 724) กับ Dispatch (เริ่มที่ x = 1596) → จุดกึ่งกลาง = 1148 = 960 + 188, ปัดเป็น +190 ให้เหลือขอบเท่ากันสองข้าง
@@ -91,7 +93,7 @@
 | บนซ้าย `CoreItemGroup` | `Canvas/StatusBar/CoreItemGroup/CoreItem` | **1 ช่อง → 2 ช่อง** (`CoreItemA`, `CoreItemB`) |
 | บนกลาง `ResourceStrip` | `Canvas/StatusBar/TopBar` (Food/Medicine/CookingMaterial/Materials) | **คงตำแหน่งเดิม (กลางบน)** ไม่ย้าย |
 | บนขวา `DayFrame` | `Canvas/StatusBar/DayFrame` + `Canvas/EndDay button` | รวมปุ่ม End Day เข้า DayFrame → **คลิกที่ Day = จบวัน** |
-| กลางจอ `WarningText` | `Canvas/WarningText` + `WarningBackdrop` | คงตำแหน่งกลางจอ, **แสดงเฉพาะ Error** |
+| กลางจอ `Warning` | `Canvas/WarningText` + `WarningBackdrop` | **รวมเป็น group เดียว** (`Warning` ถือ CanvasGroup + `WarningView`), คงตำแหน่งกลางจอ, **แสดงเฉพาะ Error** |
 | ล่างซ้าย `LogMessagePanel` | `Canvas/MapPanel/MessageUi` | **ของใหม่** — log มี history, minimize ได้ |
 | ล่างกลาง `CharacterHandPanel` | `Canvas/CharCard` | ย้ายมาล่างกลาง, ทำเป็นมือไพ่ |
 | ขวา `SkillTriggerPanel` | `Canvas/BaseWorkPanel` | **Rework** เป็นปุ่มสกิล + queue |
@@ -102,7 +104,7 @@
 
 ## 4. สเปกองค์ประกอบ
 
-### 4.1 `WarningText` — เตือนเฉพาะที่ทำไม่ได้
+### 4.1 `Warning` — เตือนเฉพาะที่ทำไม่ได้
 
 | หัวข้อ | สเปก |
 |---|---|
@@ -112,6 +114,7 @@
 | ข้อความทั่วไป/ข้อมูล | **ไม่ขึ้น warning** → ลง log เท่านั้น |
 | พร้อม log | ทุกครั้งที่ขึ้น warning ต้องมี log entry ชนิดเดียวกันด้วย |
 | Animation | **คงของเดิม** — fade in 0.3s → hold 2.5s → fade out 0.3s, คิวทีละข้อความ (`WarningView` เดิม) |
+| โครงสร้าง | group `Warning` (CanvasGroup + `WarningView`) → `WarningBackdrop` (Image, stretch เต็ม) + `WarningText` (TMP, stretch inset 8/6) — ดู §7.16 |
 | ต้องแก้ | `WarningView.Show*` callers: จัดประเภท `Warning`/`Error`/`Info` ใหม่ให้เหลือเฉพาะ Error ที่เด้งกลางจอ |
 
 ### 4.2 `LogMessagePanel` — ประวัติการกระทำ (ล่างซ้าย)
@@ -730,6 +733,39 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 **ยังไม่ทำ (ตั้งใจ):** `Assets/Day` และ `Assets/Night` scenes (`ShipDay`, `Night`, `NPCtest`, `Setup`) ยังใช้ LiberationSans ของเดิม — เป็น prototype คนละชุดกับ V2 และยังอยู่ใน Build Settings ถ้าต้องการให้เปลี่ยนด้วยสั่งได้ (`TMP_Settings` default เปลี่ยนแล้ว จึงมีผลกับ TMP ที่สร้างใหม่ในซีนเหล่านั้น แต่ component เดิมยังชี้ LiberationSans อยู่)
 
+### 7.16 รวมกลุ่ม `Warning` ให้ parent/child ตรงกัน (2026-10-28)
+
+เดิม `WarningBackdrop` กับ `WarningText` เป็น object **แยกกันบน Canvas** (ไม่ใช่พ่อลูก) แต่ละตัวมี `CanvasGroup` ของตัวเอง และ `WarningView` อยู่บน `WarningText` โดยอ้าง `backdropGroup` ของอีกตัว
+
+หลังรวมเป็น group `Warning` (parent) ที่มีลูก 2 ตัว ปัญหาที่โผล่คือ **ลูกทั้งคู่ถูก stretch เต็ม parent แต่ยังถือค่า pivot/anchoredPosition เดิมจากตอนเป็น object อิสระ**
+
+| object | anchor | pivot | anchoredPosition | sizeDelta | ผล |
+|---|---|---|---|---|---|
+| `WarningBackdrop` | (0,0)-(1,1) | **(0,0)** | **(300,60)** | (−100, 0) | มุมล่างซ้ายไปโผล่ที่ (300,60) ของ parent |
+| `WarningText` | (0,0)-(1,1) | (0.5,0.5) | (250,60) | (−100, 0) | กึ่งกลางไปโผล่ที่ (250,60) |
+
+→ backdrop กับ text ห่างกันเกินขนาดของ parent เอง
+
+**หลักการ:** ลูกที่ stretch หมายถึง "เต็ม parent" — จะจริงก็ต่อเมื่อ `pivot = (0.5,0.5)`, `anchoredPosition = (0,0)`, และ `sizeDelta` คือ **inset** (ติดลบเมื่อต้องการขอบ) ไม่ใช่ offset ที่ตกค้าง
+
+**ที่แก้**
+
+| อย่าง | เดิม | ใหม่ |
+|---|---|---|
+| CanvasGroup | 2 ตัว (คนละลูก) + 1 ที่ root | **1 ตัวที่ `Warning`** — ลูกจึงจางตามพร้อมกัน |
+| `WarningView` | อยู่บน `WarningText` | ย้ายไป `Warning` (root) — `label` → `Warning/WarningText`, `backdropGroup` → ว่าง |
+| ลูกทั้งคู่ | pivot/offset ตกค้าง | `pivot .5`, offset `0`, backdrop `sizeDelta (0,0)`, text `sizeDelta (−16,−12)` |
+| TMP margin | `(2, −3.86, 0.64, −4.05)` | `0` (ระยะขอบมาจาก inset ของ rect แทน) |
+| ขนาด group | 200 × 60 | **620 × 120** (ขนาดเดิมของแบนเนอร์ — ที่ 200×60 ข้อความเต็มประโยคขึ้น 4 บรรทัด) |
+
+**กับดักที่เจอ:** ลบ `CanvasGroup` ออกจาก object ที่ยังถือ `WarningView` อยู่ไม่ได้ เพราะ `[RequireComponent(typeof(CanvasGroup))]` จะเติมกลับให้ → ต้องย้าย `WarningView` ไป root **ก่อน** แล้วจึงลบ CanvasGroup ของลูก · การย้าย component ทำให้ serialized reference ของ `GatherDispatchPanel.warningView` / `SkillFlowController.warningView` ชี้ object ที่ถูกทำลาย สคริปต์จึงไล่ repoint ให้ (2 จุด)
+
+**ผล:** `backdrop` world (640,480)-(1260,600) · `text` world (648,486)-(1252,594) → **inset L=8 R=8 B=6 T=6, centred=True** และ fade ด้วย alpha เดียว (ไม่เป็นกำลังสอง)
+
+**ยืนยันแล้ว:** `TestUiRedesign` เพิ่ม 2 ข้อ → **ALL PASS 39 ข้อ** — "warning banner fades through one CanvasGroup on the group root" และ "warning text sits centred inside the backdrop" · console 0 error
+
+> **บทเรียนเรื่อง process:** การแก้ `.unity` จากภายนอกขณะ editor เปิดซีนนั้นอยู่ ทำให้ Unity ขึ้น dialog "The open scene(s) have been modified externally" และบล็อก main thread (pipeline ทุกคำสั่ง timeout) — งานซีน/prefab ต้องทำผ่าน editor API (`script.run`) เท่านั้น
+
 ---
 
 ## 8. Contracts ที่ต้องเพิ่ม (ต่อยอดจากข้อ 3 ใน Overview)
@@ -837,8 +873,9 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 25. [ ] **มีฟอนต์ pixel จาก tileset ที่ใช้ได้จริง** — `Assets/V2/Fonts/PixelTileset.asset` ครอบ A–Z / a–z / 0–9 / `% + -` + วรรคตอนที่ UI ใช้, มี fallback, และสร้างซ้ำได้จากเมนู `Tools > V2 > Rebuild Pixel Font`
 26. [ ] **TMP ทุกตัวใน V2 UI ใช้ฟอนต์นี้** — รวม label ที่สร้างจากโค้ด (`TMP_Settings` default ชี้ PixelTileset) และไม่มีอักขระใดต้อง fallback · ตรวจด้วย `TestUiRedesign` 2 ข้อ
 27. [ ] **ฟอนต์ใหม่ไม่ทำให้ layout แตก** — ขนาดตัวอักษร (cap height / line height) ตรงกับ LiberationSans เดิม และข้อความในแถบทรัพยากรไม่ตัดขึ้นบรรทัดใหม่
+28. [ ] **กลุ่ม `Warning` เป็น parent/child ที่ตรงกัน** — CanvasGroup ตัวเดียวบน group root, backdrop กับ text stretch เต็ม group และข้อความอยู่กึ่งกลาง (inset เท่ากันทั้ง 4 ด้าน)
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–27 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 37 ข้อ** (§7.12–§7.13, §7.15) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15)
+> **สถานะ AC (2026-10-28):** ข้อ 1–28 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 39 ข้อ** (§7.12–§7.13, §7.15–§7.16) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15)
 
 ---
 

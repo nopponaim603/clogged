@@ -50,6 +50,7 @@ public static class TestUiRedesign
         CheckLegacyGone(canvas);
         CheckCoreItemSlots(canvas);
         Check("Day frame carries EndDayTrigger", dayFrame.GetComponent<EndDayTrigger>() != null);
+        CheckWarningGroup(canvas);
         CheckFont(canvas);
 
         // --- 2. clickability ----------------------------------------------
@@ -220,6 +221,42 @@ public static class TestUiRedesign
     /// exist in that atlas - a miss silently falls back to LiberationSans, which
     /// is the one way two typefaces end up on screen at once.
     /// </summary>
+    /// <summary>
+    /// The warning banner must read as one block: a single CanvasGroup on the
+    /// group root (two groups multiply the fade) and the label sitting exactly
+    /// inside the backdrop, centred. A stretched child that keeps its old pivot
+    /// or offset drifts away from the parent, which is what happened before.
+    /// </summary>
+    static void CheckWarningGroup(GameObject canvas)
+    {
+        var rootT = canvas.transform.Find("Warning");
+        if (rootT == null) { Check("warning group exists", false, "Canvas/Warning missing"); return; }
+
+        var groups = rootT.GetComponentsInChildren<CanvasGroup>(true);
+        var view = rootT.GetComponent<WarningView>();
+        Check("warning banner fades through one CanvasGroup on the group root",
+            groups.Length == 1 && groups[0].gameObject == rootT.gameObject && view != null,
+            $"groups={groups.Length} view={(view != null ? view.gameObject.name : "none")}");
+
+        var backdrop = rootT.Find("WarningBackdrop") as RectTransform;
+        var text = rootT.Find("WarningText") as RectTransform;
+        if (backdrop == null || text == null) { Check("warning backdrop and text exist", false); return; }
+
+        var b = new Vector3[4];
+        var t = new Vector3[4];
+        backdrop.GetWorldCorners(b);
+        text.GetWorldCorners(t);
+
+        float left = t[0].x - b[0].x, right = b[2].x - t[2].x;
+        float bottom = t[0].y - b[0].y, top = b[2].y - t[2].y;
+        bool inside = left >= 0f && right >= 0f && bottom >= 0f && top >= 0f;
+        bool centred = Mathf.Abs(left - right) < 0.5f && Mathf.Abs(bottom - top) < 0.5f;
+
+        Check("warning text sits centred inside the backdrop",
+            inside && centred && (left + right + bottom + top) > 0f,
+            $"insets L={left:F1} R={right:F1} B={bottom:F1} T={top:F1}");
+    }
+
     static void CheckFont(GameObject canvas)
     {
         var texts = canvas.GetComponentsInChildren<TMPro.TMP_Text>(true);
@@ -561,5 +598,14 @@ public static class TestUiRedesign
         else failed++;
 
         Log.AppendLine((ok ? "PASS  " : "FAIL  ") + label);
+    }
+
+    /// <summary>Same as <see cref="Check(string,bool)"/> but prints the measured values on failure.</summary>
+    static void Check(string label, bool ok, string detail)
+    {
+        if (ok) passed++;
+        else failed++;
+
+        Log.AppendLine((ok ? "PASS  " : "FAIL  ") + label + (ok ? "" : $"  [{detail}]"));
     }
 }

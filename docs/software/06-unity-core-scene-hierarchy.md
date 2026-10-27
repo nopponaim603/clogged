@@ -1,6 +1,6 @@
 # clogged (Unity V2) — Core Scene Hierarchy
 
-**Version:** 3.0 | **Last Updated:** 2026-10-28
+**Version:** 3.1 | **Last Updated:** 2026-10-28
 > อธิบาย Hierarchy ทั้งหมดของ `Unity-Projects/Assets/V2/Scenes/Core.unity` — ตรวจจาก `unity command scene.get_hierarchy` ของ scene จริง
 > ตรรกะของแต่ละระบบดู [Unity V2 System Design](04-unity-system-design.md) · class ดู [Unity V2 Class Diagram](05-unity-class-diagram.md) · layout/UI ล่าสุดดู [UI Layout Redesign](07-unity-v2-ui-layout-redesign.md)
 
@@ -29,7 +29,7 @@ flowchart TD
 
     Canvas --> Map["MapPanel<br/>พื้นแมป + ถ้ำ spawn ตอนเล่น"]
     Canvas --> SB["StatusBar<br/>CoreItemGroup + TopBar + DayFrame"]
-    Canvas --> WB["WarningBackdrop + WarningText"]
+    Canvas --> WB["Warning<br/>WarningBackdrop + WarningText"]
     Canvas --> Hand["CharacterHandPanel<br/>มือไพ่ล่างกลาง"]
     Canvas --> Act["DispatchActionPanel<br/>ปุ่มยืนยันล่างขวา"]
     Canvas --> Log["LogPanel<br/>ประวัติล่างซ้าย"]
@@ -74,8 +74,9 @@ Core.unity
 │   │       ├── Medicine             TextMeshProUGUI
 │   │       ├── CookingMaterial      TextMeshProUGUI
 │   │       └── Materials            TextMeshProUGUI
-│   ├── WarningBackdrop              Image (ดำ a0.85), CanvasGroup
-│   ├── WarningText                  **WarningView**, CanvasGroup, TextMeshProUGUI
+│   ├── Warning                      **WarningView**, CanvasGroup  620×120
+│   │   ├── WarningBackdrop          Image (ดำ a0.85) — stretch เต็ม group
+│   │   └── WarningText              TextMeshProUGUI — stretch, inset 8/6
 │   ├── CharacterHandPanel           **CharacterHandPanel**, **UnitRosterView**
 │   │   └── Cards                    HorizontalLayoutGroup
 │   │       └── ⟳ ScoutIcon(Clone) ×4  ← spawn โดย UnitRosterView (**UnitIconView**)
@@ -122,7 +123,7 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 | GameObject | Component | ค่าใน Inspector | อ้างถึง |
 |---|---|---|---|
 | `GameSystem` | `RunLogNarrator` | — | อ่าน `Instance` เองทั้งหมด |
-| `GameSystem` | `SkillFlowController` | — | `rosterView` → `CharacterHandPanel`, `actionPanel` → `DispatchActionPanel`, `skillPanel` → `SkillTriggerPanel`, `warningView` → `WarningText` |
+| `GameSystem` | `SkillFlowController` | — | `rosterView` → `CharacterHandPanel`, `actionPanel` → `DispatchActionPanel`, `skillPanel` → `SkillTriggerPanel`, `warningView` → `Warning` |
 | `UnitManager` | `UnitManager` | `units: []` → ใช้ roster default ในโค้ด (Ann, Boon, Cia, Dan) | — |
 | `RunResources` | `RunResources` | food 8, cookingMaterial 2, medicine 1, materials 0, coreItemA/B ปิดทั้งคู่ | — |
 | `DayManager` | `DayManager` | currentDay 1, deadlineDay 7 | — |
@@ -140,7 +141,7 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 
 - **Render Mode:** Screen Space - Overlay
 - **CanvasScaler:** Scale With Screen Size, reference **1920×1080**, match 0.5
-- **ลำดับการวาด (หลัง→หน้า):** MapPanel → StatusBar → WarningBackdrop → WarningText → CharacterHandPanel → DispatchActionPanel → LogPanel → SkillTriggerPanel
+- **ลำดับการวาด (หลัง→หน้า):** MapPanel → StatusBar → Warning (backdrop → text) → CharacterHandPanel → DispatchActionPanel → LogPanel → SkillTriggerPanel
 
 ```
 ┌──────────────────── StatusBar (เต็มความกว้าง) ────────────────────┐
@@ -165,8 +166,9 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 | `StatusBar/DayFrame` | ขวาบน | `DAY n / 7 (x left)` — **คลิกที่กรอบ = จบวัน** (พื้นผิวคลิกคือ `DayBackground` ที่ `raycastTarget = true`; `Day`/border ปิด raycast) | `StatusBarView` (ข้อความ) + `EndDayTrigger` (คลิก) |
 | `StatusBar/CoreItemGroup` | ซ้ายบน | ช่อง Core Item A/B + ข้อความสถานะ | `StatusBarView` |
 | `StatusBar/TopBar` | กลางบน | Food / Medicine / CookingMaterial / Materials | `StatusBarView` |
-| `WarningBackdrop` | กลางจอ 620×120 | แผงดำโปร่ง 85% หลังข้อความเตือน (ปิด raycast) | `WarningView.backdropGroup` |
-| `WarningText` | กลางจอ 620×120 | แบนเนอร์เตือน: outline เปลี่ยนสีตามระดับ | `WarningView` |
+| `Warning` | กลางจอ 620×120, anchor (0.5,0.5), pivot (1,1), pos (300,60) | กลุ่มแบนเนอร์เตือน — ถือ CanvasGroup ตัวเดียวและ `WarningView` | `WarningView` |
+| `Warning/WarningBackdrop` | stretch เต็ม group (pivot .5, offset 0) | แผงดำโปร่ง 85% หลังข้อความ (ปิด raycast) | — (ลูกของ group) |
+| `Warning/WarningText` | stretch, inset 8/6, pivot .5 | ข้อความเตือน: outline เปลี่ยนสีตามระดับ | `WarningView.label` |
 | `CharacterHandPanel` | ล่างกลาง (0.5,0) +190, 830×300 | มือไพ่ 4 ใบ — dispatch เลือก 2, สกิล 1, heal target เฉพาะคน Hurt | `CharacterHandPanel` + `UnitRosterView` |
 | `DispatchActionPanel` | ล่างขวา 300×200 | ปุ่มยืนยันตัวเดียว; ซ่อนตอน `Awake`, label ตามบริบท | `DispatchActionPanel` → `GatherDispatchPanel` / `SkillFlowController` |
 | `LogPanel` | ล่างซ้าย (24,24) 700×300 | log 16 entry, ย่อเหลือบรรทัดเดียว (สูง 64) | `LogMessagePanel` |
@@ -244,7 +246,7 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 | rosterView | `CharacterHandPanel` (UnitRosterView) |
 | actionPanel | `DispatchActionPanel` |
 | skillPanel | `SkillTriggerPanel` |
-| warningView | `WarningText` |
+| warningView | `Warning` (group root) |
 
 **`GatherDispatchPanel`** (บน `GatherUI`)
 
@@ -252,7 +254,7 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 |---|---|
 | actionPanel | `DispatchActionPanel` |
 | rosterView | `CharacterHandPanel` (UnitRosterView) |
-| warningView | `WarningText` |
+| warningView | `Warning` (group root) |
 
 **`GatherMapController`** (บน `GameSystem/GatherMapController`)
 
@@ -270,12 +272,14 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 
 > `EndDayTrigger.Awake()` เรียก `EnsureClickSurface()` — ถ้าไม่มี Graphic ที่ `raycastTarget` ใต้กรอบเลย จะเพิ่ม transparent `Image` ให้เองพร้อม warning (กัน bug §7.11 กลับมา)
 
-**`WarningView`** (บน `WarningText`)
+**`WarningView`** (บน `Warning` — group root)
 
 | Field | → GameObject |
 |---|---|
-| messageText | ตัวเอง (`WarningText`) |
-| backdropGroup | `WarningBackdrop` (CanvasGroup) |
+| label | `Warning/WarningText` (TMP) |
+| backdropGroup | ว่าง — `WarningBackdrop` เป็นลูกของ group เดียวกัน จึงจางตาม CanvasGroup ของ root อยู่แล้ว |
+
+> group `Warning` ถือ CanvasGroup **ตัวเดียว** และลูกทั้งสอง stretch เต็ม group (text inset 8/6) — เดิม backdrop กับ text เป็น object แยกบน Canvas และมี CanvasGroup กันคนละตัว ทำให้ (1) ตำแหน่งหลุดกัน (2) alpha คูณกันเป็นกำลังสองตอน fade (ดู §7.16 ในสเปก UI)
 
 ### 3.4 สิ่งที่ถูกลบไปแล้ว (P5, 2026-10-28)
 
