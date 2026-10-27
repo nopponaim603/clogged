@@ -34,13 +34,29 @@ public class RunResources : MonoBehaviour
     public int Materials => materials;
 
     [Header("Core Items")]
-    [Tooltip("Piece used to escape. Drops independently of B.")]
+    [Tooltip("The sealed box. Drops independently of the key.")]
     [SerializeField] private bool coreItemA = false;
-    [Tooltip("The key. Drops independently of A.")]
+    [Tooltip("The key. Drops independently of the box; its colour always fits the box.")]
     [SerializeField] private bool coreItemB = false;
+
+    [Tooltip("Which box/key pair this run uses. Randomised on start when the toggle below is on.")]
+    [SerializeField] private CoreItemVariant variant = CoreItemVariant.Orange;
+    [Tooltip("Roll a fresh box colour each run so the pair is not always orange.")]
+    [SerializeField] private bool randomiseVariant = true;
 
     public bool HasCoreItemA => coreItemA;
     public bool HasCoreItemB => coreItemB;
+
+    /// <summary>The box/key pair this run uses - drives which art the HUD shows.</summary>
+    public CoreItemVariant Variant => variant;
+
+    /// <summary>Forces a pair, e.g. from a test or the Inspector. Writes through even when randomising.</summary>
+    public void SetVariant(CoreItemVariant newVariant)
+    {
+        variant = newVariant;
+        randomiseVariant = false;
+        OnChanged?.Invoke();
+    }
 
     /// <summary>Both pieces are needed to escape - this is the win condition.</summary>
     public bool HasBothCoreItems => coreItemA && coreItemB;
@@ -56,6 +72,11 @@ public class RunResources : MonoBehaviour
             return;
         }
         Instance = this;
+
+        if (randomiseVariant)
+        {
+            variant = Random.value < 0.5f ? CoreItemVariant.Orange : CoreItemVariant.Yellow;
+        }
     }
 
     /// <summary>Consumes 1 food if available. Returns false if there was none left - caller applies starvation in that case.</summary>

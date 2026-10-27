@@ -91,8 +91,23 @@ public static class TestUiRedesign
             chefCard.SetApCostPreview(2);
             chefCard.Refresh();
             Check("pending cost flips the top pips to the about-to-be-spent state",
-                PipStates(chefCard) == ExpectedPips(chef, 2), PipStates(chefCard));
+                chefCard.ApCostPreview == 2 && PipStates(chefCard) == ExpectedPips(chef, 2),
+                PipStates(chefCard));
 
+            // Only the selected card may preview a cost: an unselected card that
+            // is handed the same number must ignore it.
+            var otherCard = roster.Cards.FirstOrDefault(c => c != chefCard && c.Unit != null);
+            if (otherCard != null)
+            {
+                otherCard.SetApCostPreview(2);
+                otherCard.Refresh();
+            }
+            Check("a card that is not selected shows no pending pips",
+                otherCard != null && otherCard.ApCostPreview == 0 &&
+                PipStates(otherCard) == ExpectedPips(otherCard.Unit, 0),
+                otherCard == null ? "no second card" : PipStates(otherCard));
+
+            if (otherCard != null) otherCard.SetApCostPreview(0);
             chefCard.SetApCostPreview(0);
             chefCard.Refresh();
         }
@@ -415,7 +430,54 @@ public static class TestUiRedesign
         InvokeUpdate(statusBar);
         Check("slot B changes tint once the item is obtained",
             iconB != null && locked != iconB.color);
+
+        CheckCoreItemArt(statusBar, a, b);
     }
+
+    /// <summary>
+    /// The two slots show the run's box/key pair, and the box turns into the
+    /// crystal once both pieces are held (that is the win condition).
+    /// </summary>
+    static void CheckCoreItemArt(StatusBarView statusBar, Transform slotA, Transform slotB)
+    {
+        var iconA = slotA != null ? slotA.Find("CoreItemIcon")?.GetComponent<Image>() : null;
+        var iconB = slotB != null ? slotB.Find("CoreItemBIcon")?.GetComponent<Image>() : null;
+        if (iconA == null || iconB == null)
+        {
+            Check("both Core Item art slots are reachable", false, "icon images missing");
+            return;
+        }
+
+        var res = RunResources.Instance;
+
+        foreach (var pair in new[]
+                 {
+                     (variant: CoreItemVariant.Orange, box: "coreitem_panel_orange", key: "coreitem_key_lit", crystal: "coreitem_crystal"),
+                     (variant: CoreItemVariant.Yellow, box: "coreitem_panel_yellow", key: "coreitem_key_plain", crystal: "coreitem_crystal_b")
+                 })
+        {
+            res.SetVariant(pair.variant);
+            ClearCoreItemFlags();
+            res.ObtainCoreItem(CoreItemKind.A);
+            InvokeUpdate(statusBar);
+            bool boxOk = iconA.sprite != null && iconA.sprite.name == pair.box;
+            bool noCrystalYet = iconA.sprite == null || iconA.sprite.name != pair.crystal;
+
+            res.ObtainCoreItem(CoreItemKind.B);
+            InvokeUpdate(statusBar);
+            bool keyOk = iconB.sprite != null && iconB.sprite.name == pair.key;
+            bool crystalOk = iconA.sprite != null && iconA.sprite.name == pair.crystal;
+
+            Check($"{pair.variant} pair shows its closed box, then the crystal once the key arrives",
+                boxOk && noCrystalYet && keyOk && crystalOk,
+                $"box={Name(iconA.sprite)} key={Name(iconB.sprite)} (expected {pair.box} / {pair.crystal} / {pair.key})");
+        }
+
+        ClearCoreItemFlags();
+        InvokeUpdate(statusBar);
+    }
+
+    static string Name(Sprite sprite) => sprite != null ? sprite.name : "null";
 
     static void CheckClickSurfaces(GameObject canvas)
     {

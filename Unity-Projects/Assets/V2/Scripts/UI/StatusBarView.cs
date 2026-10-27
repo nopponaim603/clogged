@@ -21,13 +21,18 @@ public class StatusBarView : MonoBehaviour
     [SerializeField] private TMP_Text coreItemStatusText;
 
     [Header("Icon Slots (optional - drop art in later)")]
-    [Tooltip("Placeholder frame for Core Item A (the escape piece); tinted by its obtained state.")]
+    [Tooltip("Core Item slot 1: the sealed box, then the crystal once both pieces are held.")]
     [SerializeField] private Image coreItemIcon;
     [SerializeField] private Sprite coreItemSprite;
 
-    [Tooltip("Placeholder frame for Core Item B (the key); tinted by its obtained state.")]
+    [Tooltip("Core Item slot 2: the key.")]
     [SerializeField] private Image coreItemBIcon;
     [SerializeField] private Sprite coreItemBSprite;
+
+    [Tooltip("Art for the orange pair: orange box, orange key, spiky crystal.")]
+    [SerializeField] private CoreItemArt orangePair = new CoreItemArt();
+    [Tooltip("Art for the yellow pair: yellow box, grey key, round crystal.")]
+    [SerializeField] private CoreItemArt yellowPair = new CoreItemArt();
 
     [SerializeField] private Image foodIcon;
     [SerializeField] private Sprite foodSprite;
@@ -44,6 +49,18 @@ public class StatusBarView : MonoBehaviour
     private const string WarningHex = "#E65C5C";
     private const string ObtainedHex = "#FFE68A";
     private const string PendingHex = "#9AA4B2";
+
+    /// <summary>One row of the Core Item art table: the box, the key that opens it, and what is inside.</summary>
+    [System.Serializable]
+    private class CoreItemArt
+    {
+        [Tooltip("Closed box - the state the item is in while it is still sealed.")]
+        public Sprite closedBox;
+        [Tooltip("The key that opens this box.")]
+        public Sprite key;
+        [Tooltip("Shown in the box slot once both pieces are held: the box is open and this is inside.")]
+        public Sprite crystal;
+    }
 
     private static readonly Color LockedColor = new Color(1f, 1f, 1f, 0.18f);
     private static readonly Color ObtainedColor = new Color(1f, 0.9f, 0.45f, 1f);
@@ -105,21 +122,29 @@ public class StatusBarView : MonoBehaviour
             // ASCII marks only: the default TMP atlas has no tick glyph, and a
             // missing glyph turns the whole HUD slot into a box.
             coreItemStatusText.text =
-                $"<color={(a ? ObtainedHex : PendingHex)}>Core A {(a ? "+" : "-")}</color>\n" +
-                $"<color={(b ? ObtainedHex : PendingHex)}>Core B {(b ? "+" : "-")}</color>";
+                $"<color={(a ? ObtainedHex : PendingHex)}>BOX {(a ? "+" : "-")}</color>\n" +
+                $"<color={(b ? ObtainedHex : PendingHex)}>KEY {(b ? "+" : "-")}</color>";
         }
     }
 
     /// <summary>
-    /// Keeps the icon frames in sync. A slot with no sprite stays a faint
-    /// placeholder, so the layout is already prepared for real art later.
+    /// Keeps the icon frames in sync. A slot with no art stays a faint
+    /// placeholder, so the layout is already prepared for real sprites.
     /// </summary>
     private void RefreshIcons()
     {
         if (RunResources.Instance != null)
         {
-            ApplyCoreItemIcon(coreItemIcon, coreItemSprite, RunResources.Instance.HasCoreItemA);
-            ApplyCoreItemIcon(coreItemBIcon, coreItemBSprite, RunResources.Instance.HasCoreItemB);
+            var art = RunResources.Instance.Variant == CoreItemVariant.Yellow ? yellowPair : orangePair;
+            bool hasBox = RunResources.Instance.HasCoreItemA;
+            bool hasKey = RunResources.Instance.HasCoreItemB;
+            bool opened = RunResources.Instance.HasBothCoreItems;
+
+            // The box slot turns into the crystal the moment both pieces are
+            // held: that is the win condition, i.e. the box is open.
+            Sprite boxArt = opened && art.crystal != null ? art.crystal : art.closedBox;
+            ApplyCoreItemIcon(coreItemIcon, coreItemSprite, boxArt, hasBox || opened);
+            ApplyCoreItemIcon(coreItemBIcon, coreItemBSprite, art.key, hasKey);
         }
 
         ApplyResourceIcon(foodIcon, foodSprite, foodText);
@@ -128,12 +153,17 @@ public class StatusBarView : MonoBehaviour
         ApplyResourceIcon(materialsIcon, materialsSprite, materialsText);
     }
 
-    private void ApplyCoreItemIcon(Image icon, Sprite sprite, bool obtained)
+    /// <summary>
+    /// Real art keeps its own colours and only dims while locked; a slot with no
+    /// art falls back to the placeholder tint so the frame still reads.
+    /// </summary>
+    private void ApplyCoreItemIcon(Image icon, Sprite placeholder, Sprite art, bool obtained)
     {
         if (icon == null) return;
 
+        Sprite sprite = art != null ? art : placeholder;
         if (sprite != null) icon.sprite = sprite;
-        icon.color = obtained ? ObtainedColor : LockedColor;
+        icon.color = obtained ? (art != null ? Color.white : ObtainedColor) : LockedColor;
     }
 
     private void ApplyResourceIcon(Image icon, Sprite sprite, TMP_Text label)

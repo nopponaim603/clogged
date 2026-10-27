@@ -137,7 +137,8 @@ public class RunLogNarrator : MonoBehaviour
 
         foreach (var kind in result.coreItemsObtained)
         {
-            RunLog.Add(LogKind.Success, $"Found Core Item {kind}!");
+            RunLog.Add(LogKind.Success,
+                kind == CoreItemKind.A ? "Found the sealed box!" : "Found the key!");
         }
     }
 

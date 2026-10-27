@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.21 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
+**Version:** 0.22 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -871,6 +871,45 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 > หมายเหตุ: `RefreshApPips()` ถูกเรียกจาก `Refresh()` ซึ่ง roster เรียกทุกเฟรมอยู่แล้ว — ไม่มี allocation เพิ่มหลังสร้าง pip ครบ · ถ้าไม่ผูกสไปรต์ การ์ดจะยังพิมพ์ `AP x/y` แบบเดิม (fallback)
 
+**แก้ตามรีวิว (2026-10-28):** `ap_30` โผล่บน**ทุกการ์ด** ทั้งที่การ์ดที่ไม่ได้เลือกไม่ได้กำลังจะทำอะไร → ย้ายเงื่อนไขไปที่ `ApCostPreview => IsSelected ? pendingApCost : 0` และ `RefreshApPips()` อ่านค่านี้ · `SetSelected()` เรียก `RefreshApPips()` เพิ่มเพื่อให้เปลี่ยนทันทีในเฟรมเดียวกับที่คลิก (ไม่ต้องรอ `Update` ของ roster) · ผลคือ **ไม่มีอะไรถูกเลือก → ไม่มี pip ส้มเลย** และเลือกการ์ดไหน การ์ดนั้นเท่านั้นที่พรีวิวต้นทุน
+
+### 7.20 Core Item ใช้สไปรต์กุญแจ/กล่อง/คริสตัล (2026-10-28)
+
+**โจทย์:** เปลี่ยนช่อง Core Item จาก "กรอบเปล่า + tint" เป็นสไปรต์จริง และกำหนดความหมายของแต่ละภาพ
+
+**คู่สี — กล่องเป็นตัวกำหนดกุญแจ**
+
+| กล่อง | กุญแจที่เปิดได้ | คริสตัลตอนชนะ |
+|---|---|---|
+| ส้ม — `coreitem_panel_orange` | **ส้ม** — `coreitem_key_lit` | `coreitem_crystal` (แบบมีแฉก) |
+| เหลือง — `coreitem_panel_yellow` | **เทา** — `coreitem_key_plain` | `coreitem_crystal_b` (ขอบมน) |
+
+**ทำไมกุญแจไม่มีทางผิด:** `RunResources` ทอยคู่สี **ครั้งเดียวตอนเริ่ม run** (`CoreItemVariant` = Orange / Yellow, สลับได้ด้วย `randomiseVariant`) แล้วทั้งกล่องและกุญแจอ่านคู่เดียวกัน → กุญแจที่ได้เป็นดอกที่เปิดกล่องได้เสมอ ไม่มีทางที่ RNG จะทำให้ run ชนะไม่ได้
+
+**สถานะที่แสดง**
+
+| ถืออะไร | ช่องกล่อง (A) | ช่องกุญแจ (B) |
+|---|---|---|
+| ยังไม่พบ | เงามืดของกล่อง (`LockedColor`) | เงามืดของกุญแจ |
+| กล่อง | กล่อง**ปิด**สีตามคู่ | เงามืด |
+| กล่อง + กุญแจ | **คริสตัล** — ไอคอนกลางเท่ากับ "เปิดกล่องแล้ว" | กุญแจสีจริง |
+
+`HasBothCoreItems` = เงื่อนไขชนะอยู่แล้ว → ใช้ค่านี้เป็นสวิตช์ "เปิดกล่อง" ตรง ๆ ไม่ต้องเพิ่ม state ใหม่
+
+**สิ่งที่แก้**
+
+| ไฟล์ | สิ่งที่เพิ่ม |
+|---|---|
+| `Scripts/CoreItemKind.cs` | enum `CoreItemVariant { Orange, Yellow }` + คำอธิบายใหม่ของ A (กล่อง) / B (กุญแจ) |
+| `Scripts/System/RunResources.cs` | field `variant` + `randomiseVariant` + `Variant` getter + `SetVariant()` (ปิด randomisation ให้ เทสต์/Inspector บังคับได้) · ทอยใน `Awake` |
+| `Scripts/UI/StatusBarView.cs` | inner class `CoreItemArt { closedBox, key, crystal }` + field `orangePair` / `yellowPair` · `ApplyCoreItemIcon(icon, placeholder, art, obtained)` เลือกสไปรต์ตามคู่และ tint `Color.white` เมื่อมี art (ของจริงมีสีของตัวเอง) · ข้อความ HUD เปลี่ยนเป็น `BOX` / `KEY` |
+| `Scripts/UI/RunLogNarrator.cs` | log เปลี่ยนจาก `Found Core Item A!` เป็น `Found the sealed box!` / `Found the key!` |
+| `Core.unity` | ผูก 6 สไปรต์ในตาราง (`AgentScripts/WireCoreItemArt.cs`) และตั้งไอคอนทั้งสองช่องเป็น `96×96` กลางกรอบ (`AgentScripts/SizeCoreItemIcons.cs`) — 96 = 6× ของ 16×14/16×10 และ 8× ของ 12×12 จึงยังเป็นจำนวนเต็มเท่า พิกเซลไม่เพี้ยน |
+
+**สไปรต์ที่ยังไม่ใช้:** `coreitem_panel_orange_bar` / `coreitem_panel_yellow_bar` (กล่องที่แถบดำ = สภาพ "เปิดฝา" ในชุดต้นฉบับ) เก็บไว้เผื่อทำอนิเมชันเปิดกล่อง — ตอนนี้ใช้คริสตัลแทนตามที่กำหนด
+
+**ยืนยันแล้ว:** `TestUiRedesign` เพิ่ม 2 ข้อ → **ALL PASS 49 ข้อ** — "Orange pair shows its closed box, then the crystal once the key arrives" และคู่ Yellow ตรวจจาก **สไปรต์ที่ถูกเพนต์จริง** บน `Image` (ไม่ใช่ค่าคงที่) · ภาพหน้าจอ: กล่องส้มอย่างเดียว → กล่อง+กุญแจ = คริสตัล ทั้งคู่สีส้มและคู่สีเหลือง
+
 ---
 
 ## 8. Contracts ที่ต้องเพิ่ม (ต่อยอดจากข้อ 3 ใน Overview)
@@ -982,8 +1021,10 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 29. [ ] **สีบนแบนเนอร์ = สีใน log** ของข้อความเดียวกัน — ทั้งคู่อ่านจาก `UiPalette.For(LogKind)` และไม่มี enum/ตารางสีที่สอง
 30. [ ] **การ์ดแสดง AP เป็นไอคอน ไม่ใช่ตัวเลข** — 1 pip ต่อ 1 AP: `ap_45` = ยังมี, `ap_30` = action ที่กำลังจะยืนยันจะกิน pip นี้, `ap_15` = ใช้ไปแล้ว · จำนวน pip ตรงกับ `maxActionPoints` และอัปเดตทันทีที่ AP เปลี่ยน
 31. [ ] **พรีวิวต้นทุนอ่านจากระบบเจ้าของ** — Cave ที่เลือก (dispatch) หรือสกิลที่ queue ไว้ (cook/craft/heal) เป็นตัวกำหนดจำนวน pip สี `ap_30` และโหลด starvation ต่อคน (base + `starvationStacks`)
+32. [ ] **`ap_30` แสดงเฉพาะการ์ดที่เลือก** — ยังไม่เลือกตัวละคร = ไม่มี pip ส้มบนการ์ดใดเลย
+33. [ ] **ช่อง Core Item ใช้สไปรต์จริงตามคู่สีของ run** — กล่องส้ม↔กุญแจส้ม, กล่องเหลือง↔กุญแจเทา; ได้ครบทั้งคู่เมื่อไรช่องกล่องกลายเป็นคริสตัล (เปิดกล่องแล้ว) และกุญแจที่ได้เปิดกล่องได้เสมอ
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–31 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 46 ข้อ** (§7.12–§7.13, §7.15–§7.19) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15) · pip ตรวจด้วยภาพหน้าจอ (§7.19)
+> **สถานะ AC (2026-10-28):** ข้อ 1–33 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 49 ข้อ** (§7.12–§7.13, §7.15–§7.20) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15) · pip และ Core Item ตรวจด้วยภาพหน้าจอ (§7.19–§7.20)
 
 ---
 

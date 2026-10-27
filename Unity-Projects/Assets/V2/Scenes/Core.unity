@@ -530,6 +530,14 @@ MonoBehaviour:
   coreItemSprite: {fileID: 0}
   coreItemBIcon: {fileID: 1438770034}
   coreItemBSprite: {fileID: 0}
+  orangePair:
+    closedBox: {fileID: 21300000, guid: bb4b08914f58a594db2d90b3719faa22, type: 3}
+    key: {fileID: 21300000, guid: 713e26db7c6b88e499d00d68c692acd4, type: 3}
+    crystal: {fileID: 21300000, guid: 2aed9fc05210bcc4da94ac26aa3f3a04, type: 3}
+  yellowPair:
+    closedBox: {fileID: 21300000, guid: aeefefcb737bee941956beb838870c5b, type: 3}
+    key: {fileID: 21300000, guid: 31469e0a300f8734b92b89d27eee95e2, type: 3}
+    crystal: {fileID: 21300000, guid: 2a3be63fae3e11a47a1d75c8c5d1d92b, type: 3}
   foodIcon: {fileID: 0}
   foodSprite: {fileID: 0}
   cookingMaterialIcon: {fileID: 0}
@@ -615,6 +623,8 @@ MonoBehaviour:
   materials: 0
   coreItemA: 0
   coreItemB: 0
+  variant: 0
+  randomiseVariant: 1
 --- !u!1 &203844586
 GameObject:
   m_ObjectHideFlags: 0
@@ -1913,10 +1923,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1222450386}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -10, y: -10}
+  m_SizeDelta: {x: 96, y: 96}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1438770034
 MonoBehaviour:
@@ -2415,11 +2425,6 @@ MonoBehaviour:
   holdSeconds: 2.5
   fadeSeconds: 0.3
   spacingSeconds: 0.15
-  textColor: {r: 1, g: 1, b: 1, a: 1}
-  warningOutline: {r: 1, g: 0.78, b: 0.12, a: 1}
-  errorOutline: {r: 1, g: 0.25, b: 0.22, a: 1}
-  infoOutline: {r: 0.35, g: 0.78, b: 1, a: 1}
-  outlineWidth: 0.28
 --- !u!225 &1760435091
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -4359,10 +4364,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 8900000000000000025}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -10, y: -10}
+  m_SizeDelta: {x: 96, y: 96}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8900000000000000044
 CanvasRenderer:

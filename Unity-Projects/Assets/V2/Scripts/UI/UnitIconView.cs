@@ -71,8 +71,11 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
     public bool IsSelected { get; private set; }
     public bool CanBeSelected => selectable && selectionEnabled && unit != null;
 
-    /// <summary>Base AP cost of the action being set up right now (0 when nothing is pending).</summary>
-    public int ApCostPreview => pendingApCost;
+    /// <summary>
+    /// Base AP cost of the action being set up right now, or 0 when this card is
+    /// not the selected one. Only the selected card previews what it will spend.
+    /// </summary>
+    public int ApCostPreview => IsSelected ? pendingApCost : 0;
 
     /// <summary>
     /// How many action points the action the player is currently setting up will
@@ -131,6 +134,8 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         IsSelected = selected;
         ApplySelectionScale();
         ApplyFrame();
+        // The pending pips belong to the selected card only, so repaint at once.
+        RefreshApPips();
     }
 
     public void SetSelectable(bool value)
@@ -284,14 +289,19 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         apPipRow.sizeDelta = new Vector2(-padding * 2f, apPipRowHeight);
     }
 
-    /// <summary>One pip per action point, painted from the unit's live AP plus the pending action's cost.</summary>
+    /// <summary>
+    /// One pip per action point, painted from the unit's live AP. The pending
+    /// cost only shows on the selected card - an unselected card must not look
+    /// like it is about to act.
+    /// </summary>
     private void RefreshApPips()
     {
         if (apPipRow == null || unit == null) return;
 
         int total = Mathf.Max(0, unit.maxActionPoints);
         int left = Mathf.Clamp(unit.currentActionPoints, 0, total);
-        int spending = pendingApCost > 0 ? Mathf.Min(unit.GetActualApCost(pendingApCost), left) : 0;
+        int pending = ApCostPreview;
+        int spending = pending > 0 ? Mathf.Min(unit.GetActualApCost(pending), left) : 0;
 
         while (apPips.Count < total)
         {
