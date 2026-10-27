@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.19 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
+**Version:** 0.20 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -801,6 +801,44 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 **ยืนยันแล้ว:** `TestUiRedesign` เพิ่ม 3 ข้อ → **ALL PASS 42 ข้อ** — "banner colour matches the log row" สำหรับ `Warning` / `Fail` / `Success` โดยเทียบสีที่ **render จริง** ของทั้งสองฝั่ง (ไม่ใช่เทียบค่าคงที่) · console 0 error
 
 > หมายเหตุ: `Show()` เรียก `StartCoroutine` ซึ่งรัน body ถึง `yield` แรกแบบ synchronous → ข้อความและสีถูกเพนต์ทันทีใน `Show()` เทสต์จึงเทียบสีได้ในเฟรมเดียว
+
+### 7.18 ตัดสไปรต์ไอคอน AP และ CoreItem ออกจาก tileset เดิม (2026-10-28)
+
+**ที่มา:** ต้องการไอคอนสำหรับ (ก) แถบ AP บนการ์ดตัวละคร แทนข้อความ `AP 3/3` และ (ข) ไอคอน Core Item ใน HUD
+
+**แหล่งที่มา — สองไฟล์เดิม ไม่มีการย้าย/คัดลอกโฟลเดอร์**
+
+| ไฟล์ | ขนาด | ใช้ทำอะไร |
+|---|---|---|
+| `Assets/Day/Sprites/tilemap_packed.png` | 288×176 | 3 สไปรต์ AP (อ่านชื่อ + rect จาก `.meta` ที่ slice ไว้แล้ว) |
+| `Assets/Day/Sprites/tilemap_packed 1.png` | 288×208 | ไอคอน CoreItem (หา rect จากพิกัดพิกเซล) |
+
+**สไปรต์ AP** — มาจาก slice ที่มีชื่ออยู่แล้วใน `.meta` จึงตัดตาม `rect` ตรง ๆ (Unity เก็บ `y` จากล่างขึ้นบน → `yTop = 176 − y − h`)
+
+| ไฟล์ | slice | rect ใน `.meta` | y จากบน | สถานะ |
+|---|---|---|---|---|
+| `ap_45.png` | `tilemap_packed_45` | x 275, y 34, 10×12 | 130 | **มี AP** (แกนในสีน้ำเงิน) |
+| `ap_30.png` | `tilemap_packed_30` | x 275, y 50, 10×12 | 114 | **กำลังจะถูกใช้** (สีส้ม) — พรีวิวต้นทุนของ action ถัดไป |
+| `ap_15.png` | `tilemap_packed_15` | x 275, y 66, 10×12 | 98 | **ใช้ไปแล้ว** (แกนในมืด) |
+
+**ไอคอน CoreItem** — ตัดด้วย bounding box ของ alpha ภายในหน้าต่างที่ปลอดจากไทล์ข้างเคียง (ไม่ใช่ตัดตามกริด 16 px เพราะชีตนี้เป็น packed sheet ที่ไอคอนล้ำเซลล์)
+
+| ไฟล์ | พิกัด (จากบน) | ขนาด | รูป |
+|---|---|---|---|
+| `coreitem_crystal.png` | 258, 98 | 12×12 | คริสตัลม่วง + ประกายขาว (แบบมีแฉก) |
+| `coreitem_crystal_b.png` | 258, 162 | 12×12 | คริสตัลเดียวกันแต่ขอบมนกว่า (ต่างกัน 36/144 px) |
+| `coreitem_key_plain.png` | 0, 179 | 16×10 | กุญแจหัวเงิน |
+| `coreitem_key_lit.png` | 48, 179 | 16×10 | กุญแจหัวส้ม |
+| `coreitem_panel_orange.png` | 0, 194 | 16×14 | แผงส้ม + หมุดกลาง |
+| `coreitem_panel_orange_bar.png` | 16, 192 | 16×16 | แผงส้ม + แถบดำ |
+| `coreitem_panel_yellow.png` | 32, 194 | 16×14 | แผงเหลือง + หมุดสองข้าง |
+| `coreitem_panel_yellow_bar.png` | 48, 192 | 16×16 | แผงเหลือง + แถบดำ |
+
+**Import settings** (`Assets/V2/Sprites/Icons/`) — ตั้งด้วย `TextureImporter` ผ่าน `AgentScripts/ImportIconSprites.cs`: `Sprite (Single)` · `Point` · `FullRect` · `Uncompressed` · `alphaIsTransparency` · no mipmap · PPU 100 · Clamp · ไม่สร้าง physics shape
+
+**ยังไม่ต่อเข้ากับ UI** — รอเลือกตำแหน่ง/วิธีวางบนการ์ด (จำนวน pip, จะเก็บข้อความ `AP x/y` ไว้หรือไม่) และรอจับคู่ชื่อ Core Item A/B
+
+**ยืนยันแล้ว:** `script.run` คืน `ok` ครบ 11 ไฟล์ พร้อมขนาด rect จริง (10×12, 12×12, 16×10, 16×14, 16×16) และ `.meta` แสดง `filterMode: 0` / `spriteMode: 1`
 
 ---
 
