@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.14 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click แล้ว (§7.11) · รอ final review
+**Version:** 0.15 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -496,7 +496,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 | Heal 2 โหมด | ปุ่มเล็ก `MED` (ยา 1 + AP 1) ↔ `AP` (AP 2) · ไม่มี medication ในคลัง = บังคับ `AP` และปุ่ม toggle ตาย |
 | ตัวเลขบนปุ่ม | แสดงเฉพาะ Cook / Craft (Heal ไม่มี) |
 
-**ตรวจสอบแล้ว (play mode, Core scene — `AgentScripts/TestSkillFlow.cs` 35/35 ผ่าน)**
+**ตรวจสอบแล้ว (play mode, Core scene)**
 
 | การทดสอบ | ผล |
 |---|---|
@@ -510,7 +510,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 | Heal โหมด `AP` | ไม่แตะ Medicine, AP ลด 2, ผู้ป่วยหาย |
 | ไม่มีใคร Hurt | ปุ่ม Heal เทา |
 
-**ตรวจ regression การสำรวจ (`AgentScripts/TestDispatchGating.cs` 16/16 ผ่าน)**
+**ตรวจ regression การสำรวจ**
 
 | การทดสอบ | ผล |
 |---|---|
@@ -537,7 +537,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 | **ลบ `MapPanel/Dispatch`** | ปุ่มเดิม (inactive) — แทนที่ด้วย `DispatchActionPanel` |
 | **ลบ `MapPanel/ScoutIcon`** | ของประดับจากยุคที่มีเวลาเดินทาง · **`ScoutIcon.prefab` ยังอยู่** (การ์ดในมือใช้ prefab นี้) · ลบ `ScoutWalkerView.cs`, ถอด field `scoutWalker`/`PlayScoutFlourish` และ property `TripInProgress` ออกจาก `GatherMapController` |
 | **Core Item 2 ช่อง** | โคลน `CoreItemFrame` → `CoreItemFrameB` (icon ภายในชื่อ `CoreItemBIcon`) แล้วผูกเข้า `StatusBarView.coreItemBIcon` · เปลี่ยนชื่อ text สรุปเป็น `CoreItemStatus` |
-| **Missing script** | ถอด component ที่ script ถูกลบออกจาก `ScoutIcon.prefab` (เดิมเตือน console ทุกครั้งที่ instantiate) — `AgentScripts/FixMissingScripts.cs` |
+| **Missing script** | ถอด component ที่ script ถูกลบออกจาก `ScoutIcon.prefab` (เดิมเตือน console ทุกครั้งที่ instantiate) |
 | **Glyph ที่ฟอนต์ไม่มี** | `✓` (U+2713) ไม่มีใน LiberationSans SDF → เปลี่ยน `CoreItemStatus` เป็น ASCII `Core A +` / `Core B -` |
 | **สี idle ของปุ่มสกิล** | `SkillTriggerPanel` ดึง `normalColor` จาก Cook แล้วใช้กับทั้ง Heal และ Craft เพื่อให้คอลัมน์ขวาเป็นชุดเดียวกัน |
 | **Map area** | ปรับ `marginLeft/Right/Top/Bottom` ของ `GatherMapController` (150/360/150/420) เพื่อไม่ให้ถ้ำไปอยู่ใต้ LogPanel / มือการ์ด / คอลัมน์สกิล / DayFrame (เดิมมีถ้ำที่มองไม่เห็นและกดไม่ได้) |
@@ -547,9 +547,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 | ชุดทดสอบ | ผล |
 |---|---|
-| `AgentScripts/TestCleanup.cs` — P5 (19 ข้อ) | **19/19 ผ่าน**: ไม่มี `EndDay button`/`BaseWorkPanel`/`CharCard`/`MessageUi`/`ScoutIcon`/`Dispatch` เหลือ, มี 2 ช่อง Core Item และไม่ทับกัน, `coreItemBIcon` ถูกผูกและเปลี่ยนสีเมื่อได้ B, `DayFrame` มี `EndDayTrigger`, คลิกแล้ว day เดินหน้า + log ขึ้น, เลือกถ้ำแล้ว log บอกต้นทุน |
-| `AgentScripts/TestSkillFlow.cs` — P4 (35 ข้อ) | **35/35 ผ่าน** (ไม่ regress หลังลบของเดิม) |
-| `AgentScripts/TestDispatchGating.cs` — P3 (17 ข้อ) | **17/17 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` — รวมทุก phase ไว้ในไฟล์เดียว (32 ข้อ) | **32/32 ผ่าน** (รันซ้ำ 2 รอบได้ผลเท่ากัน) — โครงสร้าง, clickability, skill flow, dispatch, end day |
 | Console (play mode) | **0 error / 0 warning** ที่ไม่ใช่ของ Unity Account API |
 
 > **หมายเหตุ:** `script.run` ที่เรียก `EditorSceneManager.SaveScene` ใช้ได้เฉพาะตอน **ไม่** อยู่ใน play mode · `unity` CLI จะ timeout ทันทีหลัง domain reload — ต้อง `unity status --until-ready` ก่อนเรียกซ้ำ
@@ -573,19 +571,42 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 | `StatusBar/DayFrame/Day` (TMP) | `raycastTarget = false` (ไม่แย่งคลิกจากพื้นหลัง) |
 | `Scripts/UI/EndDayTrigger.cs` | เพิ่ม `EnsureClickSurface()` — ถ้าไม่มี raycast target ใน subtree จะเพิ่ม transparent `Image` ให้เอง + `Debug.LogWarning` (กัน bug นี้กลับมาแบบเงียบ ๆ) และเพิ่ม warning + log "The run is already over." เมื่อกดหลัง run จบ |
 | `GatherMapController` | `marginRight` 360 → **400**, `marginTop` 150 → **300** → rect ของถ้ำไม่ทับกรอบ DAY อีก |
-| `AgentScripts/TestClickTargets.cs` **(ใหม่)** | audit ทุก interactive element บน Canvas ด้วย **raycast จริง** (ไม่ใช่เรียก handler ตรง ๆ) — 40 elements ผ่านหมด |
-| `AgentScripts/TestCleanup.cs` | เปลี่ยนข้อทดสอบ DayFrame ให้ raycast ก่อนแล้วจึง bubble + เพิ่มข้อ "no cave node sits under the Day frame" |
+| `AgentScripts/TestClickTargets.cs` (ภายหลังถูกรวมเข้า `TestUiRedesign.cs` แล้ว) | audit ทุก interactive element บน Canvas ด้วย **raycast จริง** (ไม่ใช่เรียก handler ตรง ๆ) |
 
 **ตรวจสอบแล้ว (play mode)**
 
 | การทดสอบ | ผล |
 |---|---|
-| `TestClickTargets` (audit 40 elements) | **ALL PASS** — DayFrame, การ์ด 4 ใบ, ปุ่ม Cook/Heal/HealMode/Craft, MinMax, ถ้ำ 6 ใบ |
-| `TestCleanup` (22 ข้อ) | **22/22 ผ่าน** รวม raycast ที่กลาง frame → hit `DayFrame` → handler = `EndDayTrigger` → คลิกแล้ว day เดินหน้า |
-| `TestSkillFlow` / `TestDispatchGating` | 35/35 · 17/17 ผ่าน (ไม่ regress) |
+| `TestUiRedesign` §clickability (16 elements) | **ALL PASS** — DayFrame, การ์ด 4 ใบ, ปุ่ม Cook/Heal/HealMode/Craft, MinMax, ถ้ำ 6 ใบ |
+| `TestUiRedesign` §end day | raycast ที่กลาง frame → hit `DayFrame` → handler = `EndDayTrigger` → คลิกแล้ว day เดินหน้า + log |
 | Console | 0 error / 0 warning |
 
 > **บทเรียน:** การทดสอบที่เรียก `button.onClick.Invoke()` หรือ `ExecuteEvents.ExecuteHierarchy()` ตรง ๆ จะ **ไม่** จับ bug นี้ เพราะข้าม raycast ไปเลย — ต้อง `EventSystem.RaycastAll` ก่อนเสมอถ้าอยากรู้ว่าผู้เล่นกดได้จริงหรือไม่
+
+### 7.12 รวมชุดทดสอบเหลือไฟล์เดียว (2026-10-28)
+
+เดิมต้องเข้า play mode 4 รอบ (`TestCleanup`, `TestSkillFlow`, `TestDispatchGating`, `TestClickTargets`) ซึ่งกินเวลาและทรัพยากรเพราะการสั่ง play Unity ช้า — รวมเป็น **`AgentScripts/TestUiRedesign.cs`** ไฟล์เดียว รันครั้งเดียวจบ 32 ข้อ
+
+| ส่วน | ครอบอะไร | จำนวนข้อ |
+|---|---|---|
+| `structure` | ของเก่าถูกลบครบ, 2 ช่อง Core Item ไม่ทับกัน, `coreItemBIcon` ผูกแล้ว + เปลี่ยนสีเมื่อได้ B, `DayFrame` มี `EndDayTrigger` | 5 |
+| `clickability` | ทุก interactive element (16 ชิ้น) ผ่าน `EventSystem.RaycastAll` จริง + ไม่มีถ้ำใต้กรอบ DAY + raycast ที่ DayFrame resolve ถึง `EndDayTrigger` | 3 |
+| `skill flow` | Heal เทาเมื่อไม่มีคนเจ็บ, Cook queue 1→2, คลิกขวาล้าง (การ์ดยังเลือก), ยืนยันแล้วหัก AP/ได้อาหาร, สลับไป Craft ล้าง counter, Heal MED, Heal AP | 14 |
+| `dispatch` | ปุ่มซ่อน/โผล่, สกิลแย่งปุ่มแล้วคืน, ทริป resolve ทันที, คนที่ busy ยังกดได้ | 8 |
+| `end day` | คลิก DayFrame → day เดินหน้า + log | 2 |
+
+**หลักการที่ทำให้รันซ้ำได้ใน play session เดียว**
+
+| ปัญหา | วิธีจัดการ |
+|---|---|
+| บาดแผล/Lost Signal คงอยู่ข้ามวันโดยดีไซน์ → รอบสองเริ่มมาแบบเจ็บ | `ResetUnits()` ตั้ง `state = Idle` + `RefreshForNewDay()` ตรง ๆ (แยกจาก `Revive()` ที่ไม่ล้าง `HasGatheredToday`) |
+| ใช้ AP หมดแล้วยูนิตเป็น `Resting` → การ์ดกดไม่ได้ | `Revive(unit)` ก่อนใช้ยูนิตซ้ำ |
+| `Cards[0]` ไม่การันตีว่ากดได้ | `FirstSelectable(roster)` |
+| UI รีเฟรชใน `Update()` แต่เทสต์รันในเฟรมเดียว | `ForceSkillPanelRefresh()` เรียก `RefreshPanel` ผ่าน reflection ก่อนอ่านสถานะปุ่ม |
+
+**ลบสคริปต์ one-shot ที่ทำเสร็จแล้ว** (กันการรันซ้ำไปทับค่าที่แก้ไว้): `CleanupLegacyUI`, `PolishLayout`, `PolishMapBounds`, `FixMissingScripts`, `FixDayFrameClick`, `ViewLayout`, `TestCleanup`, `TestClickTargets`, `TestDispatchGating`, `TestSkillFlow` — เหลือ `BuildUIPrefabs` (สร้าง prefab ซ้ำได้), `WireSkillPanel` (ต่อ ref ในซีน), `DemoState` (จัดสถานะถ่ายภาพ) และ `TestUiRedesign`
+
+> **หมายเหตุ:** `ProjectSettings/Packages/com.unity.pipeline/` (config ของ pipeline package ที่เก็บ port/watchdog) ถูกเพิ่มใน `.gitignore` เพราะเป็นค่าของแต่ละเครื่อง ไม่ควร commit
 
 **ไฟล์ที่แก้ใน P0 (compile ผ่าน, รัน play mode ไม่มี error)**
 
@@ -714,7 +735,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 20. [ ] **คลิกที่ `DayFrame` = จบวัน** (ไม่มีปุ่ม End Day แยก, ไม่มี confirm dialog)
 21. [ ] ไม่มีถ้ำ (node) อยู่ใต้ panel ใด ๆ — ทุกใบมองเห็นและกดได้
 22. [ ] ไม่มี console warning จาก missing script / glyph ที่ฟอนต์ไม่มี
-23. [ ] **ทุก interactive element ผ่าน raycast จริง** — `EventSystem.RaycastAll` ที่กลาง element ต้อง hit element นั้น (ไม่ใช่ panel ข้างหลัง) · ตรวจด้วย `AgentScripts/TestClickTargets.cs`
+23. [ ] **ทุก interactive element ผ่าน raycast จริง** — `EventSystem.RaycastAll` ที่กลาง element ต้อง hit element นั้น (ไม่ใช่ panel ข้างหลัง) · ตรวจด้วย `AgentScripts/TestUiRedesign.cs`
 
 > **สถานะ AC (2026-10-28):** ข้อ 1–19 ผ่านการตรวจด้วยสคริปต์ใน play mode (ดู §7.8–§7.10) · ข้อ 20–23 ผ่านในชุด `TestCleanup` + `TestClickTargets` (§7.11)
 
