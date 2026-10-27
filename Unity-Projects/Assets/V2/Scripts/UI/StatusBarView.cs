@@ -21,9 +21,13 @@ public class StatusBarView : MonoBehaviour
     [SerializeField] private TMP_Text coreItemStatusText;
 
     [Header("Icon Slots (optional - drop art in later)")]
-    [Tooltip("Placeholder frame next to the Core Item label; tinted by its locked/unlocked/obtained state.")]
+    [Tooltip("Placeholder frame for Core Item A (the escape piece); tinted by its obtained state.")]
     [SerializeField] private Image coreItemIcon;
     [SerializeField] private Sprite coreItemSprite;
+
+    [Tooltip("Placeholder frame for Core Item B (the key); tinted by its obtained state.")]
+    [SerializeField] private Image coreItemBIcon;
+    [SerializeField] private Sprite coreItemBSprite;
 
     [SerializeField] private Image foodIcon;
     [SerializeField] private Sprite foodSprite;
@@ -38,9 +42,10 @@ public class StatusBarView : MonoBehaviour
     [SerializeField] private bool hideResourceLabelWhenIconSet = true;
 
     private const string WarningHex = "#E65C5C";
+    private const string ObtainedHex = "#FFE68A";
+    private const string PendingHex = "#9AA4B2";
 
     private static readonly Color LockedColor = new Color(1f, 1f, 1f, 0.18f);
-    private static readonly Color UnlockedColor = new Color(1f, 0.84f, 0.35f, 0.75f);
     private static readonly Color ObtainedColor = new Color(1f, 0.9f, 0.45f, 1f);
 
     private static int CountMouthsTonight()
@@ -94,18 +99,14 @@ public class StatusBarView : MonoBehaviour
 
         if (coreItemStatusText != null)
         {
-            if (RunResources.Instance.HasCoreItem)
-            {
-                coreItemStatusText.text = "Core Item\n<color=#FFE68A>Obtained</color>";
-            }
-            else if (RunResources.Instance.HasCoreItemUnlock)
-            {
-                coreItemStatusText.text = "Core Item\n<color=#FFD75E>Unlocked</color>";
-            }
-            else
-            {
-                coreItemStatusText.text = "Core Item\n<color=#9AA4B2>Locked</color>";
-            }
+            bool a = RunResources.Instance.HasCoreItemA;
+            bool b = RunResources.Instance.HasCoreItemB;
+
+            // ASCII marks only: the default TMP atlas has no tick glyph, and a
+            // missing glyph turns the whole HUD slot into a box.
+            coreItemStatusText.text =
+                $"<color={(a ? ObtainedHex : PendingHex)}>Core A {(a ? "+" : "-")}</color>\n" +
+                $"<color={(b ? ObtainedHex : PendingHex)}>Core B {(b ? "+" : "-")}</color>";
         }
     }
 
@@ -115,19 +116,24 @@ public class StatusBarView : MonoBehaviour
     /// </summary>
     private void RefreshIcons()
     {
-        if (RunResources.Instance != null && coreItemIcon != null)
+        if (RunResources.Instance != null)
         {
-            if (coreItemSprite != null) coreItemIcon.sprite = coreItemSprite;
-
-            if (RunResources.Instance.HasCoreItem) coreItemIcon.color = ObtainedColor;
-            else if (RunResources.Instance.HasCoreItemUnlock) coreItemIcon.color = UnlockedColor;
-            else coreItemIcon.color = LockedColor;
+            ApplyCoreItemIcon(coreItemIcon, coreItemSprite, RunResources.Instance.HasCoreItemA);
+            ApplyCoreItemIcon(coreItemBIcon, coreItemBSprite, RunResources.Instance.HasCoreItemB);
         }
 
         ApplyResourceIcon(foodIcon, foodSprite, foodText);
         ApplyResourceIcon(cookingMaterialIcon, cookingMaterialSprite, cookingMaterialText);
         ApplyResourceIcon(medicineIcon, medicineSprite, medicineText);
         ApplyResourceIcon(materialsIcon, materialsSprite, materialsText);
+    }
+
+    private void ApplyCoreItemIcon(Image icon, Sprite sprite, bool obtained)
+    {
+        if (icon == null) return;
+
+        if (sprite != null) icon.sprite = sprite;
+        icon.color = obtained ? ObtainedColor : LockedColor;
     }
 
     private void ApplyResourceIcon(Image icon, Sprite sprite, TMP_Text label)

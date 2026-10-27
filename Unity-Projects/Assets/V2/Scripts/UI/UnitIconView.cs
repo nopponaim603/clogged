@@ -106,7 +106,10 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         if (statusText != null)
         {
             string hunger = unit.starvationStacks > 0 ? $"  Hungry x{unit.starvationStacks}" : "";
-            string text = $"AP {unit.currentActionPoints}/{unit.maxActionPoints}\n{StateLabel(unit.state)}{hunger}";
+            // Busy reads as its own line so a unit that already gathered today is
+            // still visibly usable for base work (it keeps its remaining AP).
+            string busy = unit.HasGatheredToday ? "\nOut today" : "";
+            string text = $"AP {unit.currentActionPoints}/{unit.maxActionPoints}\n{StateLabel(unit.state)}{hunger}{busy}";
             if (statusText.text != text) statusText.text = text;
         }
 
@@ -120,16 +123,15 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         {
             float alpha;
             if (unit.state == UnitState.Missing) alpha = 0.25f;
-            else if (!unit.CanBeSentGathering) alpha = 0.5f;
+            else if (!selectable) alpha = 0.5f;
             else if (unit.state != UnitState.Idle) alpha = 0.55f;
             else alpha = 1f;
 
             if (!Mathf.Approximately(group.alpha, alpha)) group.alpha = alpha;
         }
 
-        // Frame color follows availability; deselection is handled by UnitRosterView
-        // so it can raise a single selection-changed event.
-        selectable = unit.CanBeSentGathering;
+        // Selectability is owned by whoever drives the panel (dispatch vs skill
+        // mode pick different rules), so it is never recomputed here.
         ApplyFrame();
     }
 

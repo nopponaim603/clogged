@@ -290,7 +290,6 @@ GameObject:
   - component: {fileID: 4796066743621996572}
   - component: {fileID: 6788932613023393555}
   - component: {fileID: 4111046962789015523}
-  - component: {fileID: 629702337757393547}
   - component: {fileID: 5721533342309692810}
   - component: {fileID: 2848246395873638416}
   m_Layer: 5
@@ -359,19 +358,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &629702337757393547
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8793583368627031693}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d44969f7e19f534fbeafe2585fdc853, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ScoutWalkerView
-  moveDuration: 0.6
 --- !u!114 &5721533342309692810
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -387,6 +373,16 @@ MonoBehaviour:
   iconImage: {fileID: 4111046962789015523}
   nameText: {fileID: 7185889880816689851}
   statusText: {fileID: 3507133217154922058}
+  cardSize: {x: 195, y: 265}
+  cardBackground: {r: 0.07, g: 0.09, b: 0.14, a: 0.9}
+  padding: 10
+  portraitHeight: 155
+  statusColor: {r: 0.82, g: 0.87, b: 1, a: 1}
+  frameThickness: 4
+  selectedFrameThickness: 7
+  unselectedFrameAlpha: 0.6
+  unavailableFrameAlpha: 0.2
+  selectedScale: 1.06
 --- !u!225 &2848246395873638416
 CanvasGroup:
   m_ObjectHideFlags: 0

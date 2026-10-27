@@ -17,6 +17,9 @@ public class RunResources : MonoBehaviour
 {
     public static RunResources Instance { get; private set; }
 
+    /// <summary>Fired whenever any tracked value changes - use it instead of polling.</summary>
+    public event System.Action OnChanged;
+
     [Header("Food")]
     [SerializeField] private int food = 8;
     public int Food => food;
@@ -30,14 +33,20 @@ public class RunResources : MonoBehaviour
     public int Medicine => medicine;
     public int Materials => materials;
 
-    [Header("Core Item Progress")]
-    [Tooltip("Unlocked via a Hard Success at the Mid gather zone.")]
-    [SerializeField] private bool hasCoreItemUnlock = false;
-    [Tooltip("Obtained via a Hard Success at the Far gather zone, only once unlocked.")]
-    [SerializeField] private bool hasCoreItem = false;
+    [Header("Core Items")]
+    [Tooltip("Piece used to escape. Drops independently of B.")]
+    [SerializeField] private bool coreItemA = false;
+    [Tooltip("The key. Drops independently of A.")]
+    [SerializeField] private bool coreItemB = false;
 
-    public bool HasCoreItemUnlock => hasCoreItemUnlock;
-    public bool HasCoreItem => hasCoreItem;
+    public bool HasCoreItemA => coreItemA;
+    public bool HasCoreItemB => coreItemB;
+
+    /// <summary>Both pieces are needed to escape - this is the win condition.</summary>
+    public bool HasBothCoreItems => coreItemA && coreItemB;
+
+    public bool HasCoreItem(CoreItemKind kind) =>
+        kind == CoreItemKind.A ? coreItemA : coreItemB;
 
     private void Awake()
     {
@@ -54,12 +63,14 @@ public class RunResources : MonoBehaviour
     {
         if (food <= 0) return false;
         food--;
+        OnChanged?.Invoke();
         return true;
     }
 
     public void AddFood(int amount)
     {
         food = Mathf.Max(0, food + amount);
+        OnChanged?.Invoke();
     }
 
     /// <summary>Adds to the named inventory item. Explicit switch (not a dictionary lookup) so an unhandled type logs an error instead of silently doing nothing.</summary>
@@ -78,8 +89,10 @@ public class RunResources : MonoBehaviour
                 break;
             default:
                 Debug.LogError($"[RunResources] AddItem called with unhandled type: {type}");
-                break;
+                return;
         }
+
+        OnChanged?.Invoke();
     }
 
     /// <summary>Attempts to spend the given amount of an inventory item. Returns false (and spends nothing) if there isn't enough.</summary>
@@ -104,17 +117,14 @@ public class RunResources : MonoBehaviour
         }
     }
 
-    public void UnlockCoreItemMaterial()
+    /// <summary>Grants a Core Item piece. Idempotent - obtaining one that's already held does nothing.</summary>
+    public void ObtainCoreItem(CoreItemKind kind)
     {
-        hasCoreItemUnlock = true;
-    }
+        if (HasCoreItem(kind)) return;
 
-    /// <summary>Only takes effect if the unlock material has already been obtained, per the doc's rule.</summary>
-    public void ObtainCoreItem()
-    {
-        if (hasCoreItemUnlock)
-        {
-            hasCoreItem = true;
-        }
+        if (kind == CoreItemKind.A) coreItemA = true;
+        else coreItemB = true;
+
+        OnChanged?.Invoke();
     }
 }

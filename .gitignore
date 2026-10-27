@@ -17,6 +17,9 @@
 .utmp/
 ServerData/
 
+# Pipeline package runtime config (port, watchdog, run-in-background overrides) - regenerated per machine
+**/ProjectSettings/Packages/com.unity.pipeline/
+
 # Addressables & Visual Scripting generated files
 [Aa]ssets/Plugins/Editor/JetBrains*
 [Aa]ssets/StreamingAssets/aa*

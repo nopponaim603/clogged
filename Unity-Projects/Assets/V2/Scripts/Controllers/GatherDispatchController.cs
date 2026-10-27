@@ -22,8 +22,8 @@ public class GatherDispatchResult
     public string traitName;
     public UnitCharacter traitRecipient;
 
-    public bool unlockedCoreItemMaterial;
-    public bool obtainedCoreItem;
+    /// <summary>Core Item pieces found on this trip (0-2).</summary>
+    public List<CoreItemKind> coreItemsObtained = new List<CoreItemKind>();
 }
 
 /// <summary>
@@ -137,7 +137,7 @@ public class GatherDispatchController : MonoBehaviour
                 GrantMainLoot(config.mainLoot, 1f, result);
                 GrantBonusLoot(config, result);
                 MaybeAwardTrait(selectedUnits, 0.5f, TraitPolarity.Positive, result);
-                HandleCoreItemProgress(zone, result);
+                TryRollCoreItems(config, result);
                 break;
 
             case GatherResultTier.Regular:
@@ -208,19 +208,27 @@ public class GatherDispatchController : MonoBehaviour
         result.missingUnit = victim;
     }
 
-    private void HandleCoreItemProgress(GatherZone zone, GatherDispatchResult result)
+    /// <summary>
+    /// Rolls each Core Item piece the run is still missing against the zone's
+    /// drop chance. Pieces are rolled independently, so one trip can yield both.
+    /// Only reachable from Hard Success - Regular/Failure/Fumble never drop one.
+    /// </summary>
+    private void TryRollCoreItems(GatherZoneConfig config, GatherDispatchResult result)
     {
         if (RunResources.Instance == null) return;
 
-        if (zone == GatherZone.Normal && !RunResources.Instance.HasCoreItemUnlock)
+        foreach (CoreItemKind kind in new[] { CoreItemKind.A, CoreItemKind.B })
         {
-            RunResources.Instance.UnlockCoreItemMaterial();
-            result.unlockedCoreItemMaterial = true;
+            if (RunResources.Instance.HasCoreItem(kind)) continue;
+            if (UnityEngine.Random.Range(0, 100) >= config.coreItemChancePercent) continue;
+
+            RunResources.Instance.ObtainCoreItem(kind);
+            result.coreItemsObtained.Add(kind);
         }
-        else if (zone == GatherZone.Hard && RunResources.Instance.HasCoreItemUnlock && !RunResources.Instance.HasCoreItem)
+
+        // Win check once per trip, not once per piece - a trip can complete the set.
+        if (result.coreItemsObtained.Count > 0)
         {
-            RunResources.Instance.ObtainCoreItem();
-            result.obtainedCoreItem = true;
             DayManager.Instance?.CheckImmediateWin();
         }
     }

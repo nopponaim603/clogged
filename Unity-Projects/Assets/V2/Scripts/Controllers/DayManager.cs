@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum RunOutcome
@@ -7,6 +8,17 @@ public enum RunOutcome
     Win,
     LoseDeadline,
     LoseAllUnitsLost
+}
+
+/// <summary>What the day rollover did: who ate, who went hungry, and how the day moved.</summary>
+public class DayEndReport
+{
+    public int dayBefore;
+    public int dayAfter;
+    public readonly List<UnitCharacter> fed = new List<UnitCharacter>();
+    public readonly List<UnitCharacter> starved = new List<UnitCharacter>();
+    /// <summary>Units that hit max starvation this rollover and went Missing.</summary>
+    public readonly List<UnitCharacter> lostSignal = new List<UnitCharacter>();
 }
 
 /// <summary>
@@ -31,6 +43,9 @@ public class DayManager : MonoBehaviour
     public event Action<int> OnDayStarted;
     public event Action<RunOutcome> OnRunEnded;
 
+    /// <summary>Fired right after feeding and the day counter advance, before the run-end checks resolve.</summary>
+    public event Action<DayEndReport> OnDayEnded;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -46,7 +61,7 @@ public class DayManager : MonoBehaviour
     {
         if (Outcome != RunOutcome.InProgress) return; // run already decided, button should be disabled
 
-        if (RunResources.Instance != null && RunResources.Instance.HasCoreItem)
+        if (RunResources.Instance != null && RunResources.Instance.HasBothCoreItems)
         {
             DeclareOutcome(RunOutcome.Win);
             return;
@@ -62,8 +77,8 @@ public class DayManager : MonoBehaviour
             return;
         }
 
-        bool hasCoreItem = RunResources.Instance != null && RunResources.Instance.HasCoreItem;
-        if (currentDay > deadlineDay && !hasCoreItem)
+        bool hasBothCoreItems = RunResources.Instance != null && RunResources.Instance.HasBothCoreItems;
+        if (currentDay > deadlineDay && !hasBothCoreItems)
         {
             DeclareOutcome(RunOutcome.LoseDeadline);
             return;
@@ -74,11 +89,45 @@ public class DayManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Dry-runs the feeding step so the UI can warn about a food shortfall
+    /// before the player commits. Changes nothing.
+    /// </summary>
+    public DayEndReport PreviewFeeding()
+    {
+        var report = new DayEndReport { dayBefore = currentDay, dayAfter = currentDay + 1 };
+        if (UnitManager.Instance == null) return report;
+
+        int foodLeft = RunResources.Instance != null ? RunResources.Instance.Food : 0;
+
+        foreach (var unit in UnitManager.Instance.Units)
+        {
+            if (unit.state == UnitState.Away || unit.state == UnitState.Missing) continue;
+
+            if (foodLeft > 0)
+            {
+                foodLeft--;
+                report.fed.Add(unit);
+            }
+            else
+            {
+                report.starved.Add(unit);
+                if (unit.starvationStacks + 1 >= UnitCharacter.MaxStarvationStacks)
+                {
+                    report.lostSignal.Add(unit);
+                }
+            }
+        }
+
+        return report;
+    }
+
+    /// <summary>
     /// Feeds units not in Away or Missing, in roster order, until food runs
     /// out. Anyone eligible who doesn't get fed takes a starvation stack.
     /// </summary>
     private void FeedEligibleUnitsInOrder()
     {
+        var report = new DayEndReport { dayBefore = currentDay, dayAfter = currentDay + 1 };
         if (UnitManager.Instance == null) return;
 
         foreach (var unit in UnitManager.Instance.Units)
@@ -89,8 +138,16 @@ public class DayManager : MonoBehaviour
             if (!fed)
             {
                 unit.ApplyStarvationStack();
+                report.starved.Add(unit);
+                if (unit.state == UnitState.Missing) report.lostSignal.Add(unit);
+            }
+            else
+            {
+                report.fed.Add(unit);
             }
         }
+
+        OnDayEnded?.Invoke(report);
     }
 
     /// <summary>Away units are out resolving their trip and aren't refreshed here - the send-to-gather system handles their return.</summary>
@@ -105,11 +162,11 @@ public class DayManager : MonoBehaviour
         }
     }
 
-    /// <summary>Call right after obtaining the Core Item - wins immediately if still within the deadline, per the doc's "ชนะทันทีถ้ายังไม่เกินวันที่ 7" rule.</summary>
+    /// <summary>Call right after obtaining a Core Item piece - wins immediately once both pieces are held, per the doc's "ชนะทันทีถ้ายังไม่เกินวันที่ 7" rule.</summary>
     public void CheckImmediateWin()
     {
         if (Outcome != RunOutcome.InProgress) return;
-        if (RunResources.Instance != null && RunResources.Instance.HasCoreItem && currentDay <= deadlineDay)
+        if (RunResources.Instance != null && RunResources.Instance.HasBothCoreItems && currentDay <= deadlineDay)
         {
             DeclareOutcome(RunOutcome.Win);
         }
