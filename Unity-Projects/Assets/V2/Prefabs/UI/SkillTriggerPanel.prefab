@@ -67,8 +67,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -411,8 +411,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -691,8 +691,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Cook
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -828,8 +828,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Heal
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1105,6 +1105,7 @@ MonoBehaviour:
   craftButton: {fileID: 5707134535467874848}
   craftCountLabel: {fileID: 8583433392411257158}
   hideCountBelow: 1
+  armedTint: {r: 0.24, g: 0.52, b: 0.85, a: 1}
 --- !u!1 &7939473363885360578
 GameObject:
   m_ObjectHideFlags: 0
@@ -1172,8 +1173,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: MED
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1309,8 +1310,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1589,8 +1590,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Craft
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

@@ -1,6 +1,6 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.16 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · รอ final review
+**Version:** 0.17 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · รอ final review
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
 > เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
@@ -676,21 +676,59 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 |---|---|
 | `Assets/V2/Fonts/PixelTilesetAtlas.png` | 128×80, 39 glyph ในกริด 8 คอลัมน์, Point filter, ไม่บีบอัด |
 | `Assets/V2/Fonts/PixelTileset.mat` | material shader `TextMeshPro/Bitmap` |
-| `Assets/V2/Fonts/PixelTileset.asset` | `TMP_FontAsset` — 66 glyph / 66 character |
+| `Assets/V2/Fonts/PixelTileset.asset` | `TMP_FontAsset` — 66 glyph / 66 character (ก่อนเติมวรรคตอนใน §7.15) |
 | `Assets/V2/Fonts/Source/tilemap_packed.png` | สำเนาต้นฉบับ ให้ pipeline ไม่ต้องพึ่ง `Assets/Day` |
 
-| ค่า | ผล |
+| ค่า | ผล (หลัง §7.15) |
 |---|---|
-| ตัวอักษรที่มี | `A`–`Z` (26) + `a`–`z` (พับไปตัวพิมพ์ใหญ่) + `0`–`9` + `% + -` + space = 66 |
+| ตัวอักษรที่มี | `A`–`Z` + `a`–`z` (พับไปตัวพิมพ์ใหญ่) + `0`–`9` + `% + -` + วรรคตอนวาดเพิ่ม = **88 glyph / 88 character** |
 | ขนาดตัวอักษรจริง | 6×8 px (`I` 2×8, `M`/`W` 8×8, `Q` 6×9) |
-| em / cap height | `pointSize` 16 / cap 8 → cap = fontSize ÷ 2 |
-| ระยะห่าง | `bearingX` = ตำแหน่งในไทล์, advance = ink + 2, space = 6 |
-| Fallback | LiberationSans SDF → เครื่องหมายอื่น (`•` `×` `≥` ฯลฯ) ไม่กลายเป็นกล่องเปล่า |
+| em / cap height | `pointSize` 11 / cap 8 → cap/em = 0.727 (เท่า LiberationSans) |
+| ระยะห่าง | `bearingX` = 0 (ตัด padding ของไทล์), advance = ink + 1, space = 6 |
+| Fallback | LiberationSans SDF → เครื่องหมายที่ยังไม่มีไม่กลายเป็นกล่องเปล่า |
 
-**วิธีใช้:** ตั้ง `fontSize` เป็น **32** (หรือ 16/48 = ตัวคูณของ 16) เพื่อให้ 1 texel = 2 px พอดี; ที่ขนาดอื่นภาพจะไม่คมเพราะเป็น bitmap ไม่ใช่ SDF
-**ข้อจำกัด:** ไม่มีตัวพิมพ์เล็กจริง (พับเป็นใหญ่), ไม่มีวรรคตอนนอกจาก `% + -`, ไม่มีสระไทย — ฟอนต์นี้เหมาะกับตัวเลข/ป้าย/HUD อังกฤษ ไม่ใช่บทสนทนา
+**วิธีใช้:** ตั้ง `fontSize` เป็น **22** (หรือ 11/33 = ตัวคูณของ `pointSize`) เพื่อให้ 1 texel = 2 px พอดี; ที่ขนาดอื่นภาพยังคม (Point filter) แต่ความหนาเส้นจะไม่สม่ำเสมอ
+**ข้อจำกัด:** ไม่มีตัวพิมพ์เล็กจริง (พับเป็นใหญ่), ไม่มีสระไทย — ฟอนต์นี้เหมาะกับตัวเลข/ป้าย/HUD อังกฤษ ไม่ใช่บทสนทนา
 
 **ยืนยันแล้ว:** รัน builder ซ้ำได้ผลเท่าเดิม (`glyphs=66`, `brightPixels=2295`), preview render ที่ `Temp/pixel-font-preview.png` อ่านออกครบ A–Z / a–z / 0–9 / `%+-` / "Day 7", compile 0 error
+
+### 7.15 เปลี่ยน TMP ทั้งหมดของ V2 UI มาใช้ฟอนต์นี้ (2026-10-28)
+
+งานนี้แก้ 4 อย่างที่ §7.14 ยังไม่พอ:
+
+**1. วรรคตอนที่ไทล์ไม่มี — วาดเพิ่มแบบ procedural**
+ไทล์มีแค่ `A–Z`, `0–9`, `% + -` แต่ UI พิมพ์ `: ( ) / [ ] , . — – …` ตลอด ถ้าปล่อยให้ fallback ไป LiberationSans ข้อความบรรทัดเดียวจะมี 2 ฟอนต์ปนกัน จึงวาดเพิ่ม 22 ตัวในสไตล์เดียวกัน (เส้นหนา 2px, วางบน baseline เดียวกัน, กริด 6×8) เป็นตาราง `SyntheticGlyphs` ใน builder — เพิ่ม/แก้ glyph ได้ด้วยการแก้ string 8 บรรทัด
+
+**2. Metrics ให้ตรงกับ LiberationSans → layout ไม่ขยับ**
+`pointSize` เดิม 16 ทำให้ cap/em = 0.5 (ตัวเล็กกว่าที่ layout ถูกออกแบบไว้ 30%) เปลี่ยนเป็น **11** → cap 8 / em 11 = **0.727** เท่ากับ LiberationSans ทำให้ `fontSize` เดิม (17–26) ให้ขนาดตัวอักษรใกล้เดิมที่สุด
+
+| | เดิม (LiberationSans) | ใหม่ (PixelTileset) |
+|---|---|---|
+| cap height ที่ fontSize 22 | ~15.6 px | **16 px** |
+| line height ที่ fontSize 22 | ~26.4 px | **26 px** |
+
+**3. Advance เดิมติด padding ของไทล์**
+ตัวอักษรในไทล์ถูก inset ไว้ 5px (เพราะมีแผ่นเข้ม) ค่า `bearingX` จึงกลายเป็น 5 และ advance = 13 units ทำให้ตัวอักษรห่างกันเกินจริง แก้โดยตัด inset ออก: `bearingX = max(0, inkX - 5)`, `advance = bearingX + inkW + gap` และปรับ `gap` 2 → **1** ให้ความกว้างต่อตัวใกล้ LiberationSans (A–Z 6–8 units + 1)
+
+**4. ตัวเลขต่ำกว่าตัวอักษร 1px ในไทล์ต้นฉบับ**
+ไทล์วางตัวเลขที่ y4–11 แต่ตัวอักษร y5–12 → `bearingY` ต่างกัน 1px ถ้าปล่อยไว้ HUD ที่มีทั้งตัวเลขและตัวอักษรจะเหลื่อม จึง snap เฉพาะ glyph ที่สูงเต็ม cap (`inkH == capHeight`) ให้อยู่บน cap line เสมอ ส่วนเครื่องหมายสั้น (`. , - –`) คงตำแหน่งของตัวเองไว้
+
+**การเปลี่ยน component ทั้งหมด** — `Tools > V2 > Apply Pixel Font To V2 UI` (`Assets/V2/Editor/ApplyPixelFont.cs`)
+
+| ขั้น | ทำอะไร |
+|---|---|
+| 1 | ตั้ง `TMP_Settings.m_defaultFontAsset` = PixelTileset — ครอบ TMP ที่สร้างจากโค้ด (เช่น `ZoneLabel` ใน `MapNodeView` ที่มาจาก `TmpOutlineUtil.CreateLabel` และไม่เคย assign font) |
+| 2 | ไล่ prefab ทุกไฟล์ใต้ `Assets/V2/Prefabs` ผ่าน `LoadPrefabContents` → แก้ `m_fontAsset` + `m_sharedMaterial` → `SaveAsPrefabAsset` |
+| 3 | เปิด `Core.unity`, แก้ TMP ทุกตัว, save |
+| 4 | รายงานจำนวนที่เปลี่ยน (รันซ้ำได้, ตัวที่ตรงแล้วข้าม) |
+
+**กับดักที่เจอ:** อ่าน `text.font` บน reference ที่ตายแล้วจะโยน `MissingReferenceException` และตัวที่ reference ว่างจะถูก TMP เติมจาก default ตอน `Awake` (จึงเห็นเป็น LiberationSans ทั้งที่ prefab ถูกแก้แล้ว) จึงเปลี่ยนไปเขียน/อ่านผ่าน `SerializedObject.FindProperty("m_fontAsset")` ซึ่งทน reference เสียได้ และเป็นเหตุผลที่ต้องตั้ง default font ด้วย ไม่ใช่แค่แก้ prefab
+
+**Layout ที่ต้องขยับ 1 จุด:** ฟอนต์นี้เป็น uppercase-only จึงกว้างกว่า LiberationSans ต่อความสูงตัวอักษรเดียวกัน — `Food: 16 (need 4 tonight)` ต้องการ 302px แต่ label กว้าง 240px จึงตัดขึ้นบรรทัดใหม่ทับแถวบน แก้โดยขยาย label `Food` +80px และเลื่อน `Medicine` / `CookingMaterial` / `Materials` ตาม +80px (แถวเดิมห่างกัน 264px จึงยังไม่ชนกรอบ DAY)
+
+**ตรวจแล้ว:** `TestUiRedesign` เพิ่ม 2 ข้อ → **ALL PASS 37 ข้อ** ในรอบเดียว — "all 34 labels use the pixel font" (นับรวม `ZoneLabel` 6 ตัวและ nametext/statustext 8 ตัวที่สร้างตอนรัน) และ "every printed character has a glyph" (สแกนข้อความจริงหลัง strip rich-text tag) · console 0 error 0 warning
+
+**ยังไม่ทำ (ตั้งใจ):** `Assets/Day` และ `Assets/Night` scenes (`ShipDay`, `Night`, `NPCtest`, `Setup`) ยังใช้ LiberationSans ของเดิม — เป็น prototype คนละชุดกับ V2 และยังอยู่ใน Build Settings ถ้าต้องการให้เปลี่ยนด้วยสั่งได้ (`TMP_Settings` default เปลี่ยนแล้ว จึงมีผลกับ TMP ที่สร้างใหม่ในซีนเหล่านั้น แต่ component เดิมยังชี้ LiberationSans อยู่)
 
 ---
 
@@ -796,9 +834,11 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 22. [ ] ไม่มี console warning จาก missing script / glyph ที่ฟอนต์ไม่มี
 23. [ ] **ทุก interactive element ผ่าน raycast จริง** — `EventSystem.RaycastAll` ที่กลาง element ต้อง hit element นั้น (ไม่ใช่ panel ข้างหลัง) · ตรวจด้วย `AgentScripts/TestUiRedesign.cs`
 24. [ ] **ตอนเลือกคนไข้ คนที่รักษาได้ถูกไฮไลต์** — กรอบมินต์หนา alpha เต็มและเต้น ส่วนคนที่รักษาไม่ได้จาง และไฮไลต์หายทันทีที่จบการรักษา
-25. [ ] **มีฟอนต์ pixel จาก tileset ที่ใช้ได้จริง** — `Assets/V2/Fonts/PixelTileset.asset` ครอบ A–Z / a–z / 0–9 / `% + -` + space, มี fallback, และสร้างซ้ำได้จากเมนู `Tools > V2 > Rebuild Pixel Font`
+25. [ ] **มีฟอนต์ pixel จาก tileset ที่ใช้ได้จริง** — `Assets/V2/Fonts/PixelTileset.asset` ครอบ A–Z / a–z / 0–9 / `% + -` + วรรคตอนที่ UI ใช้, มี fallback, และสร้างซ้ำได้จากเมนู `Tools > V2 > Rebuild Pixel Font`
+26. [ ] **TMP ทุกตัวใน V2 UI ใช้ฟอนต์นี้** — รวม label ที่สร้างจากโค้ด (`TMP_Settings` default ชี้ PixelTileset) และไม่มีอักขระใดต้อง fallback · ตรวจด้วย `TestUiRedesign` 2 ข้อ
+27. [ ] **ฟอนต์ใหม่ไม่ทำให้ layout แตก** — ขนาดตัวอักษร (cap height / line height) ตรงกับ LiberationSans เดิม และข้อความในแถบทรัพยากรไม่ตัดขึ้นบรรทัดใหม่
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–25 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 35 ข้อ** (§7.12–§7.13) · ฟอนต์ตรวจด้วย preview render (§7.14)
+> **สถานะ AC (2026-10-28):** ข้อ 1–27 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 37 ข้อ** (§7.12–§7.13, §7.15) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15)
 
 ---
 

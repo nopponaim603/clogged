@@ -50,6 +50,7 @@ public static class TestUiRedesign
         CheckLegacyGone(canvas);
         CheckCoreItemSlots(canvas);
         Check("Day frame carries EndDayTrigger", dayFrame.GetComponent<EndDayTrigger>() != null);
+        CheckFont(canvas);
 
         // --- 2. clickability ----------------------------------------------
         Section("clickability");
@@ -214,8 +215,49 @@ public static class TestUiRedesign
 
     static void Section(string name) => Log.AppendLine($"-- {name} --");
 
-    static void CheckLegacyGone(GameObject canvas)
+    /// <summary>
+    /// Every label must use the pixel font and every character it prints must
+    /// exist in that atlas - a miss silently falls back to LiberationSans, which
+    /// is the one way two typefaces end up on screen at once.
+    /// </summary>
+    static void CheckFont(GameObject canvas)
     {
+        var texts = canvas.GetComponentsInChildren<TMPro.TMP_Text>(true);
+        var wrongFont = new List<string>();
+        var missing = new HashSet<char>();
+
+        foreach (var text in texts)
+        {
+            if (text.font == null || text.font.name != "PixelTileset")
+            {
+                wrongFont.Add($"{text.gameObject.name}->{(text.font != null ? text.font.name : "null")}");
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(text.text)) continue;
+
+            string plain = System.Text.RegularExpressions.Regex.Replace(text.text, "<[^>]*>", "");
+            foreach (char c in plain)
+            {
+                if (c == '\n' || c == '\r') continue;
+                if (!text.font.HasCharacter(c)) missing.Add(c);
+            }
+        }
+
+        Check(wrongFont.Count == 0
+                ? $"all {texts.Length} labels use the pixel font"
+                : "labels not on PixelTileset: " + string.Join(", ", wrongFont),
+            wrongFont.Count == 0);
+
+        // Covers the text the panels print for the current state, which is the
+        // set that actually renders during play.
+        Check(missing.Count == 0
+                ? "every printed character has a glyph"
+                : "missing glyphs: " + string.Concat(missing),
+            missing.Count == 0);
+    }
+
+    static void CheckLegacyGone(GameObject canvas)    {
         var found = new List<string>();
         foreach (string path in new[]
                  {
@@ -231,8 +273,7 @@ public static class TestUiRedesign
             : "legacy widgets still present: " + string.Join(", ", found), found.Count == 0);
     }
 
-    static void CheckCoreItemSlots(GameObject canvas)
-    {
+    static void CheckCoreItemSlots(GameObject canvas)    {
         Transform a = canvas.transform.Find("StatusBar/CoreItemGroup/CoreItemFrame");
         Transform b = canvas.transform.Find("StatusBar/CoreItemGroup/CoreItemFrameB");
 

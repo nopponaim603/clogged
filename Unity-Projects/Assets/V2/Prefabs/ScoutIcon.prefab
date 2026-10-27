@@ -70,8 +70,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -209,8 +209,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 653faaea9da3ad34e898332ea2b3428b, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6c5348e00a25fe04d8a67cc1b1c2efa2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -383,6 +383,10 @@ MonoBehaviour:
   unselectedFrameAlpha: 0.6
   unavailableFrameAlpha: 0.2
   selectedScale: 1.06
+  targetableColor: {r: 0.55, g: 1, b: 0.75, a: 1}
+  targetableFrameThickness: 7
+  targetablePulseSpeed: 3.2
+  targetablePulseMinAlpha: 0.55
 --- !u!225 &2848246395873638416
 CanvasGroup:
   m_ObjectHideFlags: 0

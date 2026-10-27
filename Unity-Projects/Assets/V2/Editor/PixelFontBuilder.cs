@@ -24,6 +24,15 @@ namespace V2.EditorTools
 /// with a lavender lower shade, and TMP tints glyphs by alpha, so copying the
 /// plate would paint solid blocks instead of letters.
 ///
+/// The sheet carries no punctuation, so the marks the UI actually prints
+/// ( : / ( ) [ ] , . - ) are drawn procedurally in the same 2px-stroke style.
+/// Without them every colon and bracket would fall back to LiberationSans and
+/// the HUD would mix two typefaces.
+///
+/// FaceInfo.pointSize is set to 11 rather than 16 so cap height / em is ~0.73,
+/// matching the LiberationSans metrics the layout was built against - swapping
+/// the font does not resize the text.
+///
 /// Re-runnable from Tools > V2 > Rebuild Pixel Font; it overwrites the atlas,
 /// material and font asset in place.
 /// </summary>
@@ -38,9 +47,14 @@ public static class PixelFontBuilder
     private const string FallbackPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
 
     private const int Cell = 16;
-    private const int AdvanceGap = 2;
+    private const int AdvanceGap = 1;
     private const int SpaceAdvance = 6;
     private const int AtlasCols = 8;
+
+    // Cap height is 8px. Point size 11 puts cap/em at 0.727, the same optical
+    // size LiberationSans renders at, so existing font sizes keep their layout.
+    private const int FacePointSize = 11;
+    private const int BaselineRow = 5;   // y of the ink bottom inside a 16px cell
 
     private static readonly StringBuilder Log = new StringBuilder();
 
@@ -82,14 +96,47 @@ public static class PixelFontBuilder
     private sealed class GlyphSource
     {
         public char Character;
-        public int Col;
-        public int Row;
-        public int InkX;      // ink bounds inside the cell, bottom-up
+        public int Col;          // tile column in the sheet, then reused as atlas column
+        public int Row;          // tile row in the sheet, then reused as atlas row
+        public string[] Pattern; // non-null for procedural glyphs, row 0 = top
+        public int InkX;         // ink bounds inside the cell, bottom-up
         public int InkY;
         public int InkW;
         public int InkH;
         public bool IsBlank;
+        public bool IsSynthetic => Pattern != null;
     }
+
+    /// <summary>
+    /// Marks the sheet has no tile for. Every one is drawn in the same 2px
+    /// stroke weight the letters use, in a 6x8 cell sitting on the same baseline.
+    /// </summary>
+    private static readonly (char Character, string[] Rows)[] SyntheticGlyphs =
+    {
+        ('.', new[] { "......", "......", "......", "......", "......", "......", "..##..", "..##.." }),
+        (',', new[] { "......", "......", "......", "......", "......", "..##..", "..##..", ".##..." }),
+        (':', new[] { "......", "..##..", "..##..", "......", "......", "..##..", "..##..", "......" }),
+        (';', new[] { "......", "..##..", "..##..", "......", "......", "..##..", "..##..", ".##..." }),
+        ('!', new[] { "..##..", "..##..", "..##..", "..##..", "..##..", "......", "..##..", "..##.." }),
+        ('?', new[] { ".####.", "##..##", "....##", "...##.", "..##..", "......", "..##..", "..##.." }),
+        ('(', new[] { "...##.", "..##..", ".##...", ".##...", ".##...", ".##...", "..##..", "...##." }),
+        (')', new[] { ".##...", "..##..", "...##.", "...##.", "...##.", "...##.", "..##..", ".##..." }),
+        ('/', new[] { "....##", "....##", "...##.", "..##..", "..##..", ".##...", "##....", "##...." }),
+        ('\\', new[] { "##....", "##....", ".##...", "..##..", "..##..", "...##.", "....##", "....##" }),
+        ('[', new[] { ".####.", ".##...", ".##...", ".##...", ".##...", ".##...", ".##...", ".####." }),
+        (']', new[] { ".####.", "...##.", "...##.", "...##.", "...##.", "...##.", "...##.", ".####." }),
+        ('_', new[] { "......", "......", "......", "......", "......", "......", "......", "######" }),
+        ('-', new[] { "......", "......", "......", "......", "......", ".####.", "......", "......" }),
+        ('=', new[] { "......", "......", "######", "......", "######", "......", "......", "......" }),
+        ('<', new[] { "....##", "...##.", "..##..", ".##...", "..##..", "...##.", "....##", "......" }),
+        ('>', new[] { "##....", ".##...", "..##..", "...##.", "..##..", ".##...", "##....", "......" }),
+        ('\'', new[] { "..##..", "..##..", "......", "......", "......", "......", "......", "......" }),
+        ('"', new[] { ".##.##", ".##.##", "......", "......", "......", "......", "......", "......" }),
+        ('\u2013', new[] { "........", "........", "........", "........", "########", "........", "........", "........" }),
+        ('\u2014', new[] { "........", "........", "........", "........", "########", "........", "........", "........" }),
+        ('\u2022', new[] { "......", "......", "..##..", ".####.", ".####.", "..##..", "......", "......" }),
+        ('\u2026', new[] { "........", "........", "........", "........", "........", "........", "##.##.##", "##.##.##" }),
+    };
 
     private static Texture2D LoadSheet()
     {
@@ -144,6 +191,37 @@ public static class PixelFontBuilder
             g.InkH = maxY - minY + 1;
         }
 
+        // Add the procedural marks, skipping any the sheet already covers.
+        var taken = new HashSet<char>(map.Select(g => g.Character));
+        foreach (var (character, rows) in SyntheticGlyphs)
+        {
+            if (!taken.Add(character)) continue;
+
+            var g = new GlyphSource { Character = character, Pattern = rows };
+            int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1;
+
+            for (int row = 0; row < rows.Length; row++)
+                for (int x = 0; x < rows[row].Length; x++)
+                {
+                    if (rows[row][x] == '.') continue;
+
+                    // Row 7 sits on the baseline, matching the tile letterforms.
+                    int y = BaselineRow + (rows.Length - 1 - row);
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+
+            if (maxX < 0) { g.IsBlank = true; map.Add(g); continue; }
+
+            g.InkX = minX;
+            g.InkY = minY;
+            g.InkW = maxX - minX + 1;
+            g.InkH = maxY - minY + 1;
+            map.Add(g);
+        }
+
         return map;
     }
 
@@ -175,15 +253,35 @@ public static class PixelFontBuilder
             var g = glyphs[i];
             int destX = (i % AtlasCols) * Cell;
             int destY = (i / AtlasCols) * Cell;
-            int srcY = sheet.height - (g.Row + 1) * Cell;
 
-            if (g.IsBlank) continue;
+            if (g.IsBlank)
+            {
+                g.Col = destX / Cell;
+                g.Row = destY / Cell;
+                continue;
+            }
 
-            // Write the letterform as white-on-transparent so the shader tint
-            // applies cleanly at any text colour.
-            Color[] block = sheet.GetPixels(g.Col * Cell, srcY, Cell, Cell);
-            for (int p = 0; p < block.Length; p++)
-                block[p] = IsInk(block[p]) ? Color.white : Color.clear;
+            // Write the glyph as white-on-transparent so the shader tint applies
+            // cleanly at any text colour.
+            Color[] block = new Color[Cell * Cell];
+
+            if (g.IsSynthetic)
+            {
+                for (int row = 0; row < g.Pattern.Length; row++)
+                    for (int x = 0; x < g.Pattern[row].Length; x++)
+                    {
+                        if (g.Pattern[row][x] == '.') continue;
+                        int y = BaselineRow + (g.Pattern.Length - 1 - row);
+                        if (x < Cell && y < Cell) block[y * Cell + x] = Color.white;
+                    }
+            }
+            else
+            {
+                int srcY = sheet.height - (g.Row + 1) * Cell;
+                Color[] tile = sheet.GetPixels(g.Col * Cell, srcY, Cell, Cell);
+                for (int p = 0; p < tile.Length; p++)
+                    block[p] = IsInk(tile[p]) ? Color.white : Color.clear;
+            }
 
             atlas.SetPixels(destX, destY, Cell, Cell, block);
             g.Col = destX / Cell;   // reuse Col/Row as the atlas cell index
@@ -213,14 +311,21 @@ public static class PixelFontBuilder
 
     private static TMP_FontAsset BuildFontAsset(Texture2D atlas, List<GlyphSource> glyphs, int atlasW, int atlasH)
     {
-        AssetDatabase.DeleteAsset(FontPath);
-        AssetDatabase.DeleteAsset(MaterialPath);
-
         var shader = Shader.Find("TextMeshPro/Bitmap");
         if (shader == null) shader = Shader.Find("TextMeshPro/Mobile/Bitmap");
         if (shader == null) { Debug.LogError("PixelFontBuilder: no bitmap shader found."); return null; }
 
-        var material = new Material(shader) { name = "PixelTileset Material" };
+        // Reuse the existing assets instead of delete + create: recreating them
+        // gives a new object identity, so every component referencing the old
+        // one sees a destroyed asset and TMP logs "assign a Font Asset".
+        var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+        if (material == null)
+        {
+            material = new Material(shader) { name = "PixelTileset Material" };
+            AssetDatabase.CreateAsset(material, MaterialPath);
+        }
+        else material.shader = shader;
+
         material.SetTexture("_MainTex", atlas);
         material.SetFloat("_TextureWidth", atlasW);
         material.SetFloat("_TextureHeight", atlasH);
@@ -229,10 +334,16 @@ public static class PixelFontBuilder
         material.SetColor("_FaceColor", Color.white);
         material.SetFloat("_WeightNormal", 0f);
         material.SetFloat("_WeightBold", 0.75f);
-        AssetDatabase.CreateAsset(material, MaterialPath);
+        EditorUtility.SetDirty(material);
 
-        var fontAsset = ScriptableObject.CreateInstance<TMP_FontAsset>();
-        fontAsset.name = "PixelTileset";
+        var fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (fontAsset == null)
+        {
+            fontAsset = ScriptableObject.CreateInstance<TMP_FontAsset>();
+            fontAsset.name = "PixelTileset";
+            AssetDatabase.CreateAsset(fontAsset, FontPath);
+        }
+
         fontAsset.atlas = atlas;
 
         // TMP exposes these as read-only to outside code (internal setters), so
@@ -248,48 +359,66 @@ public static class PixelFontBuilder
         SetField(fontAsset, "m_IsMultiAtlasTexturesEnabled", false);
         SetField(fontAsset, "m_Material", material);
 
-        // The character rows put the ink on rows 1..14 of a 16px cell, so the
-        // baseline sits one pixel below the ink and letters clear descenders.
-        int maxInkTop = 0;
-        foreach (var g in glyphs.Where(g => !g.IsBlank)) maxInkTop = Mathf.Max(maxInkTop, g.InkY + g.InkH);
+        // Cap height is the distance from the ink bottom to its top. The tiles
+        // carry 5px of plate below the letterform, so that padding is removed
+        // here: a glyph's bearing is measured from the baseline, not the cell.
+        int capHeight = 0;
+        foreach (var g in glyphs.Where(g => !g.IsBlank))
+            capHeight = Mathf.Max(capHeight, g.InkY + g.InkH - BaselineRow);
 
         fontAsset.faceInfo = new FaceInfo
         {
             familyName = "Clogged Pixel",
             styleName = "Regular",
-            pointSize = Cell,
+            pointSize = FacePointSize,
             scale = 1f,
-            lineHeight = Cell + 2,
-            ascentLine = maxInkTop,
-            capLine = maxInkTop - 1,
-            meanLine = maxInkTop * 0.66f,
+            lineHeight = FacePointSize + 2,
+            ascentLine = capHeight + 0.5f,
+            capLine = capHeight,
+            meanLine = capHeight * 0.69f,
             baseline = 0f,
-            descentLine = -2f,
+            descentLine = -2.5f,
             underlineOffset = -2f,
             underlineThickness = 1f,
-            strikethroughOffset = maxInkTop * 0.45f,
+            strikethroughOffset = capHeight * 0.45f,
             strikethroughThickness = 1f,
-            superscriptOffset = maxInkTop * 0.6f,
+            superscriptOffset = capHeight * 0.6f,
             superscriptSize = 0.5f,
             subscriptOffset = -2f,
             subscriptSize = 0.5f,
-            tabWidth = AdvanceGap + Cell * 0.75f
+            tabWidth = FacePointSize * 2f
         };
 
         var glyphTable = new List<Glyph>();
         var characterTable = new List<TMP_Character>();
         uint nextIndex = 0;
 
+        // Letters are inset 5px inside the tile because of the plate art. That
+        // padding is not a type bearing: keeping it makes every advance 13 units
+        // and the text reads as spaced-out caps. Strip it so advances come from
+        // the ink width.
+        const int TileLeftInset = 5;
+        int capTop = capHeight;
+
         Glyph MakeGlyph(GlyphSource g)
         {
+            int bearingX = Mathf.Max(0, g.InkX - TileLeftInset);
+
+            // Full-height glyphs share the cap line even when the source art sits
+            // a pixel low (the digits do); short marks keep their own offset so
+            // a dash or a dot stays where it belongs.
+            int bearingY = g.InkH == capTop
+                ? capTop
+                : g.InkY + g.InkH - BaselineRow;
+
             var glyph = new Glyph(
                 nextIndex++,
                 new GlyphMetrics(
                     g.InkW,
                     g.InkH,
-                    g.InkX,
-                    g.InkY + g.InkH,
-                    g.InkX + g.InkW + AdvanceGap),
+                    bearingX,
+                    bearingY,
+                    bearingX + g.InkW + AdvanceGap),
                 new GlyphRect(g.Col * Cell + g.InkX, g.Row * Cell + g.InkY, g.InkW, g.InkH));
             glyphTable.Add(glyph);
             return glyph;
@@ -319,9 +448,9 @@ public static class PixelFontBuilder
         SetField(fontAsset, "m_GlyphTable", glyphTable);
         SetField(fontAsset, "m_CharacterTable", characterTable);
 
-        // The sheet only has A-Z, 0-9 and three symbols. Fall back to the stock
-        // TMP font so punctuation in existing UI text degrades instead of showing
-        // empty boxes.
+        // The sheet plus the procedural marks cover the UI, but the stock TMP
+        // face stays as a fallback so an unexpected character degrades instead
+        // of turning into a box.
         var fallback = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FallbackPath);
         if (fallback != null && fallback != fontAsset)
         {
@@ -329,8 +458,6 @@ public static class PixelFontBuilder
             Log.AppendLine("fallback: LiberationSans SDF");
         }
         else Log.AppendLine("WARN no fallback font found");
-
-        AssetDatabase.CreateAsset(fontAsset, FontPath);
 
         fontAsset.ReadFontAssetDefinition();
 
@@ -352,7 +479,8 @@ public static class PixelFontBuilder
     private static void Preview(TMP_FontAsset fontAsset)
     {
         const int width = 960;
-        const int height = 140;
+        const int height = 260;
+        const int previewFontSize = 22;
         const float camZ = -10f;
 
         var camGo = new GameObject("PixelFontPreviewCam") { hideFlags = HideFlags.HideAndDontSave };
@@ -382,10 +510,13 @@ public static class PixelFontBuilder
         textGo.transform.SetParent(canvasGo.transform, false);
         var tmp = textGo.AddComponent<TextMeshProUGUI>();
         tmp.font = fontAsset;
-        tmp.fontSize = Cell;
+        tmp.fontSize = previewFontSize;
         tmp.color = Color.white;
         tmp.alignment = TextAlignmentOptions.TopLeft;
-        tmp.text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz 0123456789 %+-  Day 7";
+        tmp.text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789  %+-  Day 7\n" +
+                   "Food: 16 (need 4 tonight)  [D1] Hard cave \u2014 3 AP\n" +
+                   "Ann was hurt.  Core A +  AP 3/3\n" +
+                   "Day 2 \u2014 everyone ate (4 fed).  Materials x2";
 
         var textRect = (RectTransform)textGo.transform;
         textRect.anchorMin = Vector2.zero;
