@@ -117,6 +117,7 @@ public class GatherDispatchController : MonoBehaviour
         }
 
         OnGatherResolved?.Invoke(result);
+        RunStats.CountGather(result);
         return result;
     }
 

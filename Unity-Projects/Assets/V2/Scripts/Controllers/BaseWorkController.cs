@@ -232,6 +232,7 @@ public class BaseWorkController : MonoBehaviour
     /// <summary>Single funnel for the completion event so no exit path forgets to fire it.</summary>
     private BaseWorkResult Emit(BaseWorkResult result)
     {
+        RunStats.CountBaseWork(result);
         OnBaseWorkCompleted?.Invoke(result);
         return result;
     }

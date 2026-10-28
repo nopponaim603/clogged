@@ -148,4 +148,26 @@ public class RunResources : MonoBehaviour
 
         OnChanged?.Invoke();
     }
+
+    /// <summary>
+    /// Restores every tracked value from a save in one shot. Silent - no
+    /// <see cref="OnChanged"/> - because the scene is still waking up and the HUD
+    /// polls these values on its first frame anyway.
+    /// </summary>
+    public void RestoreState(SaveData data)
+    {
+        if (data == null) return;
+
+        food = Mathf.Max(0, data.food);
+        cookingMaterial = Mathf.Max(0, data.cookingMaterial);
+        medicine = Mathf.Max(0, data.medicine);
+        materials = Mathf.Max(0, data.materials);
+        coreItemA = data.coreItemA;
+        coreItemB = data.coreItemB;
+
+        // A restored run keeps the pair it was saved with, even if this
+        // particular start rolled the other one.
+        variant = (CoreItemVariant)Mathf.Clamp(data.variant, 0, 1);
+        randomiseVariant = false;
+    }
 }

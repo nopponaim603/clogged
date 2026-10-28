@@ -86,6 +86,19 @@ public class DayManager : MonoBehaviour
 
         RefreshEligibleUnitsForNewDay();
         OnDayStarted?.Invoke(currentDay);
+
+        // The run is still going, so this is the checkpoint "Continue" resumes from.
+        SaveSystem.SaveNow();
+    }
+
+    /// <summary>
+    /// Puts the counter back where a save left it. No events fire: the caller is
+    /// restoring a scene that is still being set up, not advancing a day.
+    /// </summary>
+    public void RestoreDay(int day, int deadline)
+    {
+        currentDay = Mathf.Max(1, day);
+        deadlineDay = Mathf.Max(currentDay, deadline);
     }
 
     /// <summary>
@@ -147,6 +160,7 @@ public class DayManager : MonoBehaviour
             }
         }
 
+        RunStats.CountDayEnd(report);
         OnDayEnded?.Invoke(report);
     }
 
@@ -175,6 +189,10 @@ public class DayManager : MonoBehaviour
     private void DeclareOutcome(RunOutcome outcome)
     {
         Outcome = outcome;
+
+        // The run is decided: a checkpoint would only resume the player into the
+        // same ending, so Continue must fall back to a fresh run.
+        SaveSystem.Delete();
+
         OnRunEnded?.Invoke(outcome);
-    }
-}
+    }}
