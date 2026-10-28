@@ -42,6 +42,21 @@ public class SkillTriggerPanel : MonoBehaviour
     [Tooltip("Normal colour of a skill button while it owns the pending action.")]
     [SerializeField] private Color armedTint = new Color(0.24f, 0.52f, 0.85f, 1f);
 
+    [Header("Hover Tooltips")]
+    [SerializeField] private bool showTooltips = true;
+    [Tooltip("Mouse art shown next to each hint. Leave empty to drop the icon row.")]
+    [SerializeField] private Sprite leftClickIcon;
+    [SerializeField] private Sprite rightClickIcon;
+
+    [Header("Skill Art")]
+    [Tooltip("Painted into the button's left gutter. The label is already inset to make room.")]
+    [SerializeField] private Sprite cookIcon;
+    [SerializeField] private Sprite healIcon;
+    [SerializeField] private Sprite craftIcon;
+    [SerializeField] private Image cookIconImage;
+    [SerializeField] private Image healIconImage;
+    [SerializeField] private Image craftIconImage;
+
     public event Action CookClicked;
     public event Action CookCleared;
     public event Action CraftClicked;
@@ -75,6 +90,58 @@ public class SkillTriggerPanel : MonoBehaviour
         Wire(healButton, () => HealClicked?.Invoke(), () => HealCancelled?.Invoke());
 
         if (healModeButton != null) healModeButton.onClick.AddListener(HandleHealModeClicked);
+
+        WireTooltips();
+        PaintSkillIcons();
+    }
+
+    /// <summary>
+    /// Drops the skill art into the button gutter. A slot with no sprite is
+    /// hidden rather than left as a white box, so the panel still reads as plain
+    /// text while the art is being picked.
+    /// </summary>
+    private void PaintSkillIcons()
+    {
+        PaintIcon(cookIconImage, cookIcon);
+        PaintIcon(healIconImage, healIcon);
+        PaintIcon(craftIconImage, craftIcon);
+    }
+
+    private static void PaintIcon(Image image, Sprite sprite)
+    {
+        if (image == null) return;
+
+        image.sprite = sprite;
+        image.enabled = sprite != null;
+    }
+
+    /// <summary>
+    /// Attaches the hover popups. Cook and Craft queue rounds, Heal is a single
+    /// arming step, and the mode toggle has no right click - so the two rows of
+    /// each popup differ and the unused one is dropped by the tooltip itself.
+    /// </summary>
+    private void WireTooltips()
+    {
+        if (!showTooltips) return;
+
+        AttachTooltip(cookButton, "COOK", "SPEND AP TO COOK A MEAL FOR THE CREW.",
+            "ADD ONE MORE ROUND", "CLEAR THE QUEUE");
+        AttachTooltip(craftButton, "CRAFT", "SPEND AP TO CRAFT AT THE WORKSHOP.",
+            "ADD ONE MORE ROUND", "CLEAR THE QUEUE");
+        AttachTooltip(healButton, "HEAL", "TREAT ONE HURT CREW MEMBER.",
+            "ARM HEAL", "CANCEL");
+        AttachTooltip(healModeButton, "HEAL COST", "MED USES 1 MEDICINE AND 1 AP. AP USES 2 AP.",
+            "SWITCH THE COST", null);
+    }
+
+    private void AttachTooltip(Button button, string title, string body, string leftHint, string rightHint)
+    {
+        if (button == null) return;
+
+        var trigger = button.GetComponent<SkillTooltipTrigger>();
+        if (trigger == null) trigger = button.gameObject.AddComponent<SkillTooltipTrigger>();
+
+        trigger.Configure(title, body, leftHint, rightHint, leftClickIcon, rightClickIcon);
     }
 
     private void OnDestroy()

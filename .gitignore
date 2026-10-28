@@ -106,3 +106,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Raw third-party asset downloads (sources for what is curated into Unity-Projects/Assets)
+asset-sources/
