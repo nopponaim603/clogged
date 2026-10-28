@@ -21,6 +21,9 @@ public static class UiFactory
     public static readonly Color Accent = new Color(1f, 0.88f, 0.55f, 1f);
     public static readonly Color Success = new Color(0.42f, 0.85f, 0.45f, 1f);
     public static readonly Color Fail = new Color(0.91f, 0.38f, 0.38f, 1f);
+    /// <summary>Fill for the option that is currently picked (window mode, selected list row).</summary>
+    public static readonly Color ChoiceSelected = new Color(0.24f, 0.52f, 0.85f, 1f);
+    public static readonly Color SliderTrack = new Color(0.13f, 0.16f, 0.22f, 1f);
 
     public static RectTransform CreateRect(string objectName, Transform parent)
     {
@@ -110,6 +113,78 @@ public static class UiFactory
         text.fontSizeMax = fontSize;
 
         return button;
+    }
+
+    /// <summary>
+    /// A horizontal slider with an outlined track, a filled left portion and a
+    /// square handle. Built here because the project has no prefab for one, and
+    /// Slider drives its own anchors on the fill/handle at runtime.
+    /// </summary>
+    public static Slider CreateSlider(Transform parent, string objectName, float width, float height)
+    {
+        var go = new GameObject(objectName, typeof(RectTransform), typeof(Slider));
+        var rect = (RectTransform)go.transform;
+        rect.SetParent(parent, false);
+        rect.localScale = Vector3.one;
+        rect.sizeDelta = new Vector2(width, height);
+
+        var slider = go.GetComponent<Slider>();
+        slider.transition = Selectable.Transition.None;
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+
+        var track = CreateImage("Track", rect, SliderTrack);
+        UiFactoryCenterVertically((RectTransform)track.transform, height, 10f);
+
+        var outline = track.gameObject.AddComponent<Outline>();
+        outline.effectColor = Border;
+        outline.effectDistance = new Vector2(2f, -2f);
+        outline.useGraphicAlpha = false;
+
+        var fillArea = CreateRect("Fill Area", rect);
+        UiFactoryCenterVertically(fillArea, height, 10f);
+        fillArea.offsetMin = new Vector2(2f, fillArea.offsetMin.y);
+        fillArea.offsetMax = new Vector2(-2f, fillArea.offsetMax.y);
+
+        var fill = CreateImage("Fill", fillArea, ChoiceSelected);
+        var fillRect = (RectTransform)fill.transform;
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+
+        var handleArea = CreateRect("Handle Slide Area", rect);
+        Stretch(handleArea);
+        handleArea.offsetMin = new Vector2(10f, 0f);
+        handleArea.offsetMax = new Vector2(-10f, 0f);
+
+        var handle = CreateImage("Handle", handleArea, Accent);
+        var handleRect = (RectTransform)handle.transform;
+        handleRect.anchorMin = new Vector2(0f, 0f);
+        handleRect.anchorMax = new Vector2(0f, 1f);
+        handleRect.pivot = new Vector2(0.5f, 0.5f);
+        handleRect.sizeDelta = new Vector2(14f, 0f);
+
+        var handleOutline = handle.gameObject.AddComponent<Outline>();
+        handleOutline.effectColor = Border;
+        handleOutline.effectDistance = new Vector2(2f, -2f);
+        handleOutline.useGraphicAlpha = false;
+
+        slider.fillRect = fillRect;
+        slider.handleRect = handleRect;
+        slider.targetGraphic = handle;
+
+        return slider;
+    }
+
+    private static void UiFactoryCenterVertically(RectTransform rect, float parentHeight, float ownHeight)
+    {
+        rect.anchorMin = new Vector2(0f, 0.5f);
+        rect.anchorMax = new Vector2(1f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(0f, ownHeight);
     }
 
     public static void Stretch(RectTransform rect, float inset = 0f)
