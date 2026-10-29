@@ -81,4 +81,26 @@ public class UnitManager : MonoBehaviour
     {
         return AliveCount() == 0;
     }
+
+    /// <summary>
+    /// Puts roster state back from a save. Units are matched by name, and any
+    /// entry the save does not mention is left at its scene default so an old
+    /// save cannot half-initialise the roster.
+    /// </summary>
+    public void RestoreUnits(System.Collections.Generic.List<SaveData.UnitSnapshot> snapshots)
+    {
+        if (snapshots == null || snapshots.Count == 0) return;
+
+        foreach (var snapshot in snapshots)
+        {
+            if (snapshot == null || string.IsNullOrEmpty(snapshot.unitName)) continue;
+
+            UnitCharacter unit = units.Find(u => u.unitName == snapshot.unitName);
+            if (unit == null) continue;
+
+            unit.state = (UnitState)Mathf.Clamp(snapshot.state, 0, (int)UnitState.Missing);
+            unit.currentActionPoints = Mathf.Max(0, snapshot.currentActionPoints);
+            unit.starvationStacks = Mathf.Clamp(snapshot.starvationStacks, 0, UnitCharacter.MaxStarvationStacks);
+        }
+    }
 }

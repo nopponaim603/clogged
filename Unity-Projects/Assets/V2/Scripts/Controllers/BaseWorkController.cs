@@ -10,6 +10,9 @@ public class BaseWorkController : MonoBehaviour
 {
     public static BaseWorkController Instance { get; private set; }
 
+    /// <summary>Fired after every base-work attempt, including blocked ones - the log/feedback layer listens to this.</summary>
+    public event System.Action<BaseWorkResult> OnBaseWorkCompleted;
+
     [Header("Cooking")]
     [SerializeField] private int cookApCost = 1;
     [SerializeField] private int cookMaterialCostPerRound = 1;
@@ -37,6 +40,12 @@ public class BaseWorkController : MonoBehaviour
 
     // --- Planning helpers (the UI reads these so the numbers live in one place) ---
 
+    // Base costs, before each unit's starvation surcharge - callers that paint
+    // more than one unit's card need the unmodified number.
+    public int CookBaseApCost => cookApCost;
+    public int WorkshopBaseApCost => workshopApCost;
+    public int HealBaseApCost(bool useMedicine) => useMedicine ? healApCostWithMedicine : healApCostWithoutMedicine;
+
     public int CookApPerRound(UnitCharacter worker) => worker.GetActualApCost(cookApCost);
     public int CookMaterialPerRound => cookMaterialCostPerRound;
 
@@ -59,6 +68,12 @@ public class BaseWorkController : MonoBehaviour
     public void GetHealPlan(UnitCharacter healer, out bool useMedicine, out int apCost)
     {
         useMedicine = RunResources.Instance != null && RunResources.Instance.Medicine >= 1;
+        GetHealPlan(healer, useMedicine, out apCost);
+    }
+
+    /// <summary>AP cost of the requested healing method for this healer (starvation included).</summary>
+    public void GetHealPlan(UnitCharacter healer, bool useMedicine, out int apCost)
+    {
         apCost = healer.GetActualApCost(useMedicine ? healApCostWithMedicine : healApCostWithoutMedicine);
     }
 
@@ -97,7 +112,7 @@ public class BaseWorkController : MonoBehaviour
         if (!worker.CanBeDispatched || RunResources.Instance == null)
         {
             result.blocked = true;
-            return result;
+            return Emit(result);
         }
 
         int foodPerRound = worker.HasAptitude(AptitudeTag.Cooking) ? cookFoodOutputWithAptitude : cookFoodOutputBase;
@@ -116,37 +131,49 @@ public class BaseWorkController : MonoBehaviour
             result.cookingMaterialConsumed += cookMaterialCostPerRound;
         }
 
-        return result;
+        if (result.repeatsPerformed == 0) result.blocked = true;
+        return Emit(result);
     }
 
     // --- Healing ---
 
-    public bool CanHeal(UnitCharacter healer, UnitCharacter patient)
+    public bool CanHeal(UnitCharacter healer, UnitCharacter patient) => CanHeal(healer, patient, null);
+
+    /// <summary>
+    /// Validates a heal. Pass <paramref name="useMedicine"/> to honour the UI's
+    /// mode toggle; null keeps the legacy behaviour (medicine whenever it's in stock).
+    /// </summary>
+    public bool CanHeal(UnitCharacter healer, UnitCharacter patient, bool? useMedicine)
     {
         if (healer == null || patient == null || healer == patient) return false;
         if (!healer.CanBeDispatched) return false;
         if (patient.state != UnitState.Hurt) return false;
 
-        bool hasMedicine = RunResources.Instance != null && RunResources.Instance.Medicine >= 1;
-        int apCost = hasMedicine ? healApCostWithMedicine : healApCostWithoutMedicine;
+        bool wantsMedicine = useMedicine ?? (RunResources.Instance != null && RunResources.Instance.Medicine >= 1);
+        if (wantsMedicine && (RunResources.Instance == null || RunResources.Instance.Medicine < 1)) return false;
+
+        int apCost = wantsMedicine ? healApCostWithMedicine : healApCostWithoutMedicine;
         return healer.currentActionPoints >= healer.GetActualApCost(apCost);
     }
 
-    public BaseWorkResult Heal(UnitCharacter healer, UnitCharacter patient)
+    public BaseWorkResult Heal(UnitCharacter healer, UnitCharacter patient) => Heal(healer, patient, null);
+
+    /// <summary>Heals one patient. <paramref name="useMedicine"/> null = pick automatically.</summary>
+    public BaseWorkResult Heal(UnitCharacter healer, UnitCharacter patient, bool? useMedicine)
     {
         var result = new BaseWorkResult { workType = BaseWorkType.Healing, worker = healer };
 
-        if (!CanHeal(healer, patient))
+        if (!CanHeal(healer, patient, useMedicine))
         {
             result.blocked = true;
-            return result;
+            return Emit(result);
         }
 
-        bool useMedicine = RunResources.Instance.Medicine >= 1;
-        int apCost = useMedicine ? healApCostWithMedicine : healApCostWithoutMedicine;
+        bool useMed = useMedicine ?? (RunResources.Instance.Medicine >= 1);
+        int apCost = useMed ? healApCostWithMedicine : healApCostWithoutMedicine;
 
         healer.TrySpendActionPoints(apCost);
-        if (useMedicine)
+        if (useMed)
         {
             RunResources.Instance.TryConsumeItem(InventoryItemType.Medicine, 1);
         }
@@ -154,8 +181,8 @@ public class BaseWorkController : MonoBehaviour
         patient.state = UnitState.Idle;
 
         result.healedUnit = patient;
-        result.usedMedicine = useMedicine;
-        return result;
+        result.usedMedicine = useMed;
+        return Emit(result);
     }
 
     // --- Workshop ---
@@ -167,7 +194,6 @@ public class BaseWorkController : MonoBehaviour
         if (RunResources.Instance == null || RunResources.Instance.Materials < workshopMaterialsCost) return false;
         return true;
     }
-
     public BaseWorkResult UseWorkshop(UnitCharacter worker) => UseWorkshop(worker, 1);
 
     /// <summary>
@@ -181,7 +207,7 @@ public class BaseWorkController : MonoBehaviour
         if (!worker.CanBeDispatched || RunResources.Instance == null)
         {
             result.blocked = true;
-            return result;
+            return Emit(result);
         }
 
         for (int i = 0; i < desiredRepeats; i++)
@@ -200,6 +226,14 @@ public class BaseWorkController : MonoBehaviour
         {
             result.blocked = true;
         }
+        return Emit(result);
+    }
+
+    /// <summary>Single funnel for the completion event so no exit path forgets to fire it.</summary>
+    private BaseWorkResult Emit(BaseWorkResult result)
+    {
+        RunStats.CountBaseWork(result);
+        OnBaseWorkCompleted?.Invoke(result);
         return result;
     }
 }

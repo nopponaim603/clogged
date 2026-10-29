@@ -1,36 +1,40 @@
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
-/// Send-to-gather UI: click one or two unit cards in the bottom-left roster
-/// (the cards are the selection control now, not the old toggles), click a
-/// cave on the map, then press Dispatch.
+/// Send-to-gather UI: click a cave on the map, pick one or two cards in the
+/// character hand, then press the shared confirm button.
+///
+/// The trip resolves the moment the button is pressed, so nothing here locks the
+/// UI afterwards - the player can immediately pick base work or end the day.
+///
+/// There is no dedicated message surface any more: the cave stats go to the log
+/// when a cave is picked, and anything that would block a dispatch becomes a
+/// centre warning.
 /// </summary>
 public class GatherDispatchPanel : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private Button dispatchButton;
+    [SerializeField] private DispatchActionPanel actionPanel;
     [SerializeField] private UnitRosterView rosterView;
     [SerializeField] private WarningView warningView;
-    [SerializeField] private TMP_Text messageText;
-
-    private bool tripInProgress;
 
     // Trait counts of the sent units at dispatch time, so we can tell who gained a trait afterwards.
     private readonly Dictionary<UnitCharacter, int> traitsBefore = new Dictionary<UnitCharacter, int>();
 
     private void Start()
     {
-        dispatchButton.onClick.AddListener(OnDispatchClicked);
+        if (actionPanel != null) actionPanel.Clicked += OnDispatchClicked;
+        else Debug.LogWarning("[GatherDispatchPanel] DispatchActionPanel is not assigned - the trip cannot be confirmed.");
 
         if (rosterView == null) rosterView = FindAnyObjectByType<UnitRosterView>();
         if (warningView == null) warningView = FindAnyObjectByType<WarningView>();
+
         if (rosterView != null)
         {
             rosterView.OnSelectionChanged += HandleSelectionChanged;
             rosterView.OnSelectionRejected += HandleSelectionRejected;
+            rosterView.SetMode(CharacterHandPanel.SelectionMode.Dispatch);
         }
         else
         {
@@ -46,13 +50,19 @@ public class GatherDispatchPanel : MonoBehaviour
         {
             DayManager.Instance.OnDayStarted += HandleDayStarted;
         }
+        if (SkillFlowController.Instance != null)
+        {
+            SkillFlowController.Instance.StateChanged += HandleSkillStateChanged;
+        }
 
         RefreshAvailability();
-        RefreshMessage();
+        RefreshActionPanel();
     }
 
     private void OnDestroy()
     {
+        if (actionPanel != null) actionPanel.Clicked -= OnDispatchClicked;
+
         if (rosterView != null)
         {
             rosterView.OnSelectionChanged -= HandleSelectionChanged;
@@ -67,17 +77,21 @@ public class GatherDispatchPanel : MonoBehaviour
         {
             DayManager.Instance.OnDayStarted -= HandleDayStarted;
         }
+        if (SkillFlowController.Instance != null)
+        {
+            SkillFlowController.Instance.StateChanged -= HandleSkillStateChanged;
+        }
     }
 
     private void OnDispatchClicked()
     {
-        if (tripInProgress) return;
+        // A pending Cook / Heal / Craft owns the button; this flow stays quiet.
+        if (IsSkillActive()) return;
 
         var map = GatherMapController.Instance;
         if (map == null || map.SelectedNode == null)
         {
-            SetMessage("No cave selected");
-            ShowWarning("Pick a cave on the map first.", WarningKind.Warning);
+            Warn("Pick a cave on the map first.");
             return;
         }
 
@@ -85,173 +99,160 @@ public class GatherDispatchPanel : MonoBehaviour
             ? rosterView.GetSelectedUnits()
             : new List<UnitCharacter>();
 
-        // Validate first so we can show the reason in the UI, and so the
-        // button never gets stuck disabled when ConfirmTrip bails out early.
+        if (selected.Count == 0)
+        {
+            Warn("Pick 1 or 2 character cards first.");
+            return;
+        }
+
+        // Validate first so we can show the reason in the UI.
         if (!GatherDispatchController.Instance.CanDispatch(map.SelectedNode.Data.zone, selected, out string reason))
         {
-            SetMessage(reason);
-            ShowWarning(reason, WarningKind.Warning);
+            Warn(reason);
             return;
         }
 
         traitsBefore.Clear();
         foreach (var unit in selected) traitsBefore[unit] = unit.traits.Count;
 
-        tripInProgress = true;
-        dispatchButton.interactable = false;
-        if (rosterView != null) rosterView.SetSelectionEnabled(false);
-        SetMessage("Traveling...");
+        RunLog.Add(LogKind.Action, $"Sent {JoinNames(selected)} to the {map.SelectedNode.Data.zone} cave.");
+
+        // Resolves synchronously and raises OnTripResolved inside this call.
         map.ConfirmTrip(selected);
     }
 
     private void HandleTripResolved(GatherDispatchResult result)
     {
-        tripInProgress = false;
-        dispatchButton.interactable = true;
-
         if (rosterView != null)
         {
-            rosterView.SetSelectionEnabled(true);
             rosterView.ClearSelection();
             rosterView.RefreshAvailability();
         }
 
-        if (result == null)
-        {
-            SetMessage("Trip cancelled");
-            return;
-        }
+        if (result == null) return;
 
-        string text =
-            $"{result.zone}: {result.tier} (roll {result.rollValue}/{result.successValue})\n" +
-            $"Got {FormatLoot(result.mainLootGranted)}" +
-            (result.bonusLootGranted.HasValue ? $" + bonus {FormatLoot(result.bonusLootGranted)}" : "");
-
-        // One line per unit that was sent.
+        // Loot/tier/hurt lines come from RunLogNarrator; this only adds the
+        // detail the narrator cannot know - who gained a trait on the way home.
         foreach (var unit in result.sentUnits)
         {
-            text += $"\n{unit.unitName}: {StatusWord(unit)} (AP {unit.currentActionPoints}/{unit.maxActionPoints})";
+            if (!traitsBefore.TryGetValue(unit, out int before)) continue;
+            if (unit.traits.Count <= before) continue;
 
-            if (traitsBefore.TryGetValue(unit, out int before) && unit.traits.Count > before)
-            {
-                text += $", gained a {unit.traits[unit.traits.Count - 1].polarity} trait";
-            }
+            var gained = unit.traits[unit.traits.Count - 1];
+            RunLog.Add(LogKind.Success, $"{unit.unitName} gained a {gained.polarity} trait.");
         }
 
-        if (result.unlockedCoreItemMaterial) text += "\nUnlocked the Core Item material!";
-        if (result.obtainedCoreItem) text += "\nGot the Core Item!";
-
-        SetMessage(text);
-        Debug.Log("[GatherDispatchPanel] " + text.Replace("\n", " | "));
+        traitsBefore.Clear();
     }
 
     private void HandleDayStarted(int day)
     {
         RefreshAvailability();
-        RefreshMessage();
     }
 
+    /// <summary>Logs what the cave costs as soon as it is picked, so the numbers are never hidden.</summary>
     private void HandleCaveSelected(MapNodeView node)
     {
-        if (tripInProgress) return;
-        RefreshMessage();
-    }
-
-    private void HandleSelectionChanged()
-    {
-        if (tripInProgress) return;
-        RefreshMessage();
-    }
-
-    /// <summary>
-    /// Builds the MessageUi text from the current cave + unit selection, so
-    /// clicking a cave always tells the player what it costs.
-    /// </summary>
-    private void RefreshMessage()
-    {
-        var map = GatherMapController.Instance;
-        MapNodeView node = map != null ? map.SelectedNode : null;
-        List<UnitCharacter> selected = rosterView != null
-            ? rosterView.GetSelectedUnits()
-            : new List<UnitCharacter>();
-
-        if (node == null && selected.Count == 0)
-        {
-            SetMessage("Pick a cave on the map, then click 1-2 unit cards");
-            return;
-        }
-
-        string text = "";
-
         if (node != null)
         {
-            GatherZone zone = node.Data.zone;
             GatherZoneConfig config = GatherZoneDatabase.Instance != null
-                ? GatherZoneDatabase.Instance.GetConfig(zone)
+                ? GatherZoneDatabase.Instance.GetConfig(node.Data.zone)
                 : null;
 
             if (config != null)
             {
-                text += $"{zone} cave — {config.apCost} AP per unit, base success {config.baseSuccessValue}, loot {config.mainLoot.type} x{config.mainLoot.amount}";
+                RunLog.Add(LogKind.Action,
+                    $"{node.Data.zone} cave — {config.apCost} AP per unit, success value {config.baseSuccessValue}, " +
+                    $"loot {config.mainLoot.type} x{config.mainLoot.amount}.");
             }
             else
             {
-                text += $"{zone} cave";
+                RunLog.Add(LogKind.Action, $"{node.Data.zone} cave selected.");
             }
         }
-        else
-        {
-            text += "No cave selected (click a cave, click again to clear)";
-        }
 
-        if (selected.Count > 0)
-        {
-            var names = new List<string>(selected.Count);
-            foreach (var unit in selected) names.Add(unit.unitName);
-            text += $"\nUnits {selected.Count}/{rosterView.MaxSelection}: {string.Join(", ", names)}";
-        }
-        else
-        {
-            text += "\nUnits: none selected";
-        }
+        RefreshActionPanel();
+    }
 
-        SetMessage(text);
+    private void HandleSelectionChanged()
+    {
+        RefreshActionPanel();
     }
 
     private void HandleSelectionRejected(string reason)
     {
-        ShowWarning(reason, WarningKind.Error);
+        Warn(reason);
     }
 
-    private void ShowWarning(string text, WarningKind kind)
+    private void Warn(string text)
     {
-        if (warningView != null) warningView.Show(text, kind);
+        if (string.IsNullOrEmpty(text)) return;
+
+        if (warningView != null) warningView.Show(text, LogKind.Warning);
+        RunLog.Add(LogKind.Warning, text);
     }
 
-    /// <summary>Greys out cards that can't be sent (Away/Hurt/Missing/Resting/already gathered today).</summary>
+    /// <summary>
+    /// The shared confirm button only exists while the player is mid-decision:
+    /// hidden with nothing picked, enabled once both a cave and units are chosen.
+    /// </summary>
+    private void RefreshActionPanel()
+    {
+        if (actionPanel == null) return;
+
+        // The skill flow is using the button right now - leave it alone.
+        if (IsSkillActive()) return;
+
+        var map = GatherMapController.Instance;
+        bool hasCave = map != null && map.SelectedNode != null;
+        int picked = rosterView != null ? rosterView.SelectedCount : 0;
+
+        // The button exists only while the player is actually choosing a crew.
+        if (picked == 0)
+        {
+            actionPanel.Hide();
+            return;
+        }
+
+        // Grey the button out rather than blocking the card click: a unit that
+        // already gathered today can still do base work.
+        bool ready = false;
+
+        if (hasCave)
+        {
+            var dispatcher = GatherDispatchController.Instance;
+            ready = dispatcher != null &&
+                    dispatcher.CanDispatch(map.SelectedNode.Data.zone, rosterView.GetSelectedUnits(), out _);
+        }
+
+        actionPanel.ShowDispatch(interactable: ready);
+    }
+
+    private static bool IsSkillActive()
+    {
+        return SkillFlowController.Instance != null && SkillFlowController.Instance.IsSkillActive;
+    }
+
+    /// <summary>Hands the confirm button back once a pending skill finishes or is cancelled.</summary>
+    private void HandleSkillStateChanged()
+    {
+        if (IsSkillActive()) return;
+
+        if (rosterView != null) rosterView.SetMode(CharacterHandPanel.SelectionMode.Dispatch);
+        RefreshActionPanel();
+    }
+
+    /// <summary>Greys out cards that can't be picked right now.</summary>
     private void RefreshAvailability()
     {
         if (rosterView != null) rosterView.RefreshAvailability();
+        RefreshActionPanel();
     }
 
-    private static string StatusWord(UnitCharacter unit)
+    private static string JoinNames(List<UnitCharacter> units)
     {
-        switch (unit.state)
-        {
-            case UnitState.Hurt: return "HURT";
-            case UnitState.Missing: return "MISSING";
-            case UnitState.Resting: return "safe, resting";
-            default: return "safe";
-        }
-    }
-
-    private static string FormatLoot(LootAmount? loot)
-    {
-        return loot.HasValue ? $"{loot.Value.type} x{loot.Value.amount}" : "nothing";
-    }
-
-    private void SetMessage(string text)
-    {
-        if (messageText != null) messageText.text = text;
+        var names = new List<string>(units.Count);
+        foreach (var unit in units) names.Add(unit.unitName);
+        return string.Join(" & ", names);
     }
 }

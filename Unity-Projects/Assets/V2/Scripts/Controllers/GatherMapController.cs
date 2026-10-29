@@ -6,8 +6,8 @@ using UnityEngine;
 /// Visual map layer on top of the existing gather system. Nodes are purely
 /// a selection UI - clicking any node just picks its zone, and ConfirmTrip
 /// still goes through GatherDispatchController for all the actual logic
-/// (AP, roll, loot). This class only handles layout, selection, and the
-/// walk-out/walk-back animation.
+/// (AP, roll, loot). This class only handles layout and selection; the trip
+/// resolves inside <see cref="ConfirmTrip"/> with no travel animation.
 /// </summary>
 public class GatherMapController : MonoBehaviour
 {
@@ -16,17 +16,14 @@ public class GatherMapController : MonoBehaviour
     [Header("Map Setup")]
     [SerializeField] private RectTransform mapPanel;
     [SerializeField] private MapNodeView nodeViewPrefab;
-    [Tooltip("The base sits at the centre of MapPanel, plus this offset. Leave at (0,0) for dead centre.")]
+    [Tooltip("Node layout is measured from the centre of MapPanel plus this offset. Leave at (0,0) for dead centre.")]
     [SerializeField] private Vector2 baseOffset = Vector2.zero;
-
-    [Header("Scout Walker")]
-    [SerializeField] private ScoutWalkerView scoutWalker;
 
     private readonly List<MapNodeData> nodeData = new List<MapNodeData>();
     private readonly List<MapNodeView> nodeViews = new List<MapNodeView>();
     private MapNodeView selectedNode;
 
-    /// <summary>Fired once a confirmed trip fully resolves (after the walk-back animation).</summary>
+    /// <summary>Fired as soon as a confirmed trip resolves - the same frame the button was pressed.</summary>
     public event Action<GatherDispatchResult> OnTripResolved;
 
     /// <summary>Fired whenever the selected cave changes (null when nothing is selected).</summary>
@@ -34,10 +31,7 @@ public class GatherMapController : MonoBehaviour
 
     public MapNodeView SelectedNode => selectedNode;
 
-    /// <summary>True from the moment a trip is confirmed until the scout is back at the base. Other panels use this to avoid giving a unit base work while it is walking out.</summary>
-    public bool TripInProgress { get; private set; }
-
-    /// <summary>Where the scout rests and trips start/end, in MapPanel-centre-relative anchored coordinates.</summary>
+    /// <summary>Node layout origin, in MapPanel-centre-relative anchored coordinates.</summary>
     private Vector2 BasePosition => baseOffset;
 
     private void Awake()
@@ -54,11 +48,6 @@ public class GatherMapController : MonoBehaviour
     {
         SetupDefaultNodes();
         SpawnNodeViews();
-
-        if (scoutWalker != null)
-        {
-            scoutWalker.SnapTo(BasePosition);
-        }
 
         MapNodeView.OnAnyNodeClicked += HandleNodeClicked;
     }
@@ -183,7 +172,7 @@ public class GatherMapController : MonoBehaviour
 
     private void HandleNodeClicked(MapNodeView clicked)
     {
-        if (clicked == null || TripInProgress) return;
+        if (clicked == null) return;
 
         // Clicking the already-selected node deselects it, so the cave
         // behaves like a toggle instead of always keeping one selected.
@@ -212,13 +201,13 @@ public class GatherMapController : MonoBehaviour
 
     /// <summary>
     /// Call once the player has picked a node and 1-2 units and hit confirm.
-    /// Walks the scout out, resolves the real dispatch on arrival, walks
-    /// back, then fires OnTripResolved.
+    ///
+    /// The trip resolves immediately: AP is spent, the roll happens, and
+    /// <see cref="OnTripResolved"/> fires inside this call, so the player can
+    /// keep playing (or end the day) in the same frame.
     /// </summary>
     public void ConfirmTrip(List<UnitCharacter> selectedUnits)
     {
-        if (TripInProgress) return;
-
         if (selectedNode == null)
         {
             Debug.LogWarning("[GatherMapController] No node selected.");
@@ -238,23 +227,7 @@ public class GatherMapController : MonoBehaviour
         }
 
         GatherZone zone = selectedNode.Data.zone;
-        Vector2 targetPos = selectedNode.Data.anchoredPosition;
-
-        TripInProgress = true;
-
-        scoutWalker.MoveTo(targetPos, () =>
-        {
-            GatherDispatchResult result = GatherDispatchController.Instance.Dispatch(zone, selectedUnits);
-            ReturnToBase(result);
-        });
-    }
-
-    private void ReturnToBase(GatherDispatchResult result)
-    {
-        scoutWalker.MoveTo(BasePosition, () =>
-        {
-            TripInProgress = false;
-            OnTripResolved?.Invoke(result);
-        });
+        GatherDispatchResult result = GatherDispatchController.Instance.Dispatch(zone, selectedUnits);
+        OnTripResolved?.Invoke(result);
     }
 }

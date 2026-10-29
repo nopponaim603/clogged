@@ -74,4 +74,5 @@ Provider นี้ถูกตั้งค่าไว้แล้วที่ r
 ## Reference
 
 - Endpoint: https://chat.naplab.uk/api/v1/
-- ดูวิธีเชื่อม MCP/AI client อื่นๆ เพิ่มเติมได้ที่ [Unity MCP Setup Guide](unity-mcp-setup.md)
+- การสั่งงาน Unity Editor จาก AI client ทำผ่าน `unity` CLI (unity-pipeline package) — ใช้ `unity command --query <term>` เพื่อดูคำสั่งที่ Editor เปิดให้ใช้
+
