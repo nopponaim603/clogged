@@ -3,6 +3,7 @@
 ## 2026-10-29
 
 - **Unity V2 design documentation refresh** — ปรับ GDD ทั้ง 5 ฉบับและเอกสาร Unity V2 system design, class diagram, Core/Main Menu scene hierarchy และ UI layout snapshot ให้สอดคล้องกับ `Unity-Projects/Assets/V2`: แยกกล่อง/กุญแจที่สุ่มดรอปอิสระ, scene flow และ checkpoint save/restore, ผลจบ run/crystal reveal, ลำดับให้อาหาร และสิ่งที่ยังไม่มี UI/audio; ปรับดัชนีเอกสารให้ชี้ไปยังข้อมูลปัจจุบัน แยก Web Prototype เป็นเอกสารอ้างอิง
+- **UI layout spec diagrams (draw.io)** — `docs/software/07-unity-v2-ui-layout-redesign.md`: แทน ASCII แผนผังโซน §3.1 และ Mermaid flow §6.1–§6.3 (Cook/Craft, Heal, สำรวจ) ด้วยรูป PNG; เก็บต้นฉบับ `.drawio` (+ `.svg`) ใน `docs/software/diagrams/`
 - **Repository layout** — เปลี่ยนชื่อโฟลเดอร์โปรเจกต์ Phaser จาก `prototype_resource_game/` เป็น `src/` และย้าย AI Gateway ไปไว้ที่ `scripts/ai-gateway/`; ปรับคำสั่งใช้งาน, เอกสาร, skill references และ ignore rules ตามตำแหน่งใหม่
 
 ## 2026-10-28

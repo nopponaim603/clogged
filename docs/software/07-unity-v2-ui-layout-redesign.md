@@ -50,28 +50,9 @@
 
 ### 3.1 แผนผังโซน (อ้างอิง Canvas 1920×1080)
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ [CoreItemA][CoreItemB]   [Food][Med][CM][Mat] (กลางบน คงเดิม)  [ DAY 3 / 7 ]│
-│        (บนซ้าย)                                 (บนขวา, คลิกที่ Day = จบวัน) │
-│                                                                          │
-│                    ┌────────────────────────────┐                        │
-│                    │   ⚠ Warning (กลางจอ)        │                       │
-│                    └────────────────────────────┘                        │
-│                                                                          │
-│            ┌───────────────────────────────────────┐                     │
-│            │        MAP AREA (เดิม)                 │   ┌───────────────┐ │
-│            │         แผนที่ + ถ้ำเท่านั้น            │   │ Cook      [2] │ │
-│            └───────────────────────────────────────┘   │ Heal [MED]    │ │
-│  ┌──────────────┐                                      │ Craft     [1] │ │
-│  │ LOG   [–]    │      ┌────┐┌────┐┌────┐┌────┐        │               │ │
-│  │ ...          │      │card││card││card││card│        │  ┌─────────┐  │ │
-│  │ บรรทัดล่าสุด  │      └────┘└────┘└────┘└────┘        │  │DISPATCH │  │ │
-│  └──────────────┘        CharacterCard (มือไพ่)         │  └─────────┘  │ │
-│   (ล่างซ้าย — ห้ามสูง    (ล่างกลาง)                      │    (ขวา/ล่างขวา) │
-│    ล้ำเข้า MAP AREA)                                                     │
-└──────────────────────────────────────────────────────────────────────────┘
-```
+![แผนผังโซน Layout (Canvas 1920×1080)](diagrams/07-ui-layout-zones.png)
+
+*ไฟล์ต้นฉบับ: [07-ui-layout-zones.drawio](diagrams/07-ui-layout-zones.drawio)*
 
 ### 3.3 ตัวเลข layout ที่ล็อกไว้ (อ้างอิง Canvas 1920×1080)
 
@@ -241,41 +222,23 @@
 
 ### 6.1 โหมด Cook / Craft (มี queue)
 
-```mermaid
-flowchart TD
-    A["1. คลิกซ้ายการ์ดตัวละคร<br/>(เลือกได้ 1 ใบ)"] --> B["2. คลิกซ้าย Cook หรือ Craft"]
-    B -->|"คลิกซ้ายซ้ำ"| B2["+1 รอบ<br/>(จน AP หมด / วัตถุดิบหมด)"]
-    B -->|"คลิกขวา"| B3["ล้างจำนวน<br/>(เก็บการ์ดที่เลือกไว้)"]
-    B2 --> E["ปุ่ม Dispatch ปรากฏ<br/>label = Cook / Craft"]
-    B3 --> E
-    E --> F["ยืนยัน → BaseWorkController<br/>→ OnBaseWorkCompleted → Log"]
-```
+![Flow โหมด Cook / Craft](diagrams/07-flow-cook-craft.png)
+
+*ไฟล์ต้นฉบับ: [07-flow-cook-craft.drawio](diagrams/07-flow-cook-craft.drawio)*
 
 ### 6.2 โหมด Heal (ไม่มี queue)
 
-```mermaid
-flowchart TD
-    A["1. คลิกซ้ายการ์ดตัวละคร<br/>(ผู้รักษา 1 ใบ)"] --> B["2. คลิกซ้าย Heal"]
-    B --> C["3. เลือกการ์ดผู้ป่วย 1 ใบ<br/>(เฉพาะ UnitState.Hurt)"]
-    C --> D["ปุ่ม Dispatch ปรากฏ<br/>label = Heal"]
-    B -.->|"ปุ่มเล็กข้าง Heal"| T["สลับโหมด<br/>ยา 1 + AP 1 ↔ AP 2"]
-    D --> F["ยืนยัน → BaseWorkController.Heal<br/>→ OnBaseWorkCompleted → Log"]
-```
+![Flow โหมด Heal](diagrams/07-flow-heal.png)
+
+*ไฟล์ต้นฉบับ: [07-flow-heal.drawio](diagrams/07-flow-heal.drawio)*
 
 > ปุ่ม Heal ไม่มีตัวเลข/ไม่มีการนับรอบ — 1 การยืนยัน = 1 ครั้ง
 
 ### 6.3 โหมดสำรวจ (ไม่มีเวลาเดินทาง)
 
-```mermaid
-flowchart LR
-    A["1. คลิกถ้ำบนแผนที่<br/>(ไม่มีฐานบน map แล้ว)"] --> B["2. เลือกการ์ด 1-2 ใบ<br/>(CanBeSentGathering)"]
-    B --> C["3. ปุ่ม Dispatch"]
-    C --> D["resolve ทันที:<br/>AP ถูกหัก, ทอย, loot, hurt/missing,<br/>Core Item, trait"]
-    D --> E["log ขึ้นทันที<br/>(ผลลัพธ์ + สถานะใหม่)"]
-    D --> F["ตัวละคร → Busy<br/>(HasGatheredToday = true)"]
-    F --> G["ยังทำสกิลได้ถ้ามี AP เหลือ<br/>(CanBeDispatched == Idle)"]
-    G --> H["End Day → รีเซ็ตสถานะ + คืน AP เต็ม"]
-```
+![Flow โหมดสำรวจ](diagrams/07-flow-explore.png)
+
+*ไฟล์ต้นฉบับ: [07-flow-explore.drawio](diagrams/07-flow-explore.drawio)*
 
 **กติกาที่ล็อกแล้ว**
 

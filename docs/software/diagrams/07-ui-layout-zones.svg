@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" font-family="Noto Sans Thai, Noto Sans, sans-serif">
+<rect width="960" height="540" fill="white"/>
+<defs><marker id="a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#333"/></marker></defs>
+<rect x="0" y="0" width="960" height="540" rx="8" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+<text x="480.0" y="274.536" font-size="12" text-anchor="middle" fill="#111"></text>
+<rect x="15.0" y="10.0" width="170.0" height="45.0" rx="8" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.5"/>
+<text x="100.0" y="28.639000000000003" font-size="13" text-anchor="middle" fill="#111">CoreItemA | CoreItemB</text>
+<text x="100.0" y="46.18900000000001" font-size="13" text-anchor="middle" fill="#111">(บนซ้าย)</text>
+<rect x="225.0" y="10.0" width="320.0" height="45.0" rx="8" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<text x="385.0" y="28.639000000000003" font-size="13" text-anchor="middle" fill="#111">Food | Med | CM | Mat</text>
+<text x="385.0" y="46.18900000000001" font-size="13" text-anchor="middle" fill="#111">(กลางบน คงเดิม)</text>
+<rect x="750.0" y="10.0" width="195.0" height="45.0" rx="8" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
+<text x="847.5" y="28.639000000000003" font-size="13" text-anchor="middle" fill="#111">DAY 3 / 7</text>
+<text x="847.5" y="46.18900000000001" font-size="13" text-anchor="middle" fill="#111">(บนขวา, คลิกที่ Day = จบวัน)</text>
+<rect x="330.0" y="95.0" width="300.0" height="50.0" rx="8" fill="#f8cecc" stroke="#b85450" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="480.0" y="125.292" font-size="14" text-anchor="middle" fill="#111">⚠ Warning (กลางจอ)</text>
+<rect x="165.0" y="165.0" width="450.0" height="150.0" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+<text x="390.0" y="235.84199999999998" font-size="14" text-anchor="middle" fill="#111">MAP AREA (เดิม)</text>
+<text x="390.0" y="254.742" font-size="14" text-anchor="middle" fill="#111">แผนที่ + ถ้ำเท่านั้น</text>
+<rect x="12.0" y="378.0" width="350.0" height="150.0" rx="8" fill="#f5f5f5" stroke="#666666" stroke-width="1.5"/>
+<text x="187.0" y="431.589" font-size="13" text-anchor="middle" fill="#111">LogPanel [–]</text>
+<text x="187.0" y="449.139" font-size="13" text-anchor="middle" fill="#111">บรรทัดล่าสุด</text>
+<text x="187.0" y="466.689" font-size="13" text-anchor="middle" fill="#111">(ล่างซ้าย ห้ามสูง</text>
+<text x="187.0" y="484.23900000000003" font-size="13" text-anchor="middle" fill="#111">ล้ำเข้า MAP AREA)</text>
+<rect x="367.5" y="380.0" width="415.0" height="150.0" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="575.0" y="450.84200000000004" font-size="14" text-anchor="middle" fill="#111">CharacterHandPanel</text>
+<text x="575.0" y="469.742" font-size="14" text-anchor="middle" fill="#111">(ล่างกลาง) การ์ดตัวละคร ×4</text>
+<rect x="735.0" y="200.0" width="210.0" height="165.0" rx="8" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<text x="840.0" y="259.442" font-size="14" text-anchor="middle" fill="#111">SkillTriggerPanel</text>
+<text x="840.0" y="278.342" font-size="14" text-anchor="middle" fill="#111">Cook [2]</text>
+<text x="840.0" y="297.242" font-size="14" text-anchor="middle" fill="#111">Heal [MED]</text>
+<text x="840.0" y="316.142" font-size="14" text-anchor="middle" fill="#111">Craft [1]</text>
+<rect x="765.0" y="400.0" width="165.0" height="60.0" rx="8" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.5"/>
+<text x="847.5" y="425.84200000000004" font-size="14" text-anchor="middle" fill="#111">DISPATCH</text>
+<text x="847.5" y="444.742" font-size="14" text-anchor="middle" fill="#111">(ขวา/ล่างขวา)</text>
+</svg>
