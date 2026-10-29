@@ -1,8 +1,8 @@
 # clogged (Unity V2) — Class Diagram
 
-**Version:** 3.0 | **Last Updated:** 2026-10-28
+**Version:** 3.1 | **Last Updated:** 2026-10-29
 > สร้างจากโค้ดจริงใน `Unity-Projects/Assets/V2/Scripts/` — ภาพรวมระบบและ flow ดูที่ [Unity V2 System Design](04-unity-system-design.md)
-> **v3.0:** อัปเดตหลัง UI redesign P0–P5 — `BaseWorkPanel`/`ScoutWalkerView` ถูกลบแล้ว, เพิ่ม `SkillTriggerPanel`/`SkillFlowController`/`CharacterHandPanel`/`DispatchActionPanel`/`LogMessagePanel`/`RunLogNarrator`/`EndDayTrigger`/`RunLog`
+> **v3.1:** เพิ่ม flow ของ `MainMenuController`, `SceneFlow`, save/restore, `RunResultView` และ `CrystalRevealView`; แก้ model Core Item ให้เป็นกล่อง/กุญแจที่ดรอปแยกกัน
 
 ## 1. Layer Overview
 
@@ -10,6 +10,9 @@
 flowchart TD
     subgraph UI["UI/ — แสดงผล + input"]
         SBV[StatusBarView]
+        MMC[MainMenuController]
+        RRV[RunResultView]
+        CRV[CrystalRevealView]
         EDT[EndDayTrigger]
         URV[UnitRosterView] --> UIV[UnitIconView]
         CHP[CharacterHandPanel]
@@ -35,6 +38,11 @@ flowchart TD
         UM[UnitManager]
         RR[RunResources]
         GZD[GatherZoneDatabase]
+        SS["SaveSystem «static»"]
+        SD[SaveData]
+        RB[RunBootstrap]
+        SF["SceneFlow «static»"]
+        RS["RunStats «static»"]
         LOG["RunLog «static»"]
         GR["GatherResolver «static»"]
         TL["TraitLibrary «static»"]
@@ -57,6 +65,18 @@ flowchart TD
     SFC --> URV
     SFC --> DAP
     SFC --> STP
+    MMC --> SF
+    MMC --> SS
+    RRV --> DM
+    RRV --> RS
+    CRV --> RR
+    RB --> SS
+    RB --> SD
+    RB --> DM
+    RB --> RR
+    RB --> UM
+    DM --> SS
+    DM --> RS
     LMP --> LOG
     RLN --> LOG
     RLN --> BWC
@@ -152,6 +172,7 @@ classDiagram
         +GatherZone zone
         +int apCost
         +int baseSuccessValue
+        +int coreItemChancePercent
         +LootAmount mainLoot
         +List~LootAmount~ hardSuccessBonusPool
         +AptitudeTag ZoneTag
@@ -214,15 +235,31 @@ classDiagram
         -int cookingMaterial = 2
         -int medicine = 1
         -int materials = 0
-        -bool hasCoreItemUnlock
-        -bool hasCoreItem
+        -bool coreItemA
+        -bool coreItemB
+        -CoreItemVariant variant
+        +bool HasCoreItemA / HasCoreItemB
+        +bool HasBothCoreItems
+        +CoreItemVariant Variant
         +TryConsumeFood() bool
         +AddFood(amount) void
         +AddItem(type, amount) void
         +TryConsumeItem(type, amount) bool
         +GetItemAmount(type) int
-        +UnlockCoreItemMaterial() void
-        +ObtainCoreItem() void
+        +ObtainCoreItem(kind) void
+        +RestoreState(data) void
+    }
+
+    class CoreItemKind {
+        <<enum>>
+        A
+        B
+    }
+
+    class CoreItemVariant {
+        <<enum>>
+        Orange
+        Yellow
     }
 
     class GatherZoneDatabase {
@@ -263,9 +300,12 @@ classDiagram
         -int deadlineDay = 7
         +RunOutcome Outcome
         +event OnDayStarted(int)
+        +event OnDayEnded(DayEndReport)
         +event OnRunEnded(RunOutcome)
         +EndDay() void
         +CheckImmediateWin() void
+        +PreviewFeeding() DayEndReport
+        +RestoreDay(day, deadline) void
         -FeedEligibleUnitsInOrder() void
         -RefreshEligibleUnitsForNewDay() void
     }
@@ -278,6 +318,61 @@ classDiagram
         LoseAllUnitsLost
     }
 
+    class SaveSystem {
+        <<static>>
+        +string FilePath
+        +HasSave bool
+        +SaveNow() bool
+        +QueueLoad() bool
+        +ConsumePendingLoad() SaveData
+        +Peek() SaveData
+        +Delete() void
+        -Capture() SaveData
+        -Read() SaveData
+    }
+
+    class SaveData {
+        <<Serializable>>
+        +int version
+        +int currentDay / deadlineDay
+        +int food / cookingMaterial / medicine / materials
+        +bool coreItemA / coreItemB
+        +int variant
+        +List~UnitSnapshot~ units
+        +RunStatsSnapshot stats
+    }
+
+    class UnitSnapshot {
+        <<Serializable, nested>>
+        +string unitName
+        +int state / currentActionPoints / starvationStacks
+    }
+
+    class RunBootstrap {
+        <<MonoBehaviour>>
+        +static Apply(data) void
+    }
+
+    class SceneFlow {
+        <<static>>
+        +NewGame() void
+        +Continue() void
+        +TryAgain() void
+        +ToMainMenu() void
+        +Quit() void
+    }
+
+    class RunStats {
+        <<static>>
+        +DaysPlayed / HealsPerformed
+        +CookRounds / FoodCooked
+        +CraftRounds / MedicineCrafted
+        +FoodConsumed / StarvationTicks
+        +GatherTrips / UnitsLost
+        +TakeSnapshot() RunStatsSnapshot
+        +ApplySnapshot(snapshot) void
+    }
+
     class GatherDispatchController {
         <<MonoBehaviour, Singleton>>
         +event OnGatherResolved(GatherDispatchResult)
@@ -286,7 +381,7 @@ classDiagram
         -ApplyOutcome(...) GatherDispatchResult
         -GrantMainLoot / GrantBonusLoot()
         -MaybeAwardTrait / InjureRandomUnit / LoseRandomUnit()
-        -HandleCoreItemProgress(zone, result) void
+        -TryRollCoreItems(config, result) void
     }
 
     class GatherDispatchResult {
@@ -302,8 +397,7 @@ classDiagram
         +bool traitAwarded
         +string traitName
         +UnitCharacter traitRecipient
-        +bool unlockedCoreItemMaterial
-        +bool obtainedCoreItem
+        +List~CoreItemKind~ coreItemsObtained
     }
 
     class GatherMapController {
@@ -375,6 +469,8 @@ classDiagram
     DayManager --> RunOutcome
     DayManager ..> UnitManager
     DayManager ..> RunResources
+    DayManager ..> SaveSystem : checkpoint
+    DayManager ..> RunStats
     GatherDispatchController ..> GatherZoneDatabase
     GatherDispatchController ..> GatherResolver
     GatherDispatchController ..> TraitLibrary
@@ -388,6 +484,20 @@ classDiagram
     BaseWorkResult --> BaseWorkType
     StarvationController ..> RunResources
     StarvationController ..> FeedResult : creates
+    RunResources --> CoreItemKind
+    RunResources --> CoreItemVariant
+    GatherDispatchController ..> CoreItemKind
+    SaveSystem ..> SaveData : reads/writes
+    SaveData "1" *-- "*" UnitSnapshot
+    SaveData --> RunStatsSnapshot
+    StatusBarView ..> CoreItemArt
+    RunBootstrap ..> SaveSystem
+    RunBootstrap ..> SaveData
+    RunBootstrap ..> UnitManager
+    RunBootstrap ..> RunResources
+    RunBootstrap ..> DayManager
+    RunBootstrap ..> RunStats
+    SceneFlow ..> SaveSystem
 ```
 
 ## 4. UI Classes
@@ -398,13 +508,42 @@ classDiagram
         <<MonoBehaviour>>
         -TMP_Text dayText, foodText, cookingMaterialText
         -TMP_Text medicineText, materialsText, coreItemStatusText
-        -Image coreItemIcon, foodIcon, cookingMaterialIcon
-        -Image medicineIcon, materialsIcon
-        -Sprite coreItemSprite, foodSprite, cookingMaterialSprite
-        -Sprite medicineSprite, materialsSprite
-        -bool hideResourceLabelWhenIconSet = true
+        -Image coreItemIcon, coreItemBIcon
+        -CoreItemArt orangePair / yellowPair
         -RefreshIcons() void
         -Update() poll DayManager + RunResources
+    }
+
+    class CoreItemArt {
+        <<Serializable, nested>>
+        +Sprite closedBox / openBox / key / crystal
+    }
+
+    class MainMenuController {
+        <<MonoBehaviour>>
+        -BuildUi() void
+        -RefreshContinue() void
+        -HandleStart() void
+        -HandleContinue() void
+        -HandleOptions() void
+        -HandleExit() void
+        -ApplyPreferenceState() void
+    }
+
+    class RunResultView {
+        <<MonoBehaviour>>
+        -HandleRunEnded(outcome) void
+        -Populate(won, outcome) void
+        -DaysUsed() int
+        -Survivors() int
+    }
+
+    class CrystalRevealView {
+        <<MonoBehaviour, IPointerClickHandler>>
+        +bool IsShowing
+        +Show() void
+        +Hide(instant) void
+        +OnPointerClick(eventData) void
     }
 
     class UnitRosterView {
@@ -571,6 +710,13 @@ classDiagram
         +event OnEntryAdded / OnCleared
     }
 
+    class RunStatsSnapshot {
+        <<Serializable>>
+        +int daysPlayed / heals / cookRounds / foodCooked
+        +int craftRounds / medicineCrafted / foodConsumed
+        +int starvationTicks / gatherTrips / unitsLost
+    }
+
     class DiceRollView {
         <<stub>>
     }
@@ -582,6 +728,12 @@ classDiagram
     CharacterHandPanel ..> UnitRosterView : pick rule
     StatusBarView ..> DayManager
     StatusBarView ..> RunResources
+    MainMenuController ..> SceneFlow
+    MainMenuController ..> SaveSystem : Continue state
+    RunResultView ..> DayManager : OnRunEnded
+    RunResultView ..> RunStats
+    RunResultView ..> SceneFlow : buttons
+    CrystalRevealView ..> RunResources : HasBothCoreItems
     EndDayTrigger ..> DayManager : EndDay()
     GatherDispatchPanel ..> GatherMapController : ConfirmTrip / OnTripResolved
     GatherDispatchPanel ..> GatherDispatchController : CanDispatch

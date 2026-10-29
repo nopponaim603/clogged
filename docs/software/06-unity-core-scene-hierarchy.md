@@ -1,7 +1,7 @@
 # clogged (Unity V2) — Core Scene Hierarchy
 
-**Version:** 3.1 | **Last Updated:** 2026-10-28
-> อธิบาย Hierarchy ทั้งหมดของ `Unity-Projects/Assets/V2/Scenes/Core.unity` — ตรวจจาก `unity command scene.get_hierarchy` ของ scene จริง
+**Version:** 3.2 | **Last Updated:** 2026-10-29
+> อธิบายโครงสร้าง `Unity-Projects/Assets/V2/Scenes/Core.unity` และ `MainMenu.unity`; Unity CLI hierarchy query ไม่พร้อมใช้งานในรอบนี้ จึงอ้างอิง serialized scene, prefab และ scripts
 > ตรรกะของแต่ละระบบดู [Unity V2 System Design](04-unity-system-design.md) · class ดู [Unity V2 Class Diagram](05-unity-class-diagram.md) · layout/UI ล่าสุดดู [UI Layout Redesign](07-unity-v2-ui-layout-redesign.md)
 
 ## 1. ภาพรวม
@@ -12,7 +12,7 @@ Root object 6 ตัว แบ่งเป็น 3 กลุ่ม:
 |---|---|---|
 | `Main Camera` | Rendering | กล้อง URP + AudioListener |
 | `Directional Light` | Rendering | แสง URP (UI ล้วน จึงแทบไม่มีผล) |
-| `GameSystem` | **Logic** | ที่รวม manager/controller ทั้งหมด (ไม่มีภาพ) + `RunLogNarrator` + `SkillFlowController` |
+| `GameSystem` | **Logic** | manager/controller, `RunLogNarrator`, `SkillFlowController`; child `RunBootstrap` restores saves |
 | `Canvas` | **UI** | ทุกอย่างที่ผู้เล่นเห็นและกด |
 | `EventSystem` | Input | ส่ง click ให้ UI (ใช้ **Input System package** — `InputSystemUIInputModule`) |
 | `GatherUI` | Logic ↔ UI | ถือ `GatherDispatchPanel` (UI controller ของการส่งสำรวจ) |
@@ -22,7 +22,7 @@ flowchart TD
     Scene["Core.unity"]
     Scene --> Cam["Main Camera"]
     Scene --> Light["Directional Light"]
-    Scene --> GS["GameSystem<br/>8 managers + narrator + skill flow"]
+    Scene --> GS["GameSystem<br/>systems + narrator + skill flow<br/>child: RunBootstrap"]
     Scene --> Canvas["Canvas<br/>1920x1080 Scale With Screen Size"]
     Scene --> ES["EventSystem"]
     Scene --> GUI["GatherUI<br/>GatherDispatchPanel"]
@@ -34,6 +34,8 @@ flowchart TD
     Canvas --> Act["DispatchActionPanel<br/>ปุ่มยืนยันล่างขวา"]
     Canvas --> Log["LogPanel<br/>ประวัติล่างซ้าย"]
     Canvas --> Skill["SkillTriggerPanel<br/>Cook / Heal / Craft"]
+    Canvas --> Reveal["CrystalReveal<br/>box/key completed reveal"]
+    Canvas --> Result["RunResult<br/>win/lose + statistics"]
 ```
 
 ## 2. Hierarchy เต็ม
@@ -52,7 +54,8 @@ Core.unity
 │   ├── GatherZoneDatabase           **GatherZoneDatabase**
 │   ├── GatherMapController          **GatherMapController**  (RectTransform)
 │   ├── BaseworkController           **BaseWorkController**
-│   └── StavingController            **StarvationController**
+│   ├── StavingController            **StarvationController**
+│   └── RunBootstrap                 **RunBootstrap** (apply checkpoint after singleton Awake)
 ├── Canvas                           Canvas (Screen Space - Overlay), CanvasScaler, GraphicRaycaster
 │   ├── MapPanel                     Image (เต็มจอ — พื้นที่แมป)
 │   │   └── ⟳ Dungeon Prefab ×6      ← spawn โดย GatherMapController (**MapNodeView**) → ลูก ZoneLabel (runtime)
@@ -62,12 +65,12 @@ Core.unity
 │   │   │   ├── Day                  TextMeshProUGUI "DAY / n / 7 (x left)"
 │   │   │   └── BorderTop/Bottom/Left/Right   Image ดำ
 │   │   ├── CoreItemGroup            380×140
-│   │   │   ├── CoreItemStatus       TextMeshProUGUI "Core A +/-" + "Core B +/-", LayoutElement
+│   │   │   ├── CoreItemStatus       TextMeshProUGUI "BOX +/-" + "KEY +/-", LayoutElement
 │   │   │   ├── CoreItemFrame        กรอบดำ 120×120  (ช่อง A)
-│   │   │   │   ├── CoreItemIcon     Image (placeholder สำหรับ sprite จริง)
+│   │   │   │   ├── CoreItemIcon     Image (closed/open box art)
 │   │   │   │   └── BorderTop/Bottom/Left/Right   Image ดำ
 │   │   │   └── CoreItemFrameB       กรอบดำ 120×120  (ช่อง B, เยื้อง +236)
-│   │   │       ├── CoreItemBIcon    Image
+│   │   │       ├── CoreItemBIcon    Image (key art)
 │   │   │       └── BorderTop/Bottom/Left/Right   Image ดำ
 │   │   └── TopBar                   HorizontalLayoutGroup (กลาง)
 │   │       ├── Food                 TextMeshProUGUI
@@ -110,28 +113,33 @@ Core.unity
 │       └── CraftButton              Button, LayoutElement
 │           ├── Label                TextMeshProUGUI "Craft"
 │           └── Count                TextMeshProUGUI
+│   ├── CrystalReveal                **CrystalRevealView** (สร้าง backdrop/crystal/caption เมื่อได้ครบคู่)
+│   └── RunResult                    **RunResultView** (สร้างผลจบ run และสถิติเมื่อ run จบ)
 ├── EventSystem                      EventSystem, InputSystemUIInputModule
 └── GatherUI                         **GatherDispatchPanel**
 ```
+
+`MainMenu.unity` เป็น scene แยก มี `Main Camera`, `Canvas` และ `EventSystem`; `MainMenuController` สร้างเมนูและ Options panel ตอน runtime แทนการ serialize ปุ่มทั้งหมดไว้ใน scene.
 
 ## 3. รายละเอียดแต่ละส่วน
 
 ### 3.1 `GameSystem` — Logic layer
 
-GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไม่มีภาพ ไม่มีลูก:
+Logic components อยู่บน GameSystem และ child objects:
 
 | GameObject | Component | ค่าใน Inspector | อ้างถึง |
 |---|---|---|---|
 | `GameSystem` | `RunLogNarrator` | — | อ่าน `Instance` เองทั้งหมด |
 | `GameSystem` | `SkillFlowController` | — | `rosterView` → `CharacterHandPanel`, `actionPanel` → `DispatchActionPanel`, `skillPanel` → `SkillTriggerPanel`, `warningView` → `Warning` |
+| `RunBootstrap` (child) | `RunBootstrap` | execution order 1000 | restore pending save หลัง singleton Awake |
 | `UnitManager` | `UnitManager` | `units: []` → ใช้ roster default ในโค้ด (Ann, Boon, Cia, Dan) | — |
 | `RunResources` | `RunResources` | food 8, cookingMaterial 2, medicine 1, materials 0, coreItemA/B ปิดทั้งคู่ | — |
 | `DayManager` | `DayManager` | currentDay 1, deadlineDay 7 | — |
 | `GatherDispatchController` | `GatherDispatchController` | (ไม่มี field) | — |
 | `GatherZoneDatabase` | `GatherZoneDatabase` | `zones: []` → ใช้ 3 zone default (Easy 0% · Normal 5% · Hard 15%) | — |
 | `GatherMapController` | `GatherMapController` | baseOffset (0, 10), nodesPerDifficulty 2, margin **L150 / R400 / T300 / B420**, baseClearRadius 180, candidatesPerNode 60 | `mapPanel` → `MapPanel`, `nodeViewPrefab` → `Dungeon Prefab.prefab` |
-| `BaseworkController` | `BaseWorkController` | cook 1 AP / 1 วัตถุดิบ → 1 Food (2 ถ้าถนัด); heal 1 AP+ยา หรือ 2 AP; workshop 1 AP + 2 Materials → 1 Medicine | — |
-| `StavingController` | `StarvationController` | foodCostPerFeed 1 | — (ยังไม่มี UI เรียก) |
+| `BaseworkController` | `BaseWorkController` | cook 1 AP / 1 วัตถุดิบ → 1 Food (2 ถ้าถนัด); heal เลือก 1 AP+ยา หรือ 2 AP; workshop 1 AP + 2 Materials → 1 Medicine | — |
+| `StavingController` | `StarvationController` | foodCostPerFeed 1 | ยังไม่พบ UI เรียก `FeedUnit()` |
 
 > margin ของ `GatherMapController` ถูกขยายใน P5 + §7.11 เพื่อกันไม่ให้ถ้ำไปอยู่ใต้ `LogPanel` / `CharacterHandPanel` / `SkillTriggerPanel` / `DayFrame` (เดิมมีถ้ำที่มองไม่เห็นและกดไม่ได้ · R400/T300 คือค่าที่กัน rect 160×30 ของถ้ำออกจากกรอบ DAY จริง)
 
@@ -141,7 +149,7 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 
 - **Render Mode:** Screen Space - Overlay
 - **CanvasScaler:** Scale With Screen Size, reference **1920×1080**, match 0.5
-- **ลำดับการวาด (หลัง→หน้า):** MapPanel → StatusBar → Warning (backdrop → text) → CharacterHandPanel → DispatchActionPanel → LogPanel → SkillTriggerPanel
+- **ลำดับการวาด (หลัง→หน้า):** MapPanel → StatusBar → Warning (backdrop → text) → CharacterHandPanel → DispatchActionPanel → LogPanel → SkillTriggerPanel; overlay ของ CrystalReveal/RunResult สร้างจาก object บน Canvas และแสดงทับ HUD เมื่อถูกเรียก
 
 ```
 ┌──────────────────── StatusBar (เต็มความกว้าง) ────────────────────┐
@@ -164,7 +172,7 @@ GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไ�
 |---|---|---|---|
 | `MapPanel` | stretch เต็มจอ | พื้นแมป; parent ของถ้ำที่ spawn ตอนเล่นเท่านั้น | `GatherMapController` |
 | `StatusBar/DayFrame` | ขวาบน | `DAY n / 7 (x left)` — **คลิกที่กรอบ = จบวัน** (พื้นผิวคลิกคือ `DayBackground` ที่ `raycastTarget = true`; `Day`/border ปิด raycast) | `StatusBarView` (ข้อความ) + `EndDayTrigger` (คลิก) |
-| `StatusBar/CoreItemGroup` | ซ้ายบน | ช่อง Core Item A/B + ข้อความสถานะ | `StatusBarView` |
+| `StatusBar/CoreItemGroup` | ซ้ายบน | ช่องกล่อง/กุญแจ + ข้อความ BOX/KEY; ภาพกล่องเปลี่ยนเป็นเปิดเมื่อได้ของครบ | `StatusBarView` |
 | `StatusBar/TopBar` | กลางบน | Food / Medicine / CookingMaterial / Materials | `StatusBarView` |
 | `Warning` | กลางจอ 620×120, anchor (0.5,0.5), pivot (1,1), pos (300,60) | กลุ่มแบนเนอร์เตือน — ถือ CanvasGroup ตัวเดียวและ `WarningView` | `WarningView` |
 | `Warning/WarningBackdrop` | stretch เต็ม group (pivot .5, offset 0) | แผงดำโปร่ง 85% หลังข้อความ (ปิด raycast) | — (ลูกของ group) |

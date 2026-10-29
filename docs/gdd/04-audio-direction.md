@@ -1,59 +1,54 @@
 # clogged — Audio Direction
 
-**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+**Version:** 2.1 (Unity V2) | **Last Updated:** 2026-10-29
 > แผนเสียงสำหรับระบบ V2 — แผนเดิมของ Web Prototype (เสียงกลางคืน/monster) ดูที่ [archive](../wiki/archive/gdd-v1-prototype/04-audio-direction.md)
 
-## 1. Current State: NO AUDIO
+## 1. Current State: NO GAMEPLAY AUDIO
 
-`Core.unity` มีแค่ `AudioListener` บน Main Camera — **ไม่มี AudioSource, เพลง หรือ SFX** ใดๆ
+ใน `Core.unity` มี `AudioListener` บน Main Camera แต่ไม่พบ `AudioSource`, music หรือ gameplay SFX ใน V2. Main Menu มี volume slider ที่ปรับ `AudioListener.volume` และบันทึก preference; slider ยังไม่ต่อกับ asset เสียงหรือ AudioMixer.
 
 ---
 
-## 2. Proposed Audio Design
+## 2. Audio Design Proposal
 
 ### 2.1 Music
 
 | ช่วง | อารมณ์ | Tempo | หมายเหตุ |
 |---|---|---|---|
-| วางแผนในฐาน (วันที่ 1–5) | ตึงเครียดแต่มีสมาธิ | ช้า–กลาง | loop ยาว ฟังซ้ำได้ไม่เบื่อ เพราะผู้เล่นคิดได้ไม่จำกัดเวลา |
+| วางแผนในฐาน | ตึงเครียดแต่มีสมาธิ | ช้า–กลาง | loop ที่ไม่รบกวนการตัดสินใจ |
 | วันท้ายๆ (วันที่ 6–7) | กดดันขึ้น | กลาง | เพิ่มชั้นเครื่องดนตรี/จังหวะ บอกว่าเส้นตายใกล้ |
-| Scout เดินทาง | ลุ้น | — | ลด volume เพลงหลัก + เสียงฝีเท้า/ambient ถ้ำ |
-| ชนะ (ได้ Core Item) | โล่งใจ มีความหวัง | กลาง | |
+| ยืนยันออกสำรวจ / ผล D100 | ลุ้น | — | cue สั้น; การ resolve ในเกมเกิดทันที |
+| ได้กล่องและกุญแจครบ | โล่งใจ มีความหวัง | กลาง | ประกอบกับ crystal reveal |
 | แพ้ | เศร้า เงียบ | ช้ามาก | หมดเวลา vs ทีมหายหมด อาจใช้ cue ต่างกัน |
 
-### 2.2 Sound Effects (ผูกกับเหตุการณ์ที่มีอยู่ในระบบแล้ว)
+### 2.2 Sound Effects
 
 | เหตุการณ์ | SFX ที่เสนอ | จุดเชื่อมในโค้ด |
 |---|---|---|
-| คลิกถ้ำ | blip สั้น (ระดับเสียงต่างกันตามระดับถ้ำ) | `MapNodeView.OnAnyNodeClicked` |
-| กด Dispatch / Scout ออกเดิน | ฝีเท้า / whoosh | `GatherMapController.ConfirmTrip` |
-| **ทอยเต๋า** | เสียงเต๋ากลิ้ง → เสียงผล | `GatherDispatchController.OnGatherResolved` |
-| Hard Success | chime สว่าง | `result.tier` |
-| Regular | tone บวกสั้นๆ | |
-| Failure + ยูนิตบาดเจ็บ | กระแทก / ร้องเจ็บ | `result.hurtUnit` |
-| Fumble / **Lost Signal** | สัญญาณวิทยุขาดหาย (static → เงียบ) | `result.missingUnit`, starvation ครบ 3 |
-| ได้ Trait | ดี: sparkle · เสีย: เสียงต่ำ | `result.traitAwarded` |
-| ปลดล็อก / ได้ Core Item | stinger พิเศษ | `result.unlockedCoreItemMaterial` / `obtainedCoreItem` |
-| Cook / Heal / Craft | กระทะ / ผ้าพันแผล / ค้อน | `BaseWorkPanel.OnConfirm` |
-| End Day — กินอาหาร | เสียงกิน (1 ครั้ง/คน) | `DayManager.EndDay` |
-| ยูนิตหิว (+1 stack) | ท้องร้อง | `UnitCharacter.ApplyStarvationStack` |
-| เริ่มวันใหม่ | ระฆัง / นกร้อง | `DayManager.OnDayStarted` |
-| ชนะ / แพ้ | stinger จบเกม | `DayManager.OnRunEnded` |
+| คลิก cave / ปุ่ม UI | blip / click | `MapNodeView`, UI controls |
+| ผลการสำรวจ | cue แยก Hard Success / Regular / Failure / Fumble | `GatherDispatchController.OnGatherResolved(result)` |
+| บาดเจ็บ / Lost Signal | impact / radio static | `result.hurtUnit`, `result.missingUnit`; starvation loss ผ่าน `DayManager.OnDayEnded(report)` |
+| ได้ trait | sparkle / tone ต่ำ | `result.traitAwarded`, polarity |
+| ได้กล่อง / กุญแจ | cue แยกสองชิ้น | `result.coreItemsObtained` |
+| Cook / Heal / Craft | stove / bandage / hammer | `BaseWorkController.OnBaseWorkCompleted(result)` |
+| End Day / ขาดอาหาร | day transition / warning | `DayManager.OnDayEnded(report)` |
+| ชนะ / แพ้ | ending stinger | `DayManager.OnRunEnded(outcome)` |
+| Resume / เริ่ม run | short system cue | menu/scene flow (หากต้องการ) |
 
 ### 2.3 UI Sounds
 - กดปุ่ม: คลิกเบาๆ
-- ปุ่มที่กดไม่ได้ / เหตุผลสีแดงขึ้น: buzz ต่ำ
+- action ที่ทำไม่ได้ / warning ขึ้น: buzz ต่ำ
 - เลือก toggle / dropdown: tick
 
 ---
 
 ## 3. Implementation Notes (Unity)
 
-- ทำ `AudioManager` (singleton แบบเดียวกับระบบอื่นใน V2) ที่ subscribe event ในตาราง §2.2 — **ไม่ต้องแก้ controller เดิม** เพราะ event ส่วนใหญ่มีอยู่แล้ว
-- เหตุการณ์ที่ยังไม่มี event (Base Work, starvation stack, คลิกปุ่ม) เรียกจาก UI โดยตรง หรือเพิ่ม event ใน controller
-- ใช้ **AudioMixer** แยก group `Music` / `SFX` / `UI` เพื่อทำ volume slider ทีหลัง
+- สร้าง audio service ที่ subscribe gameplay events (`OnGatherResolved`, `OnBaseWorkCompleted`, `OnDayEnded`, `OnRunEnded`) แทนการเพิ่ม playback logic ลงใน UI
+- การคลิกปุ่มและ starvation state ยังไม่มี event สำหรับเสียงทุกกรณี; เพิ่ม event ใน owner ของ state เมื่อเริ่ม implement
+- เชื่อม volume preference ใน `MainMenuController` กับ mixer/audio groups เมื่อมี audio assets
 - เพลง: OGG Vorbis, Load Type = Streaming · SFX: WAV, Load Type = Decompress On Load
-- ค่าเริ่มต้น: Music 70%, SFX 100%
+- ค่า volume ปัจจุบันใน Main Menu: 80% สำหรับ `AudioListener`; ค่า Music/SFX แยกกลุ่มยังไม่ได้ implement
 
 ---
 
@@ -61,13 +56,11 @@
 
 | Priority | Audio | เหตุผล |
 |---|---|---|
-| **P0** | เสียงทอยเต๋า + ผล 4 ระดับ | ช่วงเวลาที่ลุ้นที่สุดของเกม |
-| **P0** | Lost Signal | การเสียยูนิตถาวรต้องรู้สึกหนัก |
-| **P1** | UI click / error | feedback พื้นฐาน |
-| **P1** | Core Item stinger + เพลงชนะ/แพ้ | ปิด run ให้มีความหมาย |
-| **P2** | เพลงวางแผน (loop) | บรรยากาศ |
-| **P2** | SFX งานในฐาน, End Day | จังหวะของวัน |
-| **P3** | เพลงวันท้ายๆ แบบเพิ่มชั้น | ความกดดันของเส้นตาย |
+| **P0** | UI click + feedback ผล gather | ให้ action แบบ resolve ทันทีอ่านผลได้ชัด |
+| **P0** | Lost Signal และ Core Item pair | ผลถาวรและจุดเปลี่ยน run ต้องรับรู้ได้ |
+| **P1** | Ending cues | ปิด run ให้แยก win/deadline/crew lost |
+| **P2** | SFX งานในฐานและ End Day | เพิ่มน้ำหนักให้วงจร resource |
+| **P3** | เพลงวางแผนและวันท้ายๆ | เสริมบรรยากาศโดยไม่รบกวนการวางแผน |
 
 ---
 
@@ -83,3 +76,4 @@
 ## Related Documents
 - [Game Concept](00-concept.md)
 - [Core Mechanics](01-mechanics.md)
+- [Unity V2 System Design](../software/04-unity-system-design.md)

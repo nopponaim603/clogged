@@ -1,9 +1,17 @@
 # clogged (Unity V2) — UI Layout Redesign Spec
 
-**Version:** 0.23 (Draft) | **Last Updated:** 2026-10-28 | **Status:** ✅ P0–P5 เสร็จครบ · แก้ bug DayFrame click (§7.11) · รวมชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนที่รักษาได้ (§7.13) · ฟอนต์จาก tileset (§7.14) · เปลี่ยน TMP ทั้ง V2 UI (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
+**Version:** 0.24 | **Last Updated:** 2026-10-29 | **Status:** P0–P5 และ UI polish §7.11–§7.23 ลงใน `Assets/V2`; verification 52 checks ตามรายงาน 2026-10-28 (ไม่ได้รันซ้ำในรอบอัปเดตเอกสารนี้)
 **ที่มา:** แบบร่างกระดาษ 3 โซน + คำอธิบายผู้พัฒนา (2026-10-27)
-> เอกสารนี้แปลงแบบร่างเป็นสเปกที่ลงมือได้ — §7.5–§7.9 คือสถานะที่ลงมือจริงแล้ว
+> เอกสารนี้เก็บทั้งที่มาของ layout, implementation decisions และผลตรวจจากงาน UI; สถานะที่อ้างในเอกสารยืนยันจากไฟล์ใน `Assets/V2` และรายงานทดสอบตามวันที่กำกับ
 > ประกอบ: [Unity V2 System Design](04-unity-system-design.md) · [Core Scene Hierarchy](06-unity-core-scene-hierarchy.md) · [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md) · [GDD Mechanics](../gdd/01-mechanics.md)
+
+## Implementation Snapshot (2026-10-29)
+
+- `Core.unity` ใช้ hand ของการ์ดยูนิต, `SkillTriggerPanel`, `DispatchActionPanel`, `LogPanel`, `Warning`, DayFrame เป็น End Day และ Core Item art สองช่อง
+- ผล run มี `RunResultView`; การได้กล่อง/กุญแจครบมี `CrystalRevealView`
+- `MainMenu.unity` มี Start / Continue / Options / Exit; checkpoint save/restore อยู่ใน `SaveSystem` / `RunBootstrap`
+- กล่องและกุญแจดรอปแยกกันจาก Hard Success; ไม่ต้องปลดล็อกหรือทำตามลำดับ
+- ข้อความเก่าใน phase history และ acceptance criteria ที่ยังเป็น checkbox ให้ถือเป็นประวัติของ spec; สถานะการทำงานให้อ้างอิง implementation snapshot และวันที่ผลทดสอบ
 
 ---
 
@@ -34,7 +42,7 @@
 - ระบบทอยเต๋า `DiceRollView` (ยกเว้นข้อความที่ส่งเข้า log)
 - ตรรกะ `GatherResolver`, `GatherDispatchController`, `GatherZoneDatabase`
 - ภาพศิลป์/เสียง (ใช้ placeholder ไปก่อน)
-- หน้าจอจบเกม `RunEndPanel` (มีอยู่ใน [US-V2-UI-01](../agile/user-stories/US-V2-UI-01.md) แล้ว — สเปกนี้แค่ผูก event)
+- เสียงและการสร้าง audio assets
 
 ---
 
@@ -1046,7 +1054,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 33. [ ] **ช่อง Core Item ใช้สไปรต์จริงตามคู่สีของ run** — กล่องส้ม↔กุญแจส้ม, กล่องเหลือง↔กุญแจเทา; ได้ครบทั้งคู่เมื่อไรช่องกล่อง**ยังเป็นกล่อง**แต่เปลี่ยนเป็นฝาเปิด (`_bar`) และกุญแจที่ได้เปิดกล่องได้เสมอ
 34. [ ] **คริสตัลเด้งเป็น popup กลางจอ** เมื่อเปิดกล่องได้ — แสดงคริสตัลของคู่สีนั้น ไม่โผล่ใน HUD, ไม่เด้งซ้ำเมื่อโหลดซีนตอนชนะแล้ว, และคลิกที่ไหนก็ปิดได้
 
-> **สถานะ AC (2026-10-28):** ข้อ 1–34 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 52 ข้อ** (§7.12–§7.13, §7.15–§7.21) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15) · pip และ Core Item ตรวจด้วยภาพหน้าจอ (§7.19–§7.21)
+> **สถานะ AC (รายงาน 2026-10-28):** ข้อ 1–34 ผ่านการตรวจด้วยสคริปต์ใน play mode — ชุดรวม `AgentScripts/TestUiRedesign.cs` รันครั้งเดียว **ALL PASS 52 ข้อ** (§7.12–§7.13, §7.15–§7.21) · ฟอนต์ตรวจด้วย preview render และภาพหน้าจอ (§7.14–§7.15) · pip และ Core Item ตรวจด้วยภาพหน้าจอ (§7.19–§7.21). ไม่ได้รันผลนี้ซ้ำในอัปเดตเอกสารวันที่ 2026-10-29
 
 ---
 

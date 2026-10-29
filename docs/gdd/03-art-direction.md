@@ -1,19 +1,21 @@
 # clogged — Art Direction & Visual Style
 
-**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
-> อธิบายสภาพภาพปัจจุบันของ `V2/Scenes/Core.unity` (placeholder) และทิศทางที่วางไว้ — สไตล์ของ Web Prototype ดูที่ [archive](../wiki/archive/gdd-v1-prototype/03-art-direction.md)
+**Version:** 2.1 (Unity V2) | **Last Updated:** 2026-10-29
+> อธิบายสภาพภาพปัจจุบันของ `Unity-Projects/Assets/V2/` และแยกงานต่อยอดออกจากของที่มีแล้ว — สไตล์ของ Web Prototype ดูที่ [archive](../wiki/archive/gdd-v1-prototype/03-art-direction.md)
 
-## 1. Current State: PROTOTYPE (placeholder)
+## 1. Current State
 
 | ส่วน | สภาพปัจจุบัน |
 |---|---|
-| ระบบภาพ | Unity UGUI ล้วน บน Canvas (Screen Space - Overlay) — ไม่มี world sprite / tilemap ใน scene |
-| แมป | `MapPanel` เป็น Image สีพื้นเต็มจอ ไม่มีภาพพื้นหลัง |
-| ถ้ำ | `Dungeon Prefab` — ไอคอนจาก tileset 16 px ย้อมสีตามระดับ + กรอบ `SelectedHighlight` เมื่อถูกเลือก |
-| Scout / การ์ดยูนิต | `ScoutIcon.prefab` — ไอคอนจาก tileset + ข้อความชื่อ/สถานะ |
-| Tileset | `Assets/Day/Sprites/tilemap_packed*.png` (pixel art 16 px สไตล์ Kenney, ยืมจากระบบ Day เดิม) |
-| ปุ่ม / dropdown / toggle | UI default ของ Unity (TMP Dropdown, Toggle ใช้ `Text` แบบ legacy) |
-| Animation | มีแค่ Scout เลื่อนตำแหน่งแบบ linear 0.6 วินาที ไม่มี animation ทอยเต๋า |
+| Presentation | Unity UGUI บน Canvas แบบ Screen Space - Overlay; map, hand, log, controls และ HUD อยู่ใน `Core.unity` |
+| Main menu | `MainMenu.unity`; `MainMenuController` สร้าง Start, Continue, Options และ Exit runtime |
+| Map / cave | พื้นที่แผนที่เป็น UI; cave prefab แสดง zone และ AP cost พร้อมสีและ selected highlight |
+| Character hand | `ScoutIcon.prefab` ใช้เป็นการ์ดยูนิต มีชื่อ, state/AP pips, สีกรอบรายตัว และ feedback การเลือก |
+| Core Item | HUD แสดงกล่อง/กุญแจเป็นภาพคู่สีส้ม/เหลือง; ได้ครบแล้วแสดงกล่องเปิดและ crystal reveal overlay |
+| Icons | `Assets/V2/Sprites/Icons/` มี AP pips, Core Item art และชุด candidate icons สำหรับ HUD/skills; การเชื่อม sprite รายช่องขึ้นกับ scene/Inspector |
+| Typography | มี TMP font asset `Fonts/PixelTileset.asset` จาก tileset; ใช้กับ V2 UI ตามสถานะปัจจุบันของงาน redesign |
+| Feedback | `LogPanel` เก็บประวัติ 16 รายการ, `Warning` ใช้ palette ร่วมกับ log; Run Result แสดงผลและสถิติ |
+| Animation | ไม่มีเดินทางระหว่างฐานกับถ้ำหรือ dice-roll animation; dispatch คำนวณผลทันที มี crystal reveal แบบ fade |
 
 ## 2. Color Language (ใช้ในโค้ดตอนนี้)
 
@@ -29,71 +31,61 @@
 
 | ความหมาย | Hex | ใช้ที่ |
 |---|---|---|
-| ถนัด / ดี | `#5BD65B` | ชื่อยูนิตที่ถนัด Cooking ในรายชื่อผู้ทำงาน |
-| ไม่ถนัด / เตือน / ผิดพลาด | `#E65C5C` | ยูนิตไม่ถนัด, เหตุผลที่กดไม่ได้, Food ไม่พอ, "last day!" |
-| ใช้งานไม่ได้ | `#8A8A8A` | ยูนิตที่ไม่ Ready ในรายชื่อ |
-| บาดเจ็บ | `#FF8080` (tint) | ไอคอนยูนิตที่ Hurt |
+| ความสำเร็จ | `UiPalette.Success` ≈ `#6BD973` | log และ feedback สำเร็จ |
+| ผิดพลาด | `UiPalette.Fail` ≈ `#E86161` | log/ผลล้มเหลว |
+| คำเตือน | `UiPalette.Warning` ≈ `#FFB840` | log และ warning banner |
+| จบวัน | `UiPalette.DayEnd` ≈ `#8CC0FF` | log สรุปวัน |
+| Action / System | `UiPalette.Action` / `System` | log ทั่วไป |
+| สถานะยูนิต | tint/alpha ของการ์ดและกรอบรายตัว | แสดง readiness, selection, Hurt/Missing ตาม `UnitIconView` |
 
-### ความทึบของการ์ดยูนิต
-
-| สถานะ | Alpha |
-|---|---|
-| Ready (Idle) | 100% |
-| Resting / Hurt / Away | 50% |
-| Missing (Lost Signal) | 20% |
+สีของ log และ warning ใช้ตารางเดียวจาก `UiPalette`; cave ยังใช้เขียว/เหลือง/แดง แต่มีชื่อ zone และ AP cost ประกอบ ไม่พึ่งสีอย่างเดียว
 
 ## 3. Typography
 
-- ฟอนต์: **LiberationSans SDF** (ฟอนต์ default ของ TextMeshPro) ทุกข้อความ
-- ⚠️ ฟอนต์นี้ **ไม่มีอักษรไทย** — ถ้าจะทำเกมภาษาไทยต้องเพิ่ม TMP Font Asset ภาษาไทย (เช่น Noto Sans Thai / Sarabun) เป็น fallback
+- ฟอนต์ V2 ที่เพิ่มเข้ามา: **PixelTileset TMP Font Asset** (`Assets/V2/Fonts/PixelTileset.asset`) สร้างจาก pixel tileset; ตรวจ glyph coverage ก่อนสรุปการรองรับภาษา
+- ข้อความ UI และ game copy เป็นภาษาอังกฤษ; การรองรับไทยยังไม่ยืนยันและควรเพิ่ม/ทดสอบ fallback font ก่อนแปลเกม
 - ใช้ rich text `<color=#...>` ของ TMP สำหรับเน้นสีในข้อความ
 
 ## 4. Screen Layout (1920×1080 reference)
 
 ```
 ┌──────────────────────── StatusBar: Day | Food | Cooking Material | Medicine | Materials | Core Item ─┐
-│                                                                        MessageUi (ผลการสำรวจ)        │
+│                                                                    Warning / Crystal reveal          │
 │                                                                                                      │
 │       ● Easy        ● Hard                                                  ┌──────────────────┐     │
-│                                    ◆ ฐาน / Scout                            │  BaseWorkPanel   │     │
-│   ● Normal                  ● Easy                                          │  [Cook][Heal][Craft]   │
-│                 ● Hard            ● Normal                                  │  Worker ▼        │     │
-│                                                                             │  Patient ▼ / − n +│    │
-│                                                                             │  Preview         │     │
-│                                                                             │  [Confirm]       │     │
-│                                                                             └──────────────────┘     │
-│ [Ann][Boon][Cia][Dan]  ← การ์ดยูนิต      ☐Ann ☐Boon ☐Cia ☐Dan  ← เลือกส่งสำรวจ                       │
-│                                               [Dispatch]          [EndDay]                           │
+│                                    ◆ ฐาน / cave markers                   │ Cook / Heal / Craft    │
+│                                                                             │ SkillTriggerPanel      │
+│ [LOG]       [Ann] [Boon] [Cia] [Dan]                 [Dispatch / Confirm]    │                       │
+│             Character Hand                  คลิก DayFrame = End Day          │                       │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-ถ้ำสุ่มตำแหน่งทุก run แต่เว้นขอบขวา 420 px ไว้ให้ BaseWorkPanel และขอบล่าง 260 px ไว้ให้การ์ด/ปุ่ม — รายละเอียดดู [Core Scene Hierarchy](../software/06-unity-core-scene-hierarchy.md#32-canvas--ui-layer)
+ถ้ำ 6 จุดสุ่มตำแหน่งรอบฐานและเว้นพื้นที่ panel โดย `GatherMapController`; รายละเอียด layout ดู [Core Scene Hierarchy](../software/06-unity-core-scene-hierarchy.md#32-canvas--ui-layer) และ [UI Layout Redesign](../software/07-unity-v2-ui-layout-redesign.md)
 
-## 5. Target Visual Direction (ยังไม่ทำ)
+## 5. Target Visual Direction (งานต่อยอด)
 
-1. **Pixel art 16×16** ต่อยอดจาก tileset ที่ใช้อยู่ — ฐาน, ปากถ้ำ 3 แบบตามระดับ, ไอคอนทรัพยากร
-2. **ภาพพื้นหลังแมป** (tilemap หรือภาพวาด) แทนพื้นสีเรียบ
-3. **Portrait ตัวละคร 4 คน** สำหรับการ์ดยูนิต — แสดงสถานะ Hurt / Hungry / Lost Signal ด้วยภาพ ไม่ใช่แค่ข้อความ
-4. **Animation ทอยเต๋า D100** (`DiceRollView`) — แสดงเลขที่ทอยเทียบเส้น Hard Success / Success / Fumble ให้ผู้เล่นเห็นความเสี่ยง
-5. **Scout เดินแบบ sprite sheet** แทนการเลื่อนตำแหน่ง
-6. **หน้าจอจบเกม** Win / Lose
-7. **ไอคอนทรัพยากร** บน StatusBar แทนข้อความล้วน
+1. ทำภาพฉาก/พื้นหลังแมปให้สมบูรณ์กว่าพื้น UI ปัจจุบัน
+2. สร้าง portrait หรือ character art ที่สอดคล้องกับการ์ด Ann, Boon, Cia และ Dan
+3. เพิ่ม animation ทอย D100 (ถ้าต้องการเน้นช่วงเสี่ยง) โดยไม่เปลี่ยนผลคำนวณที่ resolve ทันที
+4. ตรวจและปรับ icon assignments ใน scene ให้ครบ; candidate sprites ใน `Sprites/Icons/` ไม่ได้แปลว่าทุกช่องใช้งานแล้ว
+5. ตรวจ pixel-font glyph, scaling และ contrast ที่ resolution/aspect ratio เป้าหมาย
 
 ## 6. UI Feedback (ปัจจุบัน)
 
 | เหตุการณ์ | Feedback |
 |---|---|
-| เลือกถ้ำ | กรอบ `SelectedHighlight` ขึ้นที่ถ้ำนั้น |
-| เลือกยูนิตเกิน 2 | toggle ที่เพิ่งติ๊กถูกยกเลิกเอง |
-| ส่งสำรวจ | ปุ่ม Dispatch ปิด, ข้อความ "Traveling...", Scout เดินไป-กลับ |
-| ผลการสำรวจ | ข้อความหลายบรรทัด: ระดับผล + เลขทอย/SV, ของที่ได้, สถานะแต่ละคน, trait ที่ได้, Core Item |
-| งานในฐาน | preview ต้นทุน/ผลได้ก่อนกด, เหตุผลสีแดงเมื่อกดไม่ได้, ข้อความผลหลัง Confirm |
-| Food ไม่พอสำหรับคืนนี้ | ข้อความ Food บน StatusBar เป็นสีแดง |
+| เลือกถ้ำ | กรอบ selected highlight; cave แสดง zone/AP cost |
+| เลือกยูนิต/เกินจำนวน | การ์ดแสดง selection; selection ที่ไม่ผ่านเงื่อนไขถูกปฏิเสธและมี warning/log |
+| ส่งสำรวจ | resolve ทันที; log แสดง tier, roll/SV, loot, injury/loss, trait และ Core Item |
+| งานในฐาน | เลือก Cook/Craft queue หรือ Heal mode; preview AP pips และ confirm ผ่านปุ่มร่วม |
+| Food ไม่พอคืนนี้ | HUD แสดงจำนวนที่มีเทียบจำนวนที่ต้องใช้และเน้นเตือน |
+| ได้ Core Item ครบ | กล่องเปิด, crystal reveal fade; คลิกเพื่อปิด |
+| จบ run | Run Result overlay แสดงเหตุผล, art และสถิติ; มีทางเริ่มใหม่/กลับเมนู |
 
 ## 7. Accessibility Notes
 
-- ระดับถ้ำสื่อด้วย **สีอย่างเดียว** (เขียว/เหลือง/แดง) — ผู้เล่นตาบอดสีแดง-เขียวแยก Easy กับ Hard ยาก → ควรเพิ่มรูปทรงหรือตัวอักษร (E/N/H) บนไอคอน
-- ความถนัดในรายชื่อผู้ทำงานใช้สีเขียว/แดงเช่นกัน → ควรเพิ่มสัญลักษณ์ (★ / ✕)
+- ตรวจ contrast และความชัดของข้อความ/ภาพเมื่อปรับ resolution และ scale
+- ตรวจสถานะการ์ดและโอกาส action ด้วยสัญญาณมากกว่าสีเพียงอย่างเดียวในแต่ละโหมด input
 - ยังไม่มีตัวเลือกขนาดตัวอักษร
 
 ## Related Documents

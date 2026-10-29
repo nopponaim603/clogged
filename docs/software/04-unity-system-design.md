@@ -1,6 +1,6 @@
 # clogged (Unity V2) — System Design
 
-**Version:** 3.0 | **Last Updated:** 2026-10-28
+**Version:** 3.1 | **Last Updated:** 2026-10-29
 > สร้างจากการอ่านโค้ดจริงใน `Unity-Projects/Assets/V2/` (scene `V2/Scenes/Core.unity`) — เป็น **ระบบหลักปัจจุบัน** ของเกมใน Unity
 > เอกสาร [01](01-system-design.md) / [02](02-class-diagram.md) / [03](03-class-design.md) อธิบาย Web Prototype (Phaser) ซึ่งเป็นระยะที่ 1 — เก็บไว้เป็นข้อมูลอ้างอิง
 
@@ -13,7 +13,8 @@
 ```
 Unity-Projects/Assets/V2/
 ├── Scenes/
-│   └── Core.unity              ← scene เดียวของ V2 — ทุกระบบอยู่ในนี้
+│   ├── MainMenu.unity          ← Start / Continue / Options / Exit
+│   └── Core.unity              ← gameplay run, HUD, result/reveal
 ├── Prefabs/
 │   ├── Dungeon Prefab.prefab   ← MapNodeView (จุดถ้ำบนแมป)
 │   ├── ScoutIcon.prefab        ← UnitIconView (ใช้เป็นการ์ดยูนิตในมือ; ไม่มี walker แล้ว)
@@ -22,7 +23,7 @@ Unity-Projects/Assets/V2/
 └── Scripts/
     ├── BaseWorkType.cs          (enum Cooking/Healing/Workshop)
     ├── BaseWorkResult.cs        (ผลของงานในฐาน 1 ครั้ง)
-    ├── CoreItemKind.cs          (enum A/B — Core Item 2 ชิ้น)
+    ├── CoreItemKind.cs          (enum A/B — box/key)
     ├── DiceRollView.cs          (stub ว่าง — สำรองไว้ทำ animation ทอยเต๋า)
     ├── Entities/               ← ข้อมูลล้วน ไม่ใช่ MonoBehaviour
     │   ├── UnitCharacter.cs     (UnitState, AptitudeTag, UnitTrait, UnitCharacter)
@@ -34,14 +35,20 @@ Unity-Projects/Assets/V2/
     │   ├── GatherZoneDatabase.cs(config ของ 3 zone + Core Item chance)
     │   ├── GatherResolver.cs    (static — สูตร success value + ทอย D100)
     │   ├── RunLog.cs            (static — buffer log 16 entry + event)
+    │   ├── RunStats.cs          (สถิติ run และ snapshot)
+    │   ├── SaveData.cs          (ข้อมูล serializable ของ save)
+    │   ├── SaveSystem.cs        (อ่าน/เขียน checkpoint ของ run)
+    │   ├── RunBootstrap.cs      (restore save หลัง scene ตื่น)
+    │   ├── SceneFlow.cs         (New Game / Continue / menu / retry)
     │   └── TraitLibrary.cs      (static — สุ่มชื่อ trait)
     ├── Controllers/            ← กฎของเกม / การกระทำของผู้เล่น
     │   ├── DayManager.cs        (End Day, win/lose)
     │   ├── GatherDispatchController.cs (ส่งสำรวจ + ใช้ผลทอย + ทอย Core Item)
     │   ├── GatherMapController.cs      (วางจุดบนแมป + เลือกถ้ำ; ทริป resolve ทันที)
     │   ├── BaseWorkController.cs       (ทำอาหาร / รักษา / Workshop)
-    │   └── StarvationController.cs     (ปุ่มให้อาหารลด stack ด้วยมือ)
+    │   └── StarvationController.cs     (กฎให้อาหารเพื่อลด stack; ยังไม่มี UI เรียกใช้)
     └── UI/                     ← อ่าน state มาแสดง + ส่ง input ไป Controller
+        ├── MainMenuController.cs, RunResultView.cs, CrystalRevealView.cs
         ├── StatusBarView.cs, EndDayTrigger.cs, WarningView.cs
         ├── UnitRosterView.cs, UnitIconView.cs, CharacterHandPanel.cs
         ├── GatherDispatchPanel.cs, DispatchActionPanel.cs, MapNodeView.cs
@@ -67,12 +74,15 @@ Unity-Projects/Assets/V2/
 
 ### 2.1 Scene ของ V2
 
-V2 มี **scene เดียว** คือ `Core.unity` ไม่มีการโหลด scene (`SceneManager`) ระหว่างเล่น — การเปลี่ยน "ช่วง" ของเกมเกิดขึ้นใน scene เดียวผ่านการคลิกที่ DayFrame (= จบวัน) และ panel ต่างๆ
+V2 ใช้ 2 scenes: `MainMenu.unity` และ `Core.unity`. `SceneFlow` เป็นเจ้าของการเปลี่ยน scene; gameplay ภายใน Core ใช้ state และ overlays แทนการเปลี่ยน scene ทุกวัน
 
 ```mermaid
 flowchart LR
-    Core["Core.unity<br/>(ทั้ง run อยู่ใน scene นี้)"]
-    Core -->|"OnRunEnded (Win / Lose)"| End["ยังไม่มีหน้าจอจบเกม<br/>(ดู §6)"]
+    Menu["MainMenu.unity<br/>Start / Continue / Options / Exit"]
+    Menu -->|"NewGame"| Core["Core.unity<br/>RunBootstrap + gameplay"]
+    Menu -->|"Continue: restore checkpoint"| Core
+    Core -->|"Win / Lose"| Result["RunResultView<br/>New Game / Try Again / Main Menu"]
+    Core -->|"ครบ box + key"| Reveal["CrystalRevealView<br/>dismiss by click"]
 ```
 
 **Hierarchy ของ `Core.unity`** (GameObject → component)
@@ -86,8 +96,12 @@ flowchart LR
 | `GatherDispatchController` | `GatherDispatchController` | ตรรกะส่งสำรวจ |
 | `GatherMapController` | `GatherMapController` | แมป + เลือกถ้ำ (ใช้ `MapPanel`, `Dungeon Prefab`) — ไม่มี walker/เวลาเดินทางแล้ว |
 | `BaseworkController` | `BaseWorkController` | ตรรกะงานในฐาน |
-| `StavingController` | `StarvationController` | ปุ่มให้อาหาร (ยังไม่มี UI ต่อ) |
+| `StavingController` | `StarvationController` | ลด Starvation ด้วย Food (controller มี แต่ยังไม่พบ UI ที่เรียกใช้) |
+| `RunBootstrap` | `RunBootstrap` | restore pending save หลัง singleton ตื่น |
+| `— (static)` | `RunStats` / `SaveSystem` / `SceneFlow` | สถิติ run, checkpoint, scene navigation; เป็น static classes ไม่ได้ติดอยู่บน GameObject |
 | `GameSystem` | `RunLogNarrator`, `SkillFlowController` | แปลง event เป็น log / เจ้าของ flow สกิล |
+| `Canvas/RunResult` | `RunResultView` | ผลจบ run, สรุปสถิติ, New Game/Try Again/Main Menu |
+| `Canvas/CrystalReveal` | `CrystalRevealView` | reveal crystal เมื่อถือ box/key ครบ |
 | `StatusBar` | `StatusBarView` | HUD 3 กลุ่ม: `DayFrame` (ขวา, คลิก = จบวัน ผ่าน `EndDayTrigger`), `CoreItemGroup` 2 ช่อง A/B (ซ้าย), `TopBar` (กลาง) |
 | `CharacterHandPanel` | `CharacterHandPanel` + `UnitRosterView` | มือไพ่ล่างกลาง (`UnitIconView` 195×265) — dispatch เลือกได้ 2, สกิล 1, heal target เฉพาะคน Hurt |
 | `GatherUI` | `GatherDispatchPanel` | ประสานการส่งสำรวจ: เลือกถ้ำ + การ์ด → ปุ่มยืนยัน |
@@ -125,12 +139,13 @@ stateDiagram-v2
 - ใน 1 วัน ผู้เล่นสลับทำ Gather / Base Work ได้ไม่จำกัดลำดับ ตราบที่ยูนิตมี AP
 - ยูนิตหนึ่ง **ส่งสำรวจได้ 1 ครั้งต่อวัน** (`HasGatheredToday`) แต่ **งานในฐานทำซ้ำได้ไม่จำกัด** ทั้งก่อนและหลังออกสำรวจ
 - `deadlineDay = 7` → ผู้เล่นมี 7 วันเต็ม; กด End Day ในวันที่ 7 แล้ววันจะกลายเป็น 8 → แพ้ถ้ายังไม่มี Core Item
+- เมื่อยังเล่นต่อได้หลัง rollover ระบบเขียน checkpoint; Continue โหลดวัน/ทรัพยากร/ยูนิต/สถิติและคู่สี Core Item กลับมา
 
 ### 2.3 Legacy (นอก V2)
 
 โฟลเดอร์ `Assets/Day/` และ `Assets/Night/` เป็นระบบ Unity รุ่นก่อน (ส.ค. 2026): `ShipDay.unity` ↔ `Night.unity` สลับกันด้วย `GameManager.GoToNight()` / `GoToShip()` และฉากป้องกันฐานกลางคืน (`NightGameManager`, `WaveManager`, `Turret`) **V2 ไม่ได้ใช้โค้ดเหล่านี้** — ไม่มีระบบกลางคืนใน V2
 
-> ⚠️ `ProjectSettings/EditorBuildSettings.asset` ยังชี้ไปที่ scene legacy (`Setup` — ไฟล์ไม่มีอยู่แล้ว, `ShipDay`, `Night`, `NPCtest`) และ **ไม่มี `V2/Scenes/Core.unity`** ต้องเพิ่มก่อน build
+`ProjectSettings/EditorBuildSettings.asset` มี `V2/Scenes/MainMenu.unity` และ `V2/Scenes/Core.unity` อยู่ก่อน scenes legacy (`ShipDay`, `Night`, `NPCtest`); scene legacy ไม่ใช่ส่วนหนึ่งของ flow V2
 
 ## 3. Subsystem Breakdown
 
@@ -177,7 +192,8 @@ stateDiagram-v2
 | Cooking Material | 2 | Easy, bonus | Cooking (1/รอบ) |
 | Medicine | 1 | Normal, Workshop, bonus | Healing (ถ้ามี) |
 | Materials | 0 | Hard, bonus | Workshop (2/รอบ) |
-| Core Item A / Core Item B | false / false | Hard Success + `coreItemChancePercent` ของโซน | ชนะเมื่อมีครบทั้ง 2 |
+| Core Item A (กล่อง) / B (กุญแจ) | false / false | Hard Success: roll แยกต่อชิ้นที่ยังไม่มี ตาม `coreItemChancePercent` ของโซน | ได้ครบแล้วชนะ; ไม่บังคับลำดับ |
+| CoreItemVariant | Orange / Yellow | สุ่มครั้งเดียวเมื่อเริ่ม run; save คงคู่สีเดิม | เลือก sprite กล่อง/กุญแจ/crystal ให้เข้าคู่ |
 
 ทุกค่า clamp ไม่ให้ติดลบ, `TryConsumeItem` ไม่หักถ้าไม่พอ
 
@@ -214,7 +230,7 @@ stateDiagram-v2
 | งาน | ต้นทุนต่อรอบ | ผลต่อรอบ | หมายเหตุ |
 |---|---|---|---|
 | Cooking | 1 AP + 1 Cooking Material | +1 Food (+2 ถ้ามี aptitude Cooking) | เลือกจำนวนรอบได้, หยุดเองเมื่อ AP/วัตถุดิบหมด |
-| Healing | 1 AP + 1 Medicine **หรือ** 2 AP ถ้าไม่มียา | ผู้ป่วย `Hurt → Idle` | ใช้ยาอัตโนมัติถ้ามี, รักษาตัวเองไม่ได้ |
+| Healing | ผู้เล่นเลือก 1 AP + 1 Medicine หรือ 2 AP โดยไม่ใช้ยา | ผู้ป่วย `Hurt → Idle` | รักษาตัวเองไม่ได้ |
 | Workshop | 1 AP + 2 Materials | +1 Medicine | เลือกจำนวนรอบได้ |
 
 มี helper (`GetMaxCookRounds`, `GetHealPlan`, `GetMaxWorkshopRounds`, …) ให้ UI ใช้แสดง preview โดยไม่ต้องรู้ตัวเลขเอง
@@ -222,14 +238,18 @@ stateDiagram-v2
 ### DayManager — End Day และ win/lose
 ดู sequence ใน §4.3 ยิง `OnDayStarted(day)` เมื่อขึ้นวันใหม่ และ `OnRunEnded(RunOutcome)` เมื่อจบ run (`Win`, `LoseDeadline`, `LoseAllUnitsLost`)
 
-### StarvationController — ให้อาหารลด stack
-ปุ่มที่ใช้ได้ตลอดวัน: 1 Food → −1 starvation stack, ใช้ได้ 1 ครั้ง/ยูนิต/วัน (`HasBeenFedManuallyToday`) แยกจากการกินอัตโนมัติตอน End Day — **อยู่ใน scene แล้วแต่ยังไม่มี UI เรียกใช้**
+### StarvationController — กฎให้อาหารลด stack
+ระบบ controller รองรับ 1 Food → −1 starvation stack, ใช้ได้ 1 ครั้ง/ยูนิต/วัน (`HasBeenFedManuallyToday`) แยกจากการกินอัตโนมัติตอน End Day — ยังไม่พบ UI script ที่เรียก `FeedUnit()` จึงยังไม่มีทางให้ผู้เล่นใช้ความสามารถนี้จาก UI
+
+### Save / Continue
+
+`DayManager` เขียน checkpoint หลัง rollover เมื่อ run ยังดำเนินต่อ; `SaveSystem` เก็บ day, deadline, resources, Core Item flags/variant, unit state/AP/starvation และ `RunStats` ลง `Application.persistentDataPath/clogged-run.json`. `MainMenuController` เปิดใช้ Continue เมื่อมี save; `RunBootstrap` restore หลัง singleton ตื่นแล้ว. เริ่ม run ใหม่และจบ run จะลบ save.
 
 ### UI Layer
 
 | Class | อัปเดตแบบ | หน้าที่ |
 |---|---|---|
-| `StatusBarView` | poll ทุกเฟรม | `DayFrame` (DAY + day/deadline + จำนวนวันเหลือ), `TopBar` (Food/Medicine/CookingMaterial/Materials), `CoreItemGroup` (ข้อความ "Core Item" + สถานะ Locked/Unlocked/Obtained และ tint ไอค่อนในกรอบ); เตือนสีแดงถ้า Food < จำนวนคนที่ต้องกินคืนนี้ |
+| `StatusBarView` | poll ทุกเฟรม | `DayFrame` (วัน/เส้นตาย), `TopBar` (Food/Medicine/CookingMaterial/Materials), `CoreItemGroup` (BOX/KEY และภาพตามคู่สี/สถานะ); เตือนเมื่อ Food < จำนวนคนที่ต้องกินคืนนี้ |
 | `UnitRosterView` + `UnitIconView` | poll ทุกเฟรม | การ์ดยูนิตแบบการ์ด (กรอบสีประจำตัว: แดง/เหลือง/เขียว/น้ำเงิน): ชื่อ, AP, สถานะ, Hungry ×n, จางเมื่อใช้งานไม่ได้ — **การ์ดเป็นตัวเลือกยูนิตด้วยการคลิก** (สูงสุด 2 ใบ, การ์ดที่เลือกได้กรอบหนาขึ้น + ขยายเล็กน้อย) |
 | `GatherDispatchPanel` | event `OnTripResolved`, `OnDayStarted`, `UnitRosterView.OnSelectionChanged`, `GatherMapController.OnSelectionChanged`, `SkillFlowController.StateChanged` | อ่านยูนิตที่เลือกจาก `UnitRosterView`; แสดง/ซ่อน `DispatchActionPanel` ตามการเลือก; ข้อมูลถ้ำที่เลือก + คำเตือน ไปที่ `RunLog`/`WarningView` (ไม่มี `MessageUi` แล้ว); trait ที่ได้จากทริปถูก log เพิ่มเอง |
 | `SkillTriggerPanel` | event จากปุ่ม (คลิกซ้าย/ขวา) | view อย่างเดียว: `SetCookCount` / `SetCraftCount` / `SetArmed` / `SetHealAvailable` / `SetHealMode` — ไม่มี state |
@@ -239,7 +259,7 @@ stateDiagram-v2
 | `LogMessagePanel` | `RunLog.OnEntryAdded` / `OnCleared` | render จาก `RunLog` ด้วย row pool (≤ 16), ใหม่สุดล่าง, auto-scroll, ย่อ/กางพร้อมเปลี่ยนความสูง panel (300 → 64) |
 | `RunLogNarrator` | event ของ `BaseWorkController` / `DayManager` / `GatherDispatchController` | ที่เดียวที่แปลง event เป็นข้อความ log (เลือก `LogKind`) |
 | `EndDayTrigger` | `IPointerClickHandler` | คลิกที่ `DayFrame` = `DayManager.EndDay()` (ไม่มี confirm, ไม่ทำงานซ้ำถ้า run จบ) |
-| `WarningView` | event (เรียกจาก `GatherDispatchPanel` / `SkillFlowController`) | แบนเนอร์เตือนในเกม: คิวข้อความ, ตัวอักษรขาวคงที่, outline (TMP material) เปลี่ยนสีตามระดับ — Warning เหลือง / Error แดง / Info ฟ้า, fade in → hold 2.5s → fade out + แผงหลังดำ (`WarningBackdrop`) |
+| `WarningView` | event (เรียกจาก `GatherDispatchPanel` / `SkillFlowController`) | แบนเนอร์เตือนในเกม: คิวข้อความ, สีตัวอักษรจาก `UiPalette.For(LogKind)` ตารางเดียวกับ log (outline ไม่มีแล้ว), fade in → hold 2.5s → fade out + แผงหลังดำ (`WarningBackdrop`) |
 | `ButtonVisual` | — | เตรียมปุ่มให้สลับระหว่างข้อความกับ sprite icon (`mode` = Label/Icon) |
 | `MapNodeView` | — | วงกลมสีตาม zone + `ZoneLabel` (TMP, สร้างตอน runtime) แสดงชื่อโซน/AP กลางวง, ยิง `OnAnyNodeClicked` (คลิกซ้ำ = ยกเลิกการเลือก) |
 
@@ -366,23 +386,23 @@ sequenceDiagram
 | `BaseWorkController.OnBaseWorkCompleted(result)` | ท้าย Cook/Heal/UseWorkshop (ทุก path) | `RunLogNarrator` |
 | `SkillFlowController.StateChanged` | arm / confirm / cancel | `GatherDispatchPanel` |
 | `RunLog.OnEntryAdded` / `OnCleared` | `RunLog.Add/Clear` | `LogMessagePanel` |
+| `DayManager.OnRunEnded(RunOutcome)` | `DeclareOutcome()` | `RunLogNarrator`, `RunResultView` |
+| `RunResources.HasBothCoreItems` transition | HUD state เปลี่ยน | `CrystalRevealView` |
 | `MapNodeView.OnAnyNodeClicked(view)` (static) | คลิกจุดบนแมป | `GatherMapController` |
 | `GatherMapController.OnSelectionChanged(node)` | เลือก/ยกเลิกถ้ำ (คลิกซ้ำ = ยกเลิก) | `GatherDispatchPanel` (log ต้นทุนถ้ำ) |
 | `UnitRosterView.OnSelectionChanged()` | คลิกเลือก/ยกเลิกการ์ดยูนิต | `GatherDispatchPanel` |
 | `UnitRosterView.OnSelectionRejected(reason)` | คลิกการ์ดที่เลือกไม่ได้ / เกิน 2 คน | `GatherDispatchPanel` (ส่งต่อให้ `WarningView`) |
 
-## 6. Known Gaps / Technical Debt (อัปเดต 2026-10-28)
+## 6. Known Gaps / Technical Debt (อัปเดต 2026-10-29)
 
-- **ไม่มีหน้าจอจบเกม** — `RunLogNarrator` เขียน log ตอนจบแล้ว แต่ยังไม่มี panel สรุปผล/ปุ่มเริ่มใหม่; `EndDayTrigger` แค่ไม่ทำงานต่อ
-- **ปุ่มให้อาหาร (`StarvationController`) ยังไม่มี UI** — ระบบลด starvation stack จึงยังเล่นไม่ได้
+- **UI ให้อาหาร (`StarvationController`) ยังไม่มี control ที่เรียกใช้** — controller ลด stack ได้ แต่ยังไม่พบ UI invocation
 - **ไม่มี `TripInProgress` / เวลาเดินทางแล้ว** — `ConfirmTrip` resolve ในเฟรมเดียว จึงไม่ต้องล็อก UI ระหว่างทริปอีก
 - **สถานะ `Away` เป็นของยุคเก่า** — `Dispatch()` resolve ทันที ยูนิตไม่เคยค้างเป็น `Away` ข้ามเฟรม; เงื่อนไข "ข้าม Away" ใน `DayManager`/`StatusBarView` จึงยังไม่ทำงานจริง
-- **Build Settings ไม่มี `Core.unity`** และยังอ้าง `Setup.unity` ที่ไม่มีไฟล์แล้ว
 - `GatherUI` (เดิมชื่อ `TestDispatch`) เป็นที่อยู่ของ `GatherDispatchPanel` — ชื่อ object ยังเป็น legacy footprint
-- `DiceRollView` เป็น class ว่าง — ยังไม่มี animation ทอยเต๋า ผลแสดงเป็นข้อความใน log
+- `DiceRollView` เป็น stub — ผลทอยแสดงเป็นข้อความใน log โดยไม่มี animation
 - `SkillTriggerPanel` มี `Count` บนปุ่ม Heal ที่ไม่ถูกใช้ (โครงสร้างมาจาก prefab ร่วม) — ลบได้ถ้าต้องการ
 - Aptitude `Speed/Endurance/Gathering/Combat` ยังไม่มีผลต่อกลไกใด
-- ไม่มี save/load — state ทั้งหมดอยู่ใน memory ของ scene เดียว
+- save เป็น checkpoint หลัง End Day เท่านั้น; ไม่มี autosave ระหว่างกิจกรรมในวัน
 
 ## Related Documents
 - [Unity V2 Class Diagram](05-unity-class-diagram.md)

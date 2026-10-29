@@ -1,5 +1,9 @@
 # Documentation Changelog — clogged
 
+## 2026-10-29
+
+- **Unity V2 design documentation refresh** — ปรับ GDD ทั้ง 5 ฉบับและเอกสาร Unity V2 system design, class diagram, Core/Main Menu scene hierarchy และ UI layout snapshot ให้สอดคล้องกับ `Unity-Projects/Assets/V2`: แยกกล่อง/กุญแจที่สุ่มดรอปอิสระ, scene flow และ checkpoint save/restore, ผลจบ run/crystal reveal, ลำดับให้อาหาร และสิ่งที่ยังไม่มี UI/audio; ปรับดัชนีเอกสารให้ชี้ไปยังข้อมูลปัจจุบัน แยก Web Prototype เป็นเอกสารอ้างอิง
+
 ## 2026-10-28
 
 - **v0.23 (คริสตัลเป็น popup กลางจอ — §7.20 ปรับ, §7.21)** — รีวิว: การเอาคริสตัลไปแทนช่องกล่องทำให้ HUD อ่านไม่เป็น inventory (ของที่ถืออยู่หายไปกลายเป็นอย่างอื่น) → ช่องกล่องยังเป็น**กล่อง**แต่เปลี่ยนเป็น **ฝาเปิด** (`coreitem_panel_orange_bar` / `coreitem_panel_yellow_bar`) และย้ายคริสตัลไปเป็น popup กลางจอ · เพิ่ม `Scripts/UI/CrystalRevealView.cs` — สร้าง UI เองในโค้ด (backdrop ทึบ 0.82, คริสตัล `192×192` = 16× ของ 12×12, caption "THE BOX IS OPEN" จากฟอนต์ pixel), เฝ้า edge `HasBothCoreItems` ใน `Update()`, fade ด้วย `Mathf.MoveTowards` ไม่ใช้ coroutine (เทสต์ในเฟรมเดียว/ตอน pause ยังได้ค่าเดิม), `wasOpen` เริ่มจากค่าจริงใน `Awake` กันเด้งซ้ำตอนโหลดซีนที่ชนะแล้ว, คลิกที่ไหนก็ปิด · `CoreItemArt` เพิ่ม field `openBox`, `StatusBarView` ใช้ `_bar` แทนคริสตัล · `TestUiRedesign` เพิ่ม 3 ข้อ และข้อ raycast ข้าม popup ตอนปิด → **ALL PASS 52 ข้อ** · AC ข้อ 33–34
