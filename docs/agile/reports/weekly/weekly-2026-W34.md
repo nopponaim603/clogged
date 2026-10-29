@@ -84,7 +84,7 @@
 - `Assets/Day/Scripts/System/GameManager.cs` — ระบบจัดการเกมและโบนัสจากโหนดนำทาง
 - `Assets/Day/Scenes/ShipDay.unity` — ฉากหลักฝั่งกลางวันที่มี UI ครบครัน
 
-### 2. Phaser Prototype (`prototype_resource_game/src/`)
+### 2. Phaser Prototype (`src/src/`)
 
 - `src/scenes/TravelScene.ts` — ระบบแผนที่ การเดินทาง และ State Persistence
 - `src/scenes/NightScene.ts` — ระบบส่งผ่าน Travel State และจัดการลูปกลางคืน

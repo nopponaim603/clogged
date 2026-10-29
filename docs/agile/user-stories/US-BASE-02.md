@@ -21,7 +21,7 @@
 ---
 
 ## 🛠 Technical Tasks (Git Log Updates)
-- [x] `prototype_resource_game/src/scenes/NightScene.ts` — เพิ่มระบบ Night Defense, Monster Wave Spawning, Turrets & Result Popup
+- [x] `src/src/scenes/NightScene.ts` — เพิ่มระบบ Night Defense, Monster Wave Spawning, Turrets & Result Popup
 - [x] `Unity-Projects/Assets/Night/VS/Enemy/` — เพิ่ม `EnemyManager.cs`, `EnemySpawner.cs`, `EnemyMove&Attack.cs`, `EnemyHealth.cs`
 - [x] `Unity-Projects/Assets/Night/VS/PlayerUnit/` — เพิ่ม `Turret.cs`, `PlayerUnit.cs`, `BaseHealth.cs`, `PlayerHealth.cs`
 

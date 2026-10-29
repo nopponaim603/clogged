@@ -15,7 +15,7 @@
 
 ## 🚀 Key Highlights & Accomplishments (ผลงานหลักที่ทำเสร็จในสัปดาห์นี้)
 
-- 🟢 **Phaser Core Loop Implementation (`prototype_resource_game/`)**:
+- 🟢 **Phaser Core Loop Implementation (`src/`)**:
   - พัฒนาและเชื่อมต่อ `DayScene.ts`, `TravelScene.ts`, `NightScene.ts`, `BootScene.ts`, `MenuScene.ts`, `ResultPopup.ts`, `SpeedControl.ts`, `TimeSystem.ts` เข้าด้วยกันเป็นเกมลูปที่ครบวงจร
   - แก้ไขปัญหา Day Cycle Bug (วันนับข้าม 2 วัน) และปรับปรุงระบบ Clean State Reset เมื่อเริ่มเกมใหม่สำเร็จ ([US-TIME-02](../../user-stories/US-TIME-02.md))
   - พัฒนาระบบ Multi-crew Collaborative Missions คำนวณ Combined Proficiency และเพิ่ม Travel Phase Visuals ([US-MISSION-02](../../user-stories/US-MISSION-02.md))
@@ -35,7 +35,7 @@
 
 ## ⚙️ Code Progress & Technical Updates (รายละเอียดการพัฒนาทางเทคนิค)
 
-### 1. Phaser Prototype (`prototype_resource_game/src/`)
+### 1. Phaser Prototype (`src/src/`)
 - **Files Modified / Created**:
   - `src/main.ts`, `src/config.ts` — ตั้งค่า Scene Registry และ Canvas Container
   - `src/scenes/DayScene.ts` — ปรับปรุง UI dispatch, Multi-crew selection, และ Day reset logic

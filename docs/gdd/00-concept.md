@@ -115,7 +115,7 @@ flowchart LR
 |---|---|---|---|
 | **v2.1 Unity V2** | Turn-based AP + D100 expedition, 4 ยูนิตคงที่, เก็บกล่องและกุญแจใน 7 วัน, เมนูและบันทึกเล่นต่อ | **ปัจจุบัน** | `Unity-Projects/Assets/V2/` |
 | v1.5 Unity Day/Night | Ship Navigator + Day scene (crew mission, real-time clock) ↔ Night scene (tower defense) | เลิกใช้ (legacy) | `Unity-Projects/Assets/Day/`, `Assets/Night/` |
-| v1.0 Web Prototype | Real-time mission chain + night monster attack, รอด 30 วัน | เลิกใช้ (ระยะที่ 1) | `prototype_resource_game/`, [GDD archive](../wiki/archive/gdd-v1-prototype/00-concept.md) |
+| v1.0 Web Prototype | Real-time mission chain + night monster attack, รอด 30 วัน | เลิกใช้ (ระยะที่ 1) | `src/`, [GDD archive](../wiki/archive/gdd-v1-prototype/00-concept.md) |
 | v0.3 Concept | Turn-based Strategy + Tower Defense — Ship → Day → Night + Node Map Roguelike | แนวคิด | [Clogged_GDD_v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
 
 **สิ่งที่เปลี่ยนจาก v1.0 → v2.0**

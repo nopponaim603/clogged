@@ -12,7 +12,7 @@
 รายงานนี้สรุปผลการตรวจสอบอัปเดตความก้าวหน้าของโครงการ **clogged** ณ วันที่ 7 สิงหาคม 2026 ซึ่งอยู่ปลายช่วง **Sprint 01 (Prototype / Vertical Slice)** ตามแผน [Sprint Planning](../02-sprint-planning.md)
 
 ในช่วงที่ผ่านมา ทีมพัฒนาได้ดำเนินกิจกรรมหลัก 3 ด้าน:
-1. **การปรับแต่ง Phaser Prototype (`prototype_resource_game/`)**: แก้ไขบั๊กระบบเวลา (Day Cycle), การจัดสรรทรัพยากร และโครงสร้างภารกิจ (Mission System) ให้การเล่นจบ 1 ด่านมีความเสถียร
+1. **การปรับแต่ง Phaser Prototype (`src/`)**: แก้ไขบั๊กระบบเวลา (Day Cycle), การจัดสรรทรัพยากร และโครงสร้างภารกิจ (Mission System) ให้การเล่นจบ 1 ด่านมีความเสถียร
 2. **การพอร์ตระบบหลักเข้าสู่งาน Unity 2D (`Unity-Projects/`)**: จัดสร้างโครงสร้าง C# Manager หลักทั้งฝั่ง Day Phase และ Night Phase พร้อมนำเข้า Asset (Kenney Desert Shooter Pack)
 3. **การแตกละเอียด User Stories และ Backlog Update (`docs/agile/`)**: สกัด User Stories เพิ่มเติม 6 รายการ (US-TIME-02, US-MISSION-02, US-BASE-02, US-FOOD-02, US-MAP-01, US-EQUIP-01) และอัปเดต [Product Backlog](../01-product-backlog.md) เป็น v1.1
 
@@ -20,7 +20,7 @@
 
 ## 2. System & Code Audit (ผลการตรวจอัปเดตระบบ)
 
-### 2.1 Phaser Prototype (`prototype_resource_game/src/`)
+### 2.1 Phaser Prototype (`src/src/`)
 * **Day Cycle Bug Fix**: แก้ไขตรรกะใน `MainScene.ts` และ `MissionSystem.ts` เพื่อป้องกันปัญหาข้ามวันผิดพลาด และล้างสถานะงานของลูกเรือได้อย่างถูกต้องเมื่อเริ่มวันใหม่
 * **Resource Node Scaling**: ปรับปรุง `ResourceNode.ts` ให้รองรับการปรับระดับความยาก และการกระจายตัวบนโหนด 3 ประเภท (Wood, Food, Relic)
 * **Core Loop Verification**: ยืนยันว่า Core Loop (ส่งลูกเรือ → ทำภารกิจ → เก็บทรัพยากร → จบวันหักอาหาร/สลายทรัพยากร) สามารถเล่นได้จนจบด่านโดยไม่เกิด Crash

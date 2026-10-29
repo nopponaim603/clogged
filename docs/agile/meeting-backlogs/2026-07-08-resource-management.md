@@ -77,6 +77,6 @@
 - พิจารณาว่า node-map แบบ 3 ชั้น + ship phase นี้ จะแทนที่หรือควบรวมกับแนวทาง crew dispatch แบบง่ายที่ prototype ปัจจุบันใช้อยู่หรือไม่
 
 ---
-> ดราฟต์นี้ ("Clogged game draft 2") ขยายรายละเอียดกว่าที่ prototype เฟส 1 ปัจจุบันมี (เช่น Phase ยานแบบ node-map 3 ชั้น, ระบบ Facility, ระบบ Crafting) — ยังไม่ได้นำมาปรับใช้ใน `prototype_resource_game/` ทั้งหมด ดู [System Design](../../software/01-system-design.md) สำหรับสถานะโค้ดจริง และ [Design Pivot](../../wiki/archive/gdd-v1-prototype/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน) สำหรับทิศทางที่เลือกใช้จริง
+> ดราฟต์นี้ ("Clogged game draft 2") ขยายรายละเอียดกว่าที่ prototype เฟส 1 ปัจจุบันมี (เช่น Phase ยานแบบ node-map 3 ชั้น, ระบบ Facility, ระบบ Crafting) — ยังไม่ได้นำมาปรับใช้ใน `src/` ทั้งหมด ดู [System Design](../../software/01-system-design.md) สำหรับสถานะโค้ดจริง และ [Design Pivot](../../wiki/archive/gdd-v1-prototype/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน) สำหรับทิศทางที่เลือกใช้จริง
 
 **Related:** [Meeting Backlogs Hub](../03-meeting-backlogs.md) · [GDD Concept](../../gdd/00-concept.md) · [GDD Mechanics](../../gdd/01-mechanics.md) · [System Design](../../software/01-system-design.md)

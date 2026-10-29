@@ -12,14 +12,14 @@
 * **Auto-fallback Routing:** สลับโมเดลหรือผู้ให้บริการสำรองโดยอัตโนมัติถึง 4 ระดับ (Subscription → API → Cheap → Free) เมื่อเกิดข้อผิดพลาดหรือติด Rate Limit
 * **Token Compression:** ย่อขนาดของโค้ด/Logs/Git Diff ด้วย compression engine 10 แบบ (เช่น RTK, Caveman) ช่วยประหยัด Token ได้ 15–95%
 * **ทางเลือกในการติดตั้ง:** รันผ่าน Docker Container หรือติดตั้งโดยตรงผ่าน Node.js / npm 
-* **รายละเอียดเพิ่มเติม:** ดูได้ที่ [omniroute/README.md](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/omniroute/README.md)
+* **รายละเอียดเพิ่มเติม:** ดูได้ที่ [omniroute/README.md](omniroute/README.md)
 
 ### 2. 9Router (ทางเลือกเพิ่มเติม)
 **9Router** เป็น AI Gateway/Proxy แบบเน้นประสิทธิภาพ:
 * **Rust Token Killer (RTK):** เทคโนโลยีบีบอัด Token 20–40%
 * **Fallback Routing:** สลับ API Key และโมเดลอัตโนมัติ
 * **การติดตั้ง:** รันผ่าน Docker Container เท่านั้น
-* **รายละเอียดเพิ่มเติม:** ดูได้ที่ [9router/README.md](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/9router/README.md)
+* **รายละเอียดเพิ่มเติม:** ดูได้ที่ [9router/README.md](9router/README.md)
 
 *⚠️ **หมายเหตุ:** ทั้งสองตัวใช้พอร์ต `20128` เป็นค่าเริ่มต้นเหมือนกัน จึงไม่สามารถเปิดใช้งานพร้อมกันสองตัวในเวลาเดียวกันได้ ให้เลือกเปิดตัวใดตัวหนึ่งเท่านั้น*
 
@@ -29,9 +29,9 @@
 
 เรามีสคริปต์อัตโนมัติสำหรับตรวจสอบ ติดตั้ง และตั้งค่า ทั้งในแบบ **Docker** และ **Node.js**:
 
-1. ดับเบิ้ลคลิกไฟล์ [setup-docker.cmd](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/setup-docker.cmd) ในโฟลเดอร์นี้ หรือเปิด Terminal แล้วรัน:
+1. ดับเบิ้ลคลิกไฟล์ [setup-docker.cmd](setup-docker.cmd) ในโฟลเดอร์นี้ หรือเปิด Terminal จาก root ของ repo แล้วรัน:
    ```powershell
-   .\ai-gateway\setup-docker.cmd
+   .\scripts\ai-gateway\setup-docker.cmd
    ```
 2. สคริปต์จะแสดงเมนูทางเลือกหลัก:
    * **[1] ใช้งานผ่าน Docker Container:**
@@ -47,13 +47,13 @@
 
 ## 📂 โครงสร้างไฟล์ในโฟลเดอร์นี้
 
-* [README.md](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/README.md) - เอกสารแนะนำภาพรวมนี้
-* [setup-docker.cmd](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/setup-docker.cmd) - สคริปต์เรียกใช้งานด่วนสำหรับ Windows
-* [setup-docker.ps1](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/setup-docker.ps1) - สคริปต์ logic หลักบน PowerShell
-* [omniroute/](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/omniroute) - โฟลเดอร์ตั้งค่าของ OmniRoute (docker-compose, สคริปต์ย่อย)
-* [9router/](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/9router) - โฟลเดอร์ตั้งค่าของ 9Router (docker-compose, สคริปต์ย่อย)
+* [README.md](README.md) - เอกสารแนะนำภาพรวมนี้
+* [setup-docker.cmd](setup-docker.cmd) - สคริปต์เรียกใช้งานด่วนสำหรับ Windows
+* [setup-docker.ps1](setup-docker.ps1) - สคริปต์ logic หลักบน PowerShell
+* [omniroute/](omniroute/) - โฟลเดอร์ตั้งค่าของ OmniRoute (docker-compose, สคริปต์ย่อย)
+* [9router/](9router/) - โฟลเดอร์ตั้งค่าของ 9Router (docker-compose, สคริปต์ย่อย)
 
 ---
 
 ## 🔒 ความปลอดภัยของข้อมูล (Security Note)
-ข้อมูลคีย์และการตั้งค่าที่ถูกสร้างขึ้นในโฟลเดอร์ `omniroute/data` และ `9router/data` จะถูกเก็บไว้ในเครื่องของคุณเท่านั้น และมีการระบุไว้ในไฟล์ [.gitignore](file:///c:/Users/noppon/sources/01_DG/clogged/.gitignore) เรียบร้อยแล้ว เพื่อไม่ให้เผลอทำการ Commit ข้อมูลสำคัญขึ้นสู่ GitHub
+ข้อมูลคีย์และการตั้งค่าที่ถูกสร้างขึ้นในโฟลเดอร์ `omniroute/data` และ `9router/data` จะถูกเก็บไว้ในเครื่องของคุณเท่านั้น และมีการระบุไว้ในไฟล์ [.gitignore](../../.gitignore) เรียบร้อยแล้ว เพื่อไม่ให้เผลอทำการ Commit ข้อมูลสำคัญขึ้นสู่ GitHub

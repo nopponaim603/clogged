@@ -48,7 +48,7 @@
 | 1 | ทำ Travel Scene ให้ครบ | Scene การเดินทางของ crew ไป-กลับ resource node + mission node — ต้องแสดง animation/feedback ไม่ใช่ teleport |
 | 2 | ทำ Night Scene ให้ครบ | Scene การต่อสู้ตอนกลางคืน — monster wave, base defense, สุ่มการตั้งป้อมปืนของ player |
 
-**Output:** `prototype_resource_game/src/scenes/` — TravelScene.ts + NightScene.ts (enhanced)
+**Output:** `src/src/scenes/` — TravelScene.ts + NightScene.ts (enhanced)
 
 ---
 

@@ -15,7 +15,7 @@
 
 ### 📚 Development
 - [Google Drive Resource Index](google-drive-index.md) — รวม link ทุกเอกสาร Google Drive ของโปรเจกต์ (Draft, GDD, Core Loop, Drive Folders)
-- (ว่าง — เพิ่ม setup guide สำหรับ `prototype_resource_game/` ที่นี่ เมื่อ onboarding สมาชิกใหม่)
+- (ว่าง — เพิ่ม setup guide สำหรับ `src/` ที่นี่ เมื่อ onboarding สมาชิกใหม่)
 
 ### 📐 Guidelines
 - [System Test Guideline](guidelines/system-test-guideline.md)

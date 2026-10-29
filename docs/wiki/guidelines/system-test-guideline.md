@@ -5,7 +5,7 @@
 
 ## หลักการ
 - **อ่าน guideline ที่เกี่ยวข้องก่อนเริ่มงาน dev หรือ test ทุกครั้ง**
-- ทดสอบ core loop ใหม่ทุกครั้งที่แก้ `systems/` หรือ `entities/` ใน `prototype_resource_game/src/`
+- ทดสอบ core loop ใหม่ทุกครั้งที่แก้ `systems/` หรือ `entities/` ใน `src/src/`
 - บันทึกผลลง `docs/agile/reports/` แยกตามหมวด (`qa/`, `polish/`, `bugs/`) แล้วอัปเดตลิงก์ใน [Report Backlog](../../agile/05-report-backlog.md)
 
 ## Checklist ขั้นต่ำก่อน merge (เฟส 1)

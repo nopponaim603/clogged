@@ -3,6 +3,7 @@
 ## 2026-10-29
 
 - **Unity V2 design documentation refresh** — ปรับ GDD ทั้ง 5 ฉบับและเอกสาร Unity V2 system design, class diagram, Core/Main Menu scene hierarchy และ UI layout snapshot ให้สอดคล้องกับ `Unity-Projects/Assets/V2`: แยกกล่อง/กุญแจที่สุ่มดรอปอิสระ, scene flow และ checkpoint save/restore, ผลจบ run/crystal reveal, ลำดับให้อาหาร และสิ่งที่ยังไม่มี UI/audio; ปรับดัชนีเอกสารให้ชี้ไปยังข้อมูลปัจจุบัน แยก Web Prototype เป็นเอกสารอ้างอิง
+- **Repository layout** — เปลี่ยนชื่อโฟลเดอร์โปรเจกต์ Phaser จาก `prototype_resource_game/` เป็น `src/` และย้าย AI Gateway ไปไว้ที่ `scripts/ai-gateway/`; ปรับคำสั่งใช้งาน, เอกสาร, skill references และ ignore rules ตามตำแหน่งใหม่
 
 ## 2026-10-28
 
@@ -77,7 +78,7 @@
 ## 2026-08-03
 
 
-- **Game Loop Audit & User Story Breakdown** — Audit `prototype_resource_game` against [gdd/00-concept.md](./gdd/00-concept.md):
+- **Game Loop Audit & User Story Breakdown** — Audit `src` against [gdd/00-concept.md](./gdd/00-concept.md):
   - Created [US-TIME-02.md](./agile/user-stories/US-TIME-02.md) — Day Cycle Bug Fix & Clean State Reset
   - Created [US-MISSION-02.md](./agile/user-stories/US-MISSION-02.md) — Collaborative Mission System
   - Created [US-BASE-02.md](./agile/user-stories/US-BASE-02.md) — Night Phase Base Defense & Escalation
@@ -89,7 +90,7 @@
 ## 2026-07-30
 
 
-- **GDD v1.0 Reverse-Engineered from prototype source code** — Documented all mechanics as implemented in `prototype_resource_game/src/`:
+- **GDD v1.0 Reverse-Engineered from prototype source code** — Documented all mechanics as implemented in `src/src/`:
   - [00-concept.md](./gdd/00-concept.md) — Full game concept with scene flow, systems architecture, mission chaining
   - [01-mechanics.md](./gdd/01-mechanics.md) — Day/Night cycle, crew stats, perks, resources, map gen, time system
   - [02-narrative.md](./gdd/02-narrative.md) — World setting, monster ecology, character backgrounds
@@ -106,7 +107,7 @@
 
 ## 2026-07-18
 - **Refactored MCP Unity server**:
-  - Moved `mcp-unity` out of `ai-gateway/` to the workspace root `mcp-unity/` to make it modular and separate from API routing.
+  - Moved `mcp-unity` out of the AI Gateway folder to the workspace root `mcp-unity/` to make it modular and separate from API routing.
   - Added automation setup scripts (`setup.ps1` and `setup.cmd`) to handle cloning, installing, and building of the external `CoderGamester/mcp-unity` server.
   - Updated configuration files (`kilo.json` and `Unity-Projects/opencode.json`) to use a deterministic static path, resolving the issue with variable commit hashes in the Unity PackageCache.
   - Configured git ignore rules to ignore only the cloned external repository folder (`mcp-unity/cloned/`) while tracking project-specific setup and documentation files.
@@ -114,8 +115,8 @@
 
 ## 2026-07-13
 - **Restructured** entire doc suite to the `docs/gdd/`, `docs/software/`, `docs/agile/`, `docs/wiki/` layout.
-- **Created** `gdd/00-concept.md`, `gdd/01-mechanics.md` — derived from the original `Idea-design.md` draft, reconciled against the actual `prototype_resource_game/` codebase. Flagged an unresolved **design pivot**: the shipped prototype is a crew-dispatch/day-night survival game, not the factory-pipeline concept in the original draft.
-- **Created** `software/01-system-design.md`, `software/02-class-diagram.md` — reverse-engineered from `prototype_resource_game/src/` (entities, systems, scenes, ui).
+- **Created** `gdd/00-concept.md`, `gdd/01-mechanics.md` — derived from the original `Idea-design.md` draft, reconciled against the actual `src/` codebase. Flagged an unresolved **design pivot**: the shipped prototype is a crew-dispatch/day-night survival game, not the factory-pipeline concept in the original draft.
+- **Created** `software/01-system-design.md`, `software/02-class-diagram.md` — reverse-engineered from `src/src/` (entities, systems, scenes, ui).
 - **Created** `agile/01-product-backlog.md` with Must/Should/Nice-have items, status-tagged against what's actually implemented.
 - **Created** `agile/02-sprint-planning.md` (migrated from `plan.md`) and `agile/sprint-backlogs/sprint-01.md` for the Phase 1 / Prototype sprint (2026-07-13 → 2026-08-09).
 - **Migrated** `team.md` → `agile/team.md`; `Meeting Notes/*.md` → `agile/meeting-backlogs/*.md` + new hub `agile/03-meeting-backlogs.md`.

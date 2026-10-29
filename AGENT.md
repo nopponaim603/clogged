@@ -18,18 +18,19 @@ Docs are largely in Thai. Start at [docs/index.md](docs/index.md) for the full d
 
 ```
 clogged/
-├── prototype_resource_game/   ← the actual game code (Phaser 3 + TS + Vite)
+├── src/                      ← Phaser 3 project (TypeScript + Vite; game sources in src/src/)
+├── scripts/ai-gateway/       ← local AI Gateway setup and configuration
 ├── docs/                      ← GDD, software design, agile docs (see docs/index.md)
 ├── .agents/                   ← agent rules/skills/workflows used in this repo
 ├── Packages/, ProjectSettings/← present but not the active engine (see note below)
 ```
 
-Note: `Packages/` and `ProjectSettings/` look like Unity project scaffolding but the game is built in Phaser/TS under `prototype_resource_game/`. Don't assume Unity workflows apply.
+Note: `Packages/` and `ProjectSettings/` look like Unity project scaffolding but the game is built in Phaser/TS under `src/`. Don't assume Unity workflows apply.
 
-## Working in `prototype_resource_game/`
+## Working in `src/`
 
 ```bash
-cd prototype_resource_game
+cd src
 npm install
 npm run dev      # start dev server (also logs via log.js)
 npm run build    # production build
@@ -37,7 +38,7 @@ npm run build    # production build
 
 No test suite exists yet (see Testing below) and no lint/typecheck npm script is defined — `tsc` config lives in `tsconfig.json` if you need to typecheck manually.
 
-### Source structure (`src/`)
+### Source structure (relative to the project root `src/`)
 
 Layering principle — respect it when adding code:
 

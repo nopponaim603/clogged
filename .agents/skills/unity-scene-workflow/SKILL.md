@@ -12,7 +12,7 @@ description: >
 # Unity Scene / Prefab Workflow
 
 Applies to `Unity-Projects/` — the Unity spike, not the Phaser game in
-`prototype_resource_game/` (see [AGENT.md](file:///c:/Users/noppon/source/01-DG/clogged/AGENT.md)).
+`src/` (see [AGENT.md](../../../AGENT.md)).
 
 Drive the Editor through the `unity` CLI run from `Unity-Projects/`. Discover what the running
 Editor exposes with `unity command --query <term>`; commands are namespaced by group

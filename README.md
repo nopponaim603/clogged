@@ -29,9 +29,10 @@
 ## การพัฒนา
 
 - **Engine:** [Phaser 3](https://phaser.io/) (TypeScript + Vite)
-- โค้ด prototype อยู่ที่ [`prototype_resource_game/`](prototype_resource_game/)
+- โค้ด prototype อยู่ที่ [`src/`](src/) (ตัวเกม Phaser อยู่ใน `src/src/`)
   ```bash
-  cd prototype_resource_game
+  cd src
   npm install
   npm run dev
   ```
+- เครื่องมือ AI Gateway อยู่ที่ [`scripts/ai-gateway/`](scripts/ai-gateway/README.md)

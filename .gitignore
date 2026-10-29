@@ -95,10 +95,10 @@ Thumbs.db
 # AI Gateway local data
 # =====================
 # 9Router Data
-ai-gateway/9router/data/
+scripts/ai-gateway/9router/data/
 
 # OmniRoute Data
-ai-gateway/omniroute/data/
+scripts/ai-gateway/omniroute/data/
 
 # Node.js dependencies & logs
 node_modules/

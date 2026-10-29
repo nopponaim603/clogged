@@ -42,7 +42,7 @@ echo - Dashboard: http://localhost:20128/dashboard
 echo - API Endpoint: http://localhost:20128/v1 (OpenAI compatible)
 echo.
 echo To stop OmniRoute in the future, run:
-echo   docker compose down (inside the ai-gateway/omniroute/ directory)
+echo   docker compose down (inside the scripts/ai-gateway/omniroute/ directory)
 echo ========================================================
 echo.
 pause

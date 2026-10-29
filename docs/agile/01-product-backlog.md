@@ -1,7 +1,7 @@
 # clogged — Product Backlog
 
 **Last Updated:** 2026-08-03 | **Version:** 1.1
-> Derived from [GDD — Core Mechanics](../gdd/01-mechanics.md) and cross-checked against the current state of `prototype_resource_game/src/` (Game Loop Audit 2026-08-03)
+> Derived from [GDD — Core Mechanics](../gdd/01-mechanics.md) and cross-checked against the current state of `src/src/` (Game Loop Audit 2026-08-03)
 > **Status legend:** ✅ Implemented in prototype · 🏗️ In-Progress / Task Defined · 🟡 Partial · ⬜ Backlog
 
 ## Unity V2 — Production (2026-10)
@@ -49,4 +49,4 @@
 
 ## Linked GDD Features
 - Derived from: [Core Mechanics](../gdd/01-mechanics.md), [Concept & Design Pivot](../gdd/00-concept.md)
-- Code source of truth for ✅/🏗️/🟡 status: `prototype_resource_game/src/`
+- Code source of truth for ✅/🏗️/🟡 status: `src/src/`

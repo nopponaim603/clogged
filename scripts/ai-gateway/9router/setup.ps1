@@ -40,7 +40,7 @@ Write-Host "- Dashboard: http://localhost:20128"
 Write-Host "- API Endpoint: http://localhost:20128/v1 (OpenAI compatible)"
 Write-Host ""
 Write-Host "To stop 9Router in the future, run:"
-Write-Host "  docker compose down (inside the ai-gateway/9router/ directory)"
+Write-Host "  docker compose down (inside the scripts/ai-gateway/9router/ directory)"
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host ""
 Read-Host "Press Enter to exit..."

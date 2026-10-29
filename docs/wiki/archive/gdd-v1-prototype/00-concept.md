@@ -158,7 +158,7 @@ flowchart TD
 
 | Version | Concept | Source |
 |---------|---------|--------|
-| **v1.0 Prototype** | Resource Management + Action Survival — send crew for missions in day, defend base at night | Source code `prototype_resource_game/` |
+| **v1.0 Prototype** | Resource Management + Action Survival — send crew for missions in day, defend base at night | Source code `src/` |
 | v0.3 Concept | Turn-based Strategy + Tower Defense Hybrid — 3 Phase (Ship → Day → Night) + Node Map Roguelike | [Clogged_GDD_v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
 
 > Prototype นี้เป็นการ test concept ของ v1.0 ที่ได้ระบุไว้ใน Design Evolution — ตรวจสอบว่าการส่ง crew ออกไป mission + ป้องกัน night ให้ความรู้สึก "survival pressure" แบบไหน

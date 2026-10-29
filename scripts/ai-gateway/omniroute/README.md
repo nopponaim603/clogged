@@ -18,9 +18,9 @@
 ---
 
 ## โครงสร้างไฟล์ในโฟลเดอร์นี้
-* [docker-compose.yml](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/omniroute/docker-compose.yml) - ไฟล์กำหนดโครงสร้าง Container ของ OmniRoute
-* [setup.cmd](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/omniroute/setup.cmd) - สคริปต์แบบคลิกเดียวสำหรับตรวจสอบ Docker, เปิดใช้งาน OmniRoute และเข้าสู่ Dashboard อัตโนมัติ (แนะนำสำหรับ Windows CMD)
-* [setup.ps1](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/omniroute/setup.ps1) - สคริปต์ทำงานแบบเดียวกันสำหรับผู้ใช้งาน PowerShell
+* [docker-compose.yml](docker-compose.yml) - ไฟล์กำหนดโครงสร้าง Container ของ OmniRoute
+* [setup.cmd](setup.cmd) - สคริปต์แบบคลิกเดียวสำหรับตรวจสอบ Docker, เปิดใช้งาน OmniRoute และเข้าสู่ Dashboard อัตโนมัติ (แนะนำสำหรับ Windows CMD)
+* [setup.ps1](setup.ps1) - สคริปต์ทำงานแบบเดียวกันสำหรับผู้ใช้งาน PowerShell
 
 ---
 
@@ -30,9 +30,9 @@
 * ต้องติดตั้งและเปิดใช้งาน **Docker Desktop** บนเครื่องคอมพิวเตอร์ของคุณ
 
 ### วิธีใช้งานสคริปต์แบบขั้นตอนเดียว (ง่ายที่สุด)
-1. ดับเบิ้ลคลิกที่ไฟล์ [setup.cmd](file:///c:/Users/noppon/source/01-DG/clogged/ai-gateway/omniroute/setup.cmd) หรือรันคำสั่งด้านล่างนี้ใน Terminal:
+1. ดับเบิ้ลคลิกที่ไฟล์ [setup.cmd](setup.cmd) หรือรันคำสั่งด้านล่างจาก root ของ repo:
    ```powershell
-   .\ai-gateway\omniroute\setup.cmd
+   .\scripts\ai-gateway\omniroute\setup.cmd
    ```
 2. สคริปต์จะเริ่มทำงาน รัน Container และเปิดบราวเซอร์เข้าสู่ Dashboard ของ OmniRoute ที่ [http://localhost:20128/dashboard](http://localhost:20128/dashboard) ให้โดยอัตโนมัติ
 3. ในหน้า Dashboard ให้เชื่อมต่อ Provider ที่ต้องการ (เช่น เลือก free-tier provider ที่ไม่ต้องสมัครสมาชิก) แล้วคัดลอก API Key จาก Dashboard → Endpoints
@@ -54,7 +54,7 @@ omniroute doctor     # ตรวจสอบสถานะ provider และ�
 
 ## คำสั่งควบคุมแบบแมนนวล (Manual Commands)
 
-คุณสามารถควบคุม Container ผ่าน Docker CLI ได้ด้วยการเข้าไปที่โฟลเดอร์นี้ (`cd ai-gateway/omniroute`) และใช้คำสั่งทั่วไป:
+คุณสามารถควบคุม Container ผ่าน Docker CLI ได้ด้วยการเข้าไปที่โฟลเดอร์นี้ (`cd scripts/ai-gateway/omniroute`) และใช้คำสั่งทั่วไป:
 
 ### เปิดใช้งาน
 ```bash
@@ -84,5 +84,5 @@ docker compose ps
 ---
 
 ## การเก็บข้อมูลและการรักษาความปลอดภัย (Data Directory)
-* ข้อมูลการตั้งค่าและ API Keys ของ OmniRoute จะถูกจัดเก็บไว้ในโฟลเดอร์ `ai-gateway/omniroute/data` บนเครื่องของคุณ
-* โฟลเดอร์ `ai-gateway/omniroute/data/` นี้ถูกระบุไว้ในไฟล์ [.gitignore](file:///c:/Users/noppon/source/01-DG/clogged/.gitignore) แล้ว เพื่อป้องกันไม่ให้ข้อมูลสำคัญเหล่านี้หลุดลอยขึ้นไปบน Git Repository หรือ GitHub ของคุณ
+* ข้อมูลการตั้งค่าและ API Keys ของ OmniRoute จะถูกจัดเก็บไว้ในโฟลเดอร์ `scripts/ai-gateway/omniroute/data` บนเครื่องของคุณ
+* โฟลเดอร์ `scripts/ai-gateway/omniroute/data/` นี้ถูกระบุไว้ในไฟล์ [.gitignore](../../../.gitignore) แล้ว เพื่อป้องกันไม่ให้ข้อมูลสำคัญเหล่านี้หลุดลอยขึ้นไปบน Git Repository หรือ GitHub ของคุณ

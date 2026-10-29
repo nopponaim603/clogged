@@ -1,4 +1,4 @@
-# Class Design Document — prototype_resource_game
+# Class Design Document — src
 
 > ℹ️ เอกสารนี้อธิบาย **Web Prototype (Phaser)** ระยะที่ 1 — ระบบหลักปัจจุบันอยู่ใน Unity ดู [Unity V2 System Design](04-unity-system-design.md) / [Unity V2 Class Diagram](05-unity-class-diagram.md)
 

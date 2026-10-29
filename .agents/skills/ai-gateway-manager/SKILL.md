@@ -9,10 +9,10 @@ This skill helps configure, run, debug, and manage local AI Gateways in this wor
 
 ## Available Files & Components
 
-- [setup-docker.cmd](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/setup-docker.cmd) - One-click CMD wrapper for Windows to execute the setup script bypassing Execution Policy.
-- [setup-docker.ps1](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/setup-docker.ps1) - Main PowerShell setup wizard. Checks requirements, installs missing dependencies, and runs gateways.
-- [omniroute/](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/omniroute/) - Contains OmniRoute configuration and docker-compose files.
-- [9router/](file:///c:/Users/noppon/sources/01_DG/clogged/ai-gateway/9router/) - Contains 9Router configuration and docker-compose files.
+- [setup-docker.cmd](../../../scripts/ai-gateway/setup-docker.cmd) - One-click CMD wrapper for Windows to execute the setup script bypassing Execution Policy.
+- [setup-docker.ps1](../../../scripts/ai-gateway/setup-docker.ps1) - Main PowerShell setup wizard. Checks requirements, installs missing dependencies, and runs gateways.
+- [omniroute/](../../../scripts/ai-gateway/omniroute/) - Contains OmniRoute configuration and docker-compose files.
+- [9router/](../../../scripts/ai-gateway/9router/) - Contains 9Router configuration and docker-compose files.
 
 ---
 
@@ -21,7 +21,7 @@ This skill helps configure, run, debug, and manage local AI Gateways in this wor
 ### 1. Automated Setup (Recommended)
 To start the interactive wizard, run the CMD script:
 ```powershell
-.\ai-gateway\setup-docker.cmd
+.\scripts\ai-gateway\setup-docker.cmd
 ```
 The wizard will:
 1. Allow you to choose between **Docker** and **Node.js/npm** deployment.
@@ -35,8 +35,8 @@ The wizard will:
 
 If you prefer to run manual commands:
 1. Navigate to the desired gateway folder:
-   - For OmniRoute: `cd ai-gateway/omniroute`
-   - For 9Router: `cd ai-gateway/9router`
+   - For OmniRoute: `cd scripts/ai-gateway/omniroute`
+   - For 9Router: `cd scripts/ai-gateway/9router`
 2. Spin up the container in detached mode:
    ```bash
    docker compose up -d
@@ -94,4 +94,4 @@ Both services listen on port `20128`. **Do not attempt to run both OmniRoute and
 If you receive standard pipe connection errors, ensure Docker Desktop is launched. The automated `setup-docker.ps1` script will try to automatically start it if located at `C:\Program Files\Docker\Docker\Docker Desktop.exe`.
 
 ### Git Security (Data Directory)
-Local configurations, database files, and provider API keys are saved under `ai-gateway/omniroute/data/` or `ai-gateway/9router/data/`. These folders are gitignored in [.gitignore](file:///c:/Users/noppon/sources/01_DG/clogged/.gitignore) to protect credentials from being committed to Git. Never change this ignore rule.
+Local configurations, database files, and provider API keys are saved under `scripts/ai-gateway/omniroute/data/` or `scripts/ai-gateway/9router/data/`. These folders are gitignored in [.gitignore](../../../.gitignore) to protect credentials from being committed to Git. Never change this ignore rule.

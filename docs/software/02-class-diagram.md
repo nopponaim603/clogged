@@ -3,7 +3,7 @@
 > ℹ️ เอกสารนี้อธิบาย **Web Prototype (Phaser)** ระยะที่ 1 — ระบบหลักปัจจุบันอยู่ใน Unity ดู [Unity V2 System Design](04-unity-system-design.md) / [Unity V2 Class Diagram](05-unity-class-diagram.md)
 
 **Version:** 1.0 | **Last Updated:** 2026-07-13
-> ครอบคลุม `entities/` และ `systems/` เท่านั้น (ไม่รวม Phaser scene/UI classes ซึ่งเป็น glue code) — สร้างจากโค้ดจริงใน `prototype_resource_game/src/`
+> ครอบคลุม `entities/` และ `systems/` เท่านั้น (ไม่รวม Phaser scene/UI classes ซึ่งเป็น glue code) — สร้างจากโค้ดจริงใน `src/src/`
 
 ```mermaid
 classDiagram

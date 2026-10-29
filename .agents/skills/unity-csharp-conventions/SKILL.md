@@ -13,8 +13,8 @@ description: >
 
 Unity-Projects/ is a **quick spike/prototype** used to validate driving the Unity Editor from an
 AI agent through the `unity` CLI (the `com.unity.pipeline` package), not the shipping game — the
-real game is `prototype_resource_game/` (Phaser+TS, see
-[AGENT.md](file:///c:/Users/noppon/source/01-DG/clogged/AGENT.md)). Per the project owner: this
+real game is `src/` (Phaser+TS, see
+[AGENT.md](../../../AGENT.md)). Per the project owner: this
 Unity work will **not** be developed further once the workflow is proven out. Conventions below
 are deliberately lightweight — enough to keep scripts readable and compiling cleanly, not an
 enterprise style guide. Don't introduce infrastructure (asmdef splits, DI frameworks, custom
