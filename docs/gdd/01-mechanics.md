@@ -1,422 +1,260 @@
-# Survival Base — Core Mechanics
+# clogged — Core Mechanics
 
-**Version:** 1.0 (Prototype) | **Last Updated:** 2026-07-30
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+> ตัวเลขทั้งหมดตรงกับค่าในโค้ด/Inspector ของ `Unity-Projects/Assets/V2/` ณ วันที่อัปเดต — ปรับได้ใน Inspector (ดู [§9](#9-tunable-values--ตัวเลขที่ปรับได้)) ถ้าเปลี่ยนค่าใน scene ให้อัปเดตเอกสารนี้ด้วย
+> กลไกของ Web Prototype (mission chain, night defense, 30 วัน) ดูที่ [archive](../wiki/archive/gdd-v1-prototype/01-mechanics.md)
 
-## Core Loop
+## 1. Core Loop
 
 ```
-1. Day Phase — Plan: Select crew, build mission chain (click crew → click targets)
-2. Day Phase — Execute: All missions run in parallel, crew travel → act → return
-3. Night Phase — Defense: Monsters attack base, base HP drops, resources lost
-4. New Day — Map regenerates, consume food, repeat
+1. เริ่มวัน — ทุกคนที่ไม่ได้ Lost Signal ได้ AP เต็ม (3)
+2. วางแผน — สลับทำได้อิสระจนกว่าจะพอใจ:
+     • ส่ง 1–2 ยูนิตออกสำรวจถ้ำ (ยูนิตละ 1 ครั้ง/วัน) → ทอย D100 → รับผล
+     • ให้ยูนิตทำงานในฐาน (ทำอาหาร / รักษา / ทำยา) — ไม่จำกัดครั้ง
+3. End Day — ทุกคนในฐานกินอาหารคนละ 1 → ใครไม่ได้กิน Starvation +1
+4. ตรวจ win/lose → ขึ้นวันใหม่
 ```
 
-Each cycle = 1 day. The game runs for 30 days.
+1 run = สูงสุด 7 วัน ไม่มีเวลาจริงจับ — ผู้เล่นคิดได้นานเท่าที่ต้องการ
 
 ---
 
-## Phase 1: Day Phase — Mission Planning
+## 2. Unit System
 
-### Player Actions
+### 2.1 ยูนิตตั้งต้น
 
-| Action | Input | Result |
-|--------|-------|--------|
-| Select Crew | Click crew text (bottom panel) | Crew highlighted, UI updates to show selection |
-| Add Target to Chain | Click resource node on map | Node added to chain, path line drawn from base → target chain |
-| Remove Last Target | Click node again (deselect) / Undo btn / Ctrl+Z | Last node removed from chain |
-| Reset Chain | Reset btn / R key | All selections cleared |
-| Confirm Chain | Confirm btn | Mission added to queue, crew marked as busy |
-| Execute All | Execute btn (after queue has missions) | All queued missions begin parallel execution |
-| Deselect All | ESC key | Crew + targets deselected |
+ทีมมี 4 คนคงที่ตลอด run (ไม่มีการจ้างเพิ่ม)
 
-### Mission Chain Logic
+| ยูนิต | Aptitude (ถนัด) | Non-aptitude (ไม่ถนัด) | บทบาทที่เหมาะ |
+|---|---|---|---|
+| **Ann** | Speed, **Easy** | **Hard** | หาวัตถุดิบอาหารที่ถ้ำ Easy |
+| **Boon** | Endurance, **Hard** | Cooking | ลุยถ้ำ Hard |
+| **Cia** | Gathering, **Normal**, **Cooking** | Combat | ถ้ำ Normal + คนครัว (อาหาร ×2) |
+| **Dan** | Combat, **Hard** | Cooking | ลุยถ้ำ Hard |
 
-A mission chain is a sequence of targets for a single crew:
+> Tag ที่มีผลในเกมตอนนี้: **Easy / Normal / Hard** (โอกาสสำเร็จของถ้ำระดับนั้น) และ **Cooking** (ผลผลิตทำอาหาร) — `Speed`, `Endurance`, `Gathering`, `Combat` ยังไม่มีผล (open question)
 
-```
-Base → [Target A] → [Target B] → [Target C] → Base
-```
+### 2.2 Action Point (AP)
 
-For each target in the chain, the system calculates:
-- **Travel time** from previous location (base or previous target)
-- **Action time** for the gathering/searching/hunting
-- **Total time** = travel_out + action + travel_back
+- ทุกคนมี **AP สูงสุด 3** ได้คืนเต็มตอนเริ่มวันใหม่ (ไม่สะสมข้ามวัน)
+- **ค่า AP จริง = ค่าพื้นฐาน + จำนวน Starvation stack** ของยูนิตนั้น
+- AP เหลือ 0 → สถานะเป็น **Resting** ทำอะไรไม่ได้จนถึงวันถัดไป
 
-Total chain time = sum of all `(travel × 2 + action)` for each target.
+### 2.3 สถานะยูนิต
 
-**Constraints:**
-- Crew must be idle (not busy)
-- Must be planning phase (not executing, not night)
-- Chain can be any length (1+)
-- Over-time warnings shown but not blocked (crew still executes)
+| สถานะ | แสดงใน UI | ส่งสำรวจ | งานในฐาน | กินอาหารตอน End Day | ออกจากสถานะนี้โดย |
+|---|---|---|---|---|---|
+| **Idle** | Ready | ✅ (ถ้ายังไม่ได้ไปวันนี้) | ✅ | ✅ | — |
+| **Resting** | Resting | ❌ | ❌ | ✅ | วันใหม่ |
+| **Hurt** | Hurt (สีแดง) | ❌ | ❌ | ✅ | ยูนิตอื่น **รักษา** (ไม่หายเองข้ามวัน) |
+| **Away** | Away | ❌ | ❌ | ❌ | กลับจากทริป |
+| **Missing** | Missing (จางมาก) | ❌ | ❌ | ❌ | **ถาวร** — Lost Signal |
 
----
+> ยูนิตที่ Hurt ยังได้ AP คืนทุกวัน แต่ใช้ไม่ได้จนกว่าจะถูกรักษา — และยังต้องกินอาหาร
 
-## Phase 2: Mission Execution
+### 2.4 Trait
 
-### Mission Phases
+ได้จากผลการสำรวจ (ดู §4.4) ติดตัวถาวรตลอด run
 
-Each mission goes through 3 visual phases:
+| Polarity | ผล | ชื่อในคลัง (flavor เท่านั้น) |
+|---|---|---|
+| ดี (Positive) | +10 โอกาสสำเร็จ | Sharp-eyed, Steady Hands, Quick Feet, Thick-skinned, Lucky Streak |
+| เสีย (Negative) | −10 โอกาสสำเร็จ | Clumsy, Jumpy, Shaky Nerves, Sluggish, Unlucky |
 
-| Phase | Symbol | Description |
-|-------|--------|-------------|
-| **Travel Out** | 🚶 | Crew moves from current position to target |
-| **Action** | ⛏️/🔍/⚔️ | Crew performs gathering/searching/hunting |
-| **Travel Back** | 🚶 | Crew returns to base |
-| **Complete** | ✅ | Mission done, resources collected, crew free |
-
-### Mission Types
-
-| Type | Action Symbol | What Happens |
-|------|--------------|--------------|
-| **Gather** | ⛏️ | Collects resource based on type (wood/stone/iron/food/water/circuit/aluminum) |
-| **Relic Search** | 🔍 → ✨ | Success rate based on searching proficiency; yields food + wood; failure yields partial resources |
-| **Monster Hunt** | ⚔️ → 💥 | Success rate based on hunting proficiency; yields food + monster parts; failure deals damage to crew |
-
-### Yield Calculations
-
-**Gathering:**
-```
-amount = floor(target.amount × (0.5 + effectiveGathering × 0.3))
-```
-- 50% base yield, scaled by crew proficiency
-- Time proportional to amount and proficiency
-
-**Relic Search:**
-```
-successRate = 0.4 + effectiveSearching × 0.3
-```
-- Success: 10 food + 15 wood
-- Failure: 5 food + 5 stone (partial success)
-- Partial time (overtime): scaled success rate × 0.2–0.6, partial loot
-
-**Monster Hunt:**
-```
-successRate = 0.2 + effectiveHunting × 0.3 - difficulty × 0.05
-```
-- Success: 20 food + 1–3 monster parts (Fangs/Hides/Claws)
-- Failure: Crew takes 5–15 damage (or dies at low HP)
-- Difficulty ranges 1–3, higher = harder
-
-### Time Calculation
-
-```
-travelTime = (BASE_TRAVEL_TIME + distance × 1.8) / effectiveSpeed
-actionTime = baseActionTime × difficultyFactor / crewProficiency
-totalTime = travelTime × 2 + actionTime
-```
-
-Base times (from config):
-| Action | Base Time (ms) |
-|--------|---------------|
-| Travel | 500 |
-| Gather | 3000 |
-| Search | 4500 |
-| Hunt | 5000 |
-
-### Crew Proficiency Modifiers
-
-Each crew has base proficiencies (1.0 = normal). Effective values are modified by:
-
-**Perks (multiplicative):**
-| Perk | Effect |
-|------|--------|
-| Fast Hands | Gathering × 2.0 |
-| Night Vision | Searching × 1.5 |
-| Gunslinger | Hunting × 2.0 (only with gun equipment) |
-| Blacksmith | Iron gather × 3 |
-| Quick Reflex | Speed × 1.3 |
-| Tough | Max HP × 1.5 |
-
-**Equipment slots:**
-| Slot | Stat Bonuses |
-|------|-------------|
-| Weapon | Hunting bonus + Gathering bonus |
-| Armor | Defense bonus |
-| Accessory | Searching bonus |
+- สุ่มชื่อที่ยูนิตยังไม่มีก่อน ถ้ามีครบแล้วจะได้ชื่อซ้ำ
+- ใน 1 ทริป trait ดีนับ **+10 ครั้งเดียว** และ trait เสียนับ **−10 ครั้งเดียว** ไม่ว่าทีมจะมีกี่ตัว
 
 ---
 
-## Phase 2.5: Collaborative Missions
+## 3. Day System
 
-When multiple crews target the same ResourceNode, the system groups them and calculates:
+### 3.1 End Day (ปุ่ม End Day)
 
-```
-totalProficiency = sum of all crew proficiencies
-avgTravelTime = average of all crew travel times
-actionTime = target.getActionTime(totalProficiency)  ← faster!
-```
+ลำดับที่เกิดขึ้นเมื่อกด:
 
-**Gathering bonus:**
-```
-amount = floor(target.amount × 0.5 × bonusMultiplier × avgProficiency)
-bonusMultiplier = 1 + (crewCount - 1) × 0.3
-```
+1. **ถ้ามี Core Item อยู่แล้ว → ชนะ** (จบทันที)
+2. **กินอาหาร** — ไล่ตามลำดับ roster (Ann → Boon → Cia → Dan) ข้ามคนที่ Away/Missing ทุกคนกิน 1 Food; ถ้าอาหารหมดกลางทาง คนที่เหลือได้ **Starvation +1**
+3. วัน +1
+4. **ทุกคน Missing → แพ้**
+5. **วันเกิน 7 และยังไม่มี Core Item → แพ้ (หมดเวลา)**
+6. **รีเฟรช** — ทุกคนที่ไม่ใช่ Away/Missing ได้ AP เต็ม, Resting → Idle, รีเซ็ตสิทธิ์ส่งสำรวจและสิทธิ์ให้อาหารรายวัน
 
-**Success rate boost for groups:**
-- Relic: +0.05 per additional crew
-- Monster: +0.15 per additional crew
+> ลำดับ roster สำคัญ: ถ้าอาหารไม่พอ **Dan หิวก่อนเสมอ** แล้วตามด้วย Cia, Boon, Ann
 
-Damage is distributed across all participating crews (shared damage).
+### 3.2 เส้นตาย
+
+- เริ่มวันที่ 1, `deadlineDay = 7` → เล่นได้ 7 วันเต็ม
+- HUD แสดง `Day X / 7 (N days left)` และขึ้น **"last day!"** สีแดงในวันที่ 7
 
 ---
 
-## Phase 3: Night Phase
+## 4. Send-to-Gather — การออกสำรวจ
 
-### Monster Attacks
+### 4.1 ขั้นตอน
 
-After each day ends, night begins. Monsters spawn and attack the base:
+1. คลิก **ถ้ำ** บนแมป (6 จุด — Easy/Normal/Hard อย่างละ 2, สุ่มตำแหน่งรอบฐานทุก run, สีบอกระดับ)
+2. ติ๊กเลือก **1–2 ยูนิต** ที่ Ready และยังไม่ได้ออกสำรวจวันนี้
+3. กด **Dispatch** → ไอคอนเดินไปถ้ำ → ทอย → เดินกลับ → แสดงผล
 
-**Monster count:** `2 + floor(day / 3)`
-- Day 1–2: 2 monsters
-- Day 3–5: 3 monsters
-- Day 6–8: 4 monsters
-- Day 9–11: 5 monsters
-- ... scales up every 3 days
+กฎ:
+- **ทุกคนที่ไปจ่าย AP เต็มจำนวน** ของถ้ำ (ไปคู่ไม่หารกัน)
+- ยูนิตออกสำรวจได้ **1 ครั้ง/วัน** แม้จะกลับมาพร้อม AP เหลือ (AP ที่เหลือใช้ทำงานในฐานได้)
+- ถ้ำ 2 จุดที่ระดับเดียวกันให้ผลเหมือนกันทุกประการ — ต่างกันแค่ตำแหน่งบนแมป
 
-**Monster properties:**
+### 4.2 ระดับถ้ำ
+
+| ระดับ | สีบนแมป | AP ต่อคน | โอกาสพื้นฐาน | ของหลัก | Bonus (Hard Success สุ่ม 1 อย่าง) |
+|---|---|---|---|---|---|
+| **Easy** | เขียว | 1 | 80 | Cooking Material ×2 | Cooking Material ×2 / Medicine ×1 |
+| **Normal** | เหลือง | 2 | 55 | Medicine ×1 | Medicine ×1 / Cooking Material ×1 |
+| **Hard** | แดง | 3 | 30 | Materials ×2 | Materials ×2 / Medicine ×1 |
+
+> ถ้ำ Hard ใช้ 3 AP = AP ทั้งวันของยูนิตที่ไม่หิว — ยูนิตที่หิวแม้แต่ 1 stack ไป Hard ไม่ได้
+
+### 4.3 Success Value (โอกาสสำเร็จ)
+
 ```
-HP = 20 + difficulty × 10
-Damage = 5 + difficulty × 3
-Speed = 50 + difficulty × 20 (pixel/s, visual only)
+Success Value = โอกาสพื้นฐานของถ้ำ
+              + 20  ถ้ามีคนในทีมถนัดระดับถ้ำนี้          (นับครั้งเดียว)
+              − 15  ถ้ามีคนในทีมไม่ถนัดระดับถ้ำนี้        (นับครั้งเดียว)
+              + 15  ถ้าไป 2 คน
+              − 20  ถ้าไปถ้ำ Hard คนเดียว
+              + 10  ถ้ามีคนในทีมมี trait ดี               (นับครั้งเดียว)
+              − 10  ถ้ามีคนในทีมมี trait เสีย              (นับครั้งเดียว)
 ```
 
-**Attack mechanics:**
-- Monsters spawn at random position around base (distance 80–200px)
-- Each monster travels toward base with a random wiggle
-- On arrival: deals 5–14 damage to base HP
-- Base HP shown in top HUD
-- Resources lost to monsters: half of each type gathered today
+### 4.4 การทอย 1D100 (roll-under) และระดับผล
 
-**Visual feedback:**
-- Damage number floats up from base (`-X HP!`)
-- Camera shake on hit
-- Base color: green (healthy) → red (critical)
+ทอยเลข 1–100 แล้วตรวจตามลำดับ:
 
-### Monster Types
+| ระดับผล | เงื่อนไข | ของที่ได้ | ผลต่อยูนิต | Trait |
+|---|---|---|---|---|
+| **Fumble** | SV < 50: ทอย 96–100 · SV ≥ 50: ทอย 100 | ไม่ได้อะไร | **ถ้ำ Hard: สุ่ม 1 คนหายตัว (Missing)** · ถ้ำอื่น: ไม่มี | trait เสีย **100%** |
+| **Hard Success** | ทอย ≤ ⌊SV ÷ 2⌋ | ของหลักเต็ม + bonus 1 อย่าง | — | trait ดี 50% |
+| **Regular** | ทอย ≤ SV | ของหลักเต็ม | — | — |
+| **Failure** | ทอย > SV | ของหลัก**ครึ่งเดียว** (ปัดลง) | **สุ่ม 1 คนบาดเจ็บ (Hurt)** | trait เสีย 50% |
 
-| Name | Difficulty Range |
-|------|-----------------|
-| Goblin | 1–2 |
-| Wolf | 1–3 |
-| Giant Spider | 1–3 |
-| Shadow Demon | 1–3 |
-| Night Stalker | 1–3 |
-| Boss | 3 |
+- Trait ที่ได้จะสุ่มให้ **1 คน** ในทีม
+- Failure ที่ถ้ำ Normal ได้ Medicine ⌊1 ÷ 2⌋ = **0** → ไม่ได้อะไรเลย
+- Hard Success ที่ Normal / Hard ยังนับเป็นความคืบหน้า Core Item (§7)
+
+### 4.5 ตารางโอกาสตัวอย่าง (ทีมยังไม่มี trait)
+
+| สถานการณ์ | SV | Hard Success | Regular | Failure | Fumble |
+|---|---|---|---|---|---|
+| Easy คนเดียว | 80 | 40% | 40% | 19% | 1% |
+| Easy — Ann คนเดียว (ถนัด) | 100 | 50% | 49% | 0% | 1% |
+| Easy ไปคู่ | 95 | 47% | 48% | 4% | 1% |
+| Normal คนเดียว | 55 | 27% | 28% | 44% | 1% |
+| Normal — Cia คนเดียว (ถนัด) | 75 | 37% | 38% | 24% | 1% |
+| Normal — Cia + อีก 1 คน | 90 | 45% | 45% | 9% | 1% |
+| Hard คนเดียว (ไม่ถนัด) | 10 | 5% | 5% | 85% | 5% |
+| Hard — Boon หรือ Dan คนเดียว | 30 | 15% | 15% | 65% | 5% |
+| Hard ไปคู่ (ไม่มีใครถนัด) | 45 | 22% | 23% | 50% | 5% |
+| Hard — Boon + Dan | 65 | 32% | 33% | 34% | 1% |
+| Hard — Dan + Ann (ถนัด + ไม่ถนัด) | 50 | 25% | 25% | 49% | 1% |
+
+> จุดตัดที่ SV = 50: ต่ำกว่านี้ Fumble กระโดดจาก 1% เป็น 5% — สำคัญมากที่ถ้ำ Hard เพราะ Fumble = เสียยูนิตถาวร
 
 ---
 
-## Time System
+## 5. Base Work — งานในฐาน
 
-### Day/Night Cycle
+- ทำได้ **ไม่จำกัดครั้ง** ต่อวัน ทั้งก่อนและหลังออกสำรวจ ตราบที่ยูนิต Ready และมี AP
+- ขั้นตอนใน panel: เลือกงาน → เลือกผู้ทำ (คนที่ Ready ขึ้นก่อน คนที่ไม่ว่างเป็นสีเทา) → เลือกจำนวนรอบ หรือผู้ป่วย → ดู preview ต้นทุน/ผลได้ → **Confirm (ย้อนไม่ได้)**
+- ล็อก Confirm ระหว่างที่ไอคอนสำรวจกำลังเดิน (กันไม่ให้ยูนิตที่กำลังจะถูกส่งไปทำงานในฐาน)
 
-| Phase | Duration | Behavior |
-|-------|----------|----------|
-| Day | 12000 time units (~12 seconds real-time) | Planning + execution window |
-| Night | 5 seconds | Monsters attack, then new day starts |
-| Total per day | ~17 seconds | 30 days × 17s = ~8.5 minutes full game |
+| งาน | ต้นทุนต่อรอบ | ผลต่อรอบ | หมายเหตุ |
+|---|---|---|---|
+| **Cook** ทำอาหาร | 1 AP + 1 Cooking Material | +1 Food (**+2** ถ้าถนัด Cooking) | เลือกหลายรอบได้; ในรายชื่อ คนถนัด = สีเขียว, ไม่ถนัด = สีแดง (ไม่ถนัดยังได้ +1 ปกติ) |
+| **Heal** รักษา | 1 AP + 1 Medicine **หรือ** 2 AP ถ้าไม่มียา | ผู้ป่วย Hurt → Ready | ใช้ยาอัตโนมัติถ้ามีในคลัง; รักษาตัวเองไม่ได้ |
+| **Craft** (Workshop) | 1 AP + 2 Materials | +1 Medicine | เลือกหลายรอบได้ |
 
-### Time Units
-
-- Time advances at +100 units per second during execution
-- All action times are in the same time unit scale
-- Day time limit: 12000 units
-- Remaining time shown in HUD: `⏳ Left: X units`
-
-### Over-Time Handling
-
-If a mission's total time exceeds the day time limit:
-- The mission still executes (not cancelled)
-- Partial results: time-ratio determines how much is gathered
-  ```
-  partialAmount = floor(target.amount × 0.5 × ratio)
-  ratio = remainingTime / actionTime
-  ```
-- Warning shown: "⚠️ Chain needs X units but only Y left"
-- Crew may not complete full action → reduced loot or nothing
+> ทุกต้นทุน AP บวก Starvation stack ของผู้ทำด้วย (เช่น คนหิว 1 stack ทำอาหารรอบละ 2 AP)
 
 ---
 
-## Resource System
+## 6. Starvation — ความหิว
 
-### Resource Types
+| กลไก | รายละเอียด |
+|---|---|
+| ได้ stack | ตอน End Day ถ้าอาหารหมดก่อนถึงคิวตัวเอง → +1 stack |
+| ผล | ทุกการกระทำ (สำรวจ, ทำอาหาร, รักษา, Craft) แพงขึ้น **+1 AP ต่อ stack** |
+| ครบ 3 stack | ยูนิต **Lost Signal (Missing)** ถาวร |
+| ลด stack | ปุ่ม **ให้อาหาร**: 1 Food → −1 stack, 1 ครั้ง/คน/วัน ใช้ได้ทุกเวลาในวัน — *มีระบบแล้วแต่ยังไม่มีปุ่มใน UI* |
+| แสดงผล | การ์ดยูนิตขึ้น `Hungry xN`; HUD แสดง `Food: X (need N tonight)` เป็นสีแดงเมื่อไม่พอ |
 
-| Resource | Icon | Color | Base Gather Time | Use |
-|----------|------|-------|-----------------|-----|
-| Wood | 🪵 | #8B6914 | 3000 | Construction |
-| Stone | 🪨 | #808080 | 3500 | Construction |
-| Iron | ⛏️ | #A0A0A0 | 4000 | Crafting/Equipment |
-| Food | 🍖 | #FF6B35 | 2500 | Crew sustenance |
-| Water | 💧 | #4A90D9 | 2000 | Crew sustenance |
-| Circuit | ⚡ | #FFD700 | 5000 | Advanced crafting |
-| Aluminum | 🔩 | #C0C0C0 | 4500 | Advanced crafting |
+> Stack ไม่ลดเองเมื่อกลับมามีอาหาร — ต้องใช้ปุ่มให้อาหารเท่านั้น
 
-### Monster Parts
+---
 
-| Part | Source | Use |
-|------|--------|-----|
-| Fangs | Monster hunt success | Equipment/material |
-| Hides | Monster hunt success | Armor/material |
-| Claws | Monster hunt success | Weapon/material |
+## 7. Core Item — เงื่อนไขชนะ
 
-### Resource Flow
-
-```
-Day Phase → Gather/Search/Hunt → Resources stored
-                    ↓
-New Day → Consume Food (2 per crew) → Remaining stored
-                    ↓
-Night → Base damaged, half of today's resources lost
+```mermaid
+flowchart LR
+    L[Locked] -->|Hard Success ที่ถ้ำ Normal| U[Unlocked]
+    U -->|Hard Success ที่ถ้ำ Hard| C[Obtained → ชนะทันที]
 ```
 
-**Daily food consumption:** `2 × aliveCrewCount`
+| สถานะ | ข้อความบน HUD |
+|---|---|
+| Locked | `Core Item: Locked - go Mid first` |
+| Unlocked | `Core Item: Unlocked - go Far` |
+| Obtained | `Core Item: OBTAINED` |
+
+- Hard Success ที่ Hard **ก่อน** ปลดล็อก → ได้แค่ของปกติ ไม่นับ
+- ต้องได้ Hard Success **2 ครั้ง** (ที่ Normal 1 และ Hard 1) ภายใน 7 วัน
 
 ---
 
-## Crew System
+## 8. Resource & Economy
 
-### Crew Statistics
+### 8.1 ทรัพยากร
 
-Each crew has these base stats (range: 0.7–1.8):
+| ทรัพยากร | เริ่มต้น | แหล่งที่มา | ใช้กับ |
+|---|---|---|---|
+| **Food** | 8 | Cook | End Day (1/คน), ปุ่มให้อาหาร |
+| **Cooking Material** | 2 | ถ้ำ Easy, bonus Easy/Normal | Cook |
+| **Medicine** | 1 | ถ้ำ Normal, Craft, bonus ทุกถ้ำ | Heal |
+| **Materials** | 0 | ถ้ำ Hard, bonus Hard | Craft |
 
-| Stat | Range | Description |
-|------|-------|-------------|
-| HP | 80–120 | Health; 0 = dead (permadeath) |
-| Speed | 0.8–1.8 | Movement speed multiplier |
-| Gathering | 0.6–2.0 | Resource gathering proficiency |
-| Searching | 0.6–1.8 | Relic search proficiency |
-| Hunting | 0.7–1.5 | Monster hunting proficiency |
-| Hire Cost | 25–35 | Crew points cost to hire |
+ทรัพยากรไม่เน่า ไม่มีเพดาน และไม่ติดลบ
 
-### Starting Crew (3 hired at game start)
+### 8.2 สมดุลอาหาร (คำนวณจากค่าปัจจุบัน)
 
-| Name | HP | Speed | Gather | Search | Hunt | Perk | Cost |
-|------|----|-------|--------|--------|------|------|------|
-| Sarah | 100 | 1.2 | 1.5 | 0.8 | 0.9 | Fast Hands | 25 |
-| John | 120 | 0.9 | 0.7 | 1.8 | 1.2 | Night Vision | 30 |
-| Emma | 90 | 1.5 | 1.2 | 1.0 | 1.5 | Gunslinger | 35 |
-
-**Total starting crew points:** 100
-**Starting resources:** 100 food
-
-### Crew States
-
-| State | Description |
-|-------|-------------|
-| **Idle** | Available for mission assignment |
-| **Busy** | On a mission, cannot be selected |
-| **Dead** | HP ≤ 0, permanent removal from game |
-
-### Perks (6 total)
-
-| Perk Name | Emoji | Effect | Crew Type |
-|-----------|-------|--------|-----------|
-| Fast Hands | 🌪️ | Gathering time reduced 50% (proficiency ×2) | Gatherer type |
-| Night Vision | 🌙 | Searching efficiency +50% (proficiency ×1.5) | Scout/Searcher type |
-| Gunslinger | 🔫 | Hunting ×2 when equipped with gun | Hunter type |
-| Blacksmith | ⚒️ | Iron gathering ×3 | Specialist |
-| Quick Reflex | ⚡ | Movement speed +30% | Scout type |
-| Tough | 💪 | Max HP +50% | Tank type |
+- ทีม 4 คนกิน **4 Food/คืน** → อาหารตั้งต้น 8 พอ **2 คืน** ถ้าไม่ทำอาหารเลย
+- 1 ทริป Easy (1 AP) = Cooking Material 2 → ทำอาหารได้ 2 รอบ (2 AP) = **2 Food** หรือ **4 Food** ถ้า Cia ทำ
+- ⇒ วงจร "Easy + Cook" ใช้ 3 AP (ทั้งวันของ 1 คน) ได้ 2–4 Food — เลี้ยงได้ 0.5–1 คน/วัน ผู้เล่นจึงต้องแบ่งทีมระหว่างหาอาหารกับลุยหา Core Item
 
 ---
 
-## Map Generation
+## 9. Tunable Values — ตัวเลขที่ปรับได้
 
-### Resource Node Distribution
+ปรับใน Inspector ของ GameObject ใต้ `GameSystem` ใน `Core.unity` (ดู [Scene Hierarchy](../software/06-unity-core-scene-hierarchy.md#31-gamesystem--logic-layer))
 
-Each new day, a new map is generated:
-
-| Node Type | Count | Position Rules |
-|-----------|-------|---------------|
-| Resource nodes (wood/stone/iron/food/water) | 4–7 | Random, ≥150px from base |
-| Relic node | 1 | Random, ≥200px from base |
-| Monster node | 1 | Random, ≥180px from base |
-
-**Node properties:**
-- Amount: 30–150 (random)
-- Position: Random within playfield bounds (50–1230px X, 80–640px Y)
-- Base position: Random each day (100–1080px X, 80–440px Y)
-
-### Map Layout
-
-```
-┌─────────────────────────────────────────────┐
-│  Grid overlay (decorative, 60×50px cells)   │
-│                                             │
-│    ○ Resource     🏛️ Relic    👹 Monster   │
-│    (yellow)       (purple)     (red)        │
-│                                             │
-│              🏠 BASE                        │
-│    [crew positions around base]             │
-│                                             │
-│  Bottom: Crew panel (3 rows)                │
-│  Bottom: Planning panel                     │
-│  Right: Resource panel                      │
-└─────────────────────────────────────────────┘
-```
+| ค่า | ค่าปัจจุบัน | อยู่ที่ |
+|---|---|---|
+| วันเส้นตาย | 7 | `DayManager.deadlineDay` |
+| ทรัพยากรเริ่มต้น | Food 8, CM 2, Medicine 1, Materials 0 | `RunResources` |
+| ต้นทุน/ผลของงานในฐาน | ตาม §5 | `BaseWorkController` |
+| ต้นทุนให้อาหาร | 1 Food | `StarvationController.foodCostPerFeed` |
+| จำนวนถ้ำต่อระดับ | 2 | `GatherMapController.nodesPerDifficulty` |
+| config ถ้ำ (AP, โอกาส, loot) | ตาม §4.2 | `GatherZoneDatabase.zones` (ว่าง = ใช้ค่า default ในโค้ด) |
+| roster / AP สูงสุด / aptitude | ตาม §2.1 | `UnitManager.units` (ว่าง = ใช้ค่า default ในโค้ด) |
+| ค่าโบนัสในสูตร SV (+20/−15/+15/−20/±10), ช่วง Fumble, โอกาสได้ trait, starvation สูงสุด 3 | ตาม §4 / §6 | **hard-coded** ใน `GatherResolver`, `GatherDispatchController`, `UnitCharacter` |
 
 ---
 
-## UI Layout
+## 10. ส่วนที่ยังต้องตัดสินใจ / ยังไม่ทำ
 
-### HUD (Top Bar)
+- **หน้าจอจบเกม** — ระบบรู้ผล Win/Lose แล้วแต่ยังไม่แสดงให้ผู้เล่นเห็น
+- **ปุ่มให้อาหาร** — ระบบพร้อม รอ UI
+- **Aptitude ที่ยังไม่มีผล** (Speed, Endurance, Gathering, Combat)
+- **Trait เฉพาะตัว** — ตอนนี้ทุก trait = ±10 เท่ากัน
+- **Fumble ที่ Easy/Normal** ไม่ได้ของและไม่เจ็บ — เบากว่า Failure ในแง่บาดเจ็บ (ได้แค่ trait เสีย) ควรทบทวนว่าตั้งใจหรือไม่
+- **ทริปข้ามวัน** — สถานะ Away มีในระบบแล้ว แต่ปัจจุบันทุกทริปจบในวันเดียว
+- **Animation ทอยเต๋า** (`DiceRollView`) — ตอนนี้ผลแสดงเป็นข้อความ
 
-| Element | Position | Content |
-|---------|----------|---------|
-| Day counter | Top-left | `Day X/30` |
-| Elapsed time | Top-left | `⏱️ Elapsed: X / 12000 units` |
-| Base HP | Top-left | `🏠 HP: XXX` |
-| Remaining time | Top-left | `⏳ Left: X units` |
-
-### Game Panels
-
-| Panel | Position | Size | Content |
-|-------|----------|------|---------|
-| Resource Panel | Right (1090, 60) | 180×230 | 7 resource types with counts |
-| Crew Panel | Bottom-left (30, 520) | 1240×130 | Crew list with pagination |
-| Planning Panel | Bottom (30, 680) | 1240×55 | Selection status + buttons |
-| Mission Display | Center overlay | Dynamic | Chain preview with times |
-| Notification System | Top-center | Dynamic | Status messages |
-
-### Panel Buttons
-
-**Planning Panel:**
-| Button | State | Action |
-|--------|-------|--------|
-| ADD TO QUEUE | Visible when crew selected + targets chained | Confirm chain → add to queue |
-| EXECUTE ALL | Visible when queue has missions | Start all queued missions |
-| RESET | Visible when chain has nodes | Clear entire selection |
-| UNDO | Visible when chain has nodes | Remove last node from chain |
-
-**Crew Panel:**
-- Pagination: 3 crews per page
-- Clickable crew text (when idle) → selects crew
-- Shows status: 🟢 Ready / 🔴 Busy
-- Shows chain count: 📋xN
-- Shows perk, stats at 11px size
-
----
-
-## Player Strategy Tips
-
-### Optimal Crew Assignment
-- **Sarah** (Fast Hands + high gather) → Send to gather nodes
-- **John** (Night Vision + high search) → Send to relic nodes
-- **Emma** (Gunslinger + high hunt) → Send to monster nodes
-
-### Chain Strategy
-- Longer chains save travel time between nearby targets
-- But total time increases — watch the day time limit
-- Group multiple crews on high-value targets for collaborative bonus
-
-### Resource Priorities
-- **Food** is critical — consume 2/crew/day; run out = game over
-- **Wood/Stone** early for base durability
-- **Iron/Circuit/Aluminum** late-game for equipment/crafting (prototype incomplete)
-- **Monster parts** for equipment unlocks
-
-### Night Defense
-- Monster count scales: +1 every 3 days
-- Base HP is the only HP pool — lose it = game over
-- No active defense (prototype) — only resource management
-- Strategy: gather food/wood to sustain through hard nights
+## Related Documents
+- [Game Concept](00-concept.md)
+- [Unity V2 System Design](../software/04-unity-system-design.md)

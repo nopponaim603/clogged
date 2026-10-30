@@ -1,167 +1,101 @@
-# Survival Base — Art Direction & Visual Style
+# clogged — Art Direction & Visual Style
 
-**Version:** 1.0 (Prototype) | **Last Updated:** 2026-07-30
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+> อธิบายสภาพภาพปัจจุบันของ `V2/Scenes/Core.unity` (placeholder) และทิศทางที่วางไว้ — สไตล์ของ Web Prototype ดูที่ [archive](../wiki/archive/gdd-v1-prototype/03-art-direction.md)
 
-## Visual Style
+## 1. Current State: PROTOTYPE (placeholder)
 
-### Genre
-**Minimalist / Geometric** — Uses Phaser primitive shapes (Arc, Graphics) with emoji overlays.
-No sprite art. Clean, readable, functional aesthetic.
+| ส่วน | สภาพปัจจุบัน |
+|---|---|
+| ระบบภาพ | Unity UGUI ล้วน บน Canvas (Screen Space - Overlay) — ไม่มี world sprite / tilemap ใน scene |
+| แมป | `MapPanel` เป็น Image สีพื้นเต็มจอ ไม่มีภาพพื้นหลัง |
+| ถ้ำ | `Dungeon Prefab` — ไอคอนจาก tileset 16 px ย้อมสีตามระดับ + กรอบ `SelectedHighlight` เมื่อถูกเลือก |
+| Scout / การ์ดยูนิต | `ScoutIcon.prefab` — ไอคอนจาก tileset + ข้อความชื่อ/สถานะ |
+| Tileset | `Assets/Day/Sprites/tilemap_packed*.png` (pixel art 16 px สไตล์ Kenney, ยืมจากระบบ Day เดิม) |
+| ปุ่ม / dropdown / toggle | UI default ของ Unity (TMP Dropdown, Toggle ใช้ `Text` แบบ legacy) |
+| Animation | มีแค่ Scout เลื่อนตำแหน่งแบบ linear 0.6 วินาที ไม่มี animation ทอยเต๋า |
 
-### Color Palette
+## 2. Color Language (ใช้ในโค้ดตอนนี้)
 
-| Role | Color | Hex | Usage |
-|------|-------|-----|-------|
-| **Primary BG** | Dark Navy | `#1a1a2e` | Game background, panel fills |
-| **Secondary BG** | Dark Gray | `#2d3436` | Panel borders, button backgrounds |
-| **Accent** | Teal | `#00b894` | Primary actions, selected state |
-| **Danger** | Red | `#ff6b6b` | Base HP, dead crew, errors |
-| **Warning** | Amber | `#f9ca24` | Time warnings, queue highlights |
-| **Success** | Mint | `#4ecdc4` | Completed actions, status text |
-| **Purple** | Violet | `#6c5ce7` | Relic nodes, relic search UI |
-| **White** | Text | `#ffffff` | Primary text |
-| **Muted** | Gray | `#b2bec3` | Secondary text |
-| **Dark Muted** | Dark Gray | `#636e72` | Tertiary text, disabled state |
+### ระดับถ้ำ
 
-### Typography
-- **Font family:** `monospace` (all text in game)
-- **Sizes:** 10px–56px range
-- **Headlines:** 48–56px, bold color
-- **Body:** 14–20px, muted colors
-- **Labels:** 10–12px, very muted
+| ระดับ | สี | Hex (โดยประมาณ) |
+|---|---|---|
+| Easy | เขียว | `#73BF73` |
+| Normal (Mid) | เหลืองทอง | `#D9BF4D` |
+| Hard (Far) | แดง | `#CC4D4D` |
 
----
+### ความหมายของสีใน UI
 
-## Visual Elements
+| ความหมาย | Hex | ใช้ที่ |
+|---|---|---|
+| ถนัด / ดี | `#5BD65B` | ชื่อยูนิตที่ถนัด Cooking ในรายชื่อผู้ทำงาน |
+| ไม่ถนัด / เตือน / ผิดพลาด | `#E65C5C` | ยูนิตไม่ถนัด, เหตุผลที่กดไม่ได้, Food ไม่พอ, "last day!" |
+| ใช้งานไม่ได้ | `#8A8A8A` | ยูนิตที่ไม่ Ready ในรายชื่อ |
+| บาดเจ็บ | `#FF8080` (tint) | ไอคอนยูนิตที่ Hurt |
 
-### Game Map
-- **Background:** Solid `#1a1a2e` (no terrain texture)
-- **Grid:** Decorative 60×50px grid lines at 30% opacity (`#4a4a5a`)
-- **Base:** Green arc (radius 30, `#00b894`) with `🏠 BASE` label
-- **Resource nodes:** Colored arcs (radius 18, 70% fill) with icon labels
+### ความทึบของการ์ดยูนิต
 
-### Node Colors
+| สถานะ | Alpha |
+|---|---|
+| Ready (Idle) | 100% |
+| Resting / Hurt / Away | 50% |
+| Missing (Lost Signal) | 20% |
 
-| Node Type | Color | Hex | Icon |
-|-----------|-------|-----|------|
-| Resource | Yellow | `#f9ca24` | 🪵🪨⛏️🍖💧 |
-| Relic | Purple | `#6c5ce7` | 🏛️ |
-| Monster | Red | `#e74c3c` | 👹 |
+## 3. Typography
 
-### Crew
-- **Icon:** `🧑‍🤝‍🧑` (24px)
-- **Idle:** Clickable, teal color (`#4ecdc4`)
-- **Busy:** Red text (`#ff6b6b`)
-- **Selected:** Yellow highlight arc (radius 24)
-- **Dead:** Removed from game
+- ฟอนต์: **LiberationSans SDF** (ฟอนต์ default ของ TextMeshPro) ทุกข้อความ
+- ⚠️ ฟอนต์นี้ **ไม่มีอักษรไทย** — ถ้าจะทำเกมภาษาไทยต้องเพิ่ม TMP Font Asset ภาษาไทย (เช่น Noto Sans Thai / Sarabun) เป็น fallback
+- ใช้ rich text `<color=#...>` ของ TMP สำหรับเน้นสีในข้อความ
 
-### Missions
-- **Travel:** `🚶` sprite, green path line (`#4ecdc4`)
-- **Action:** `⛏️` / `🔍` / `⚔️` sprite
-- **Complete:** `✅` sprite, green path line
-- **Arrow:** Custom arrow graphic on path lines
-
-### Notifications
-- **Background:** Dark panel with border
-- **Colors by type:**
-  - Success: Mint (`#00b894`) + ✅
-  - Error: Red (`#ff6b6b`) + ❌
-  - Warning: Amber (`#f9ca24`) + ⚠️
-  - Info: Teal (`#4ecdc4`) + ℹ️
-- **Animation:** Slide up + fade in (300ms)
-- **Duration:** 3000ms default
-- **Max displayed:** 5 notifications
-
----
-
-## UI Layout
-
-### Screen Resolution
-- **Game:** 1280×720 (standard HD)
-- **Scaling:** FIT mode, centered (Phaser.Scale.FIT)
-- **Padding:** Dark borders on non-game areas
-
-### HUD Positions
+## 4. Screen Layout (1920×1080 reference)
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Day: 1/30  ⏱️ Elapsed: 0/12000  🏠 HP: 100  ⏳ Left: 12000 │  ← Top bar
-│                                                          │
-│                                                          │
-│  ┌─────────┐     Resource 1    Relic    Monster     ┌────┐│
-│  │         │       Resource 2                      │Re-  ││
-│  │         │       Resource 3                      │source││
-│  │         │       Resource 4                      │  │  ││
-│  │         │                                        │P-  ││
-│  │         │                                        │an ││
-│  │         │                                        │el ││
-│  │  Crew    │                                        │  │  ││
-│  │  Panel   │                                        │  │  ││
-│  └─────────┘                                        └────┘│
-│                                                          │
-│  🧑‍🤝‍🧑 Sarah  🧑‍🤝‍🧑 John  🧑‍🤝‍🧑 Emma                     │  ← Crew panel
-│  ────────────────────────────────────────────────────── │
-│  🎯 Click a crew → Click nodes → ADD TO QUEUE │ [Reset] │  ← Planning panel
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────── StatusBar: Day | Food | Cooking Material | Medicine | Materials | Core Item ─┐
+│                                                                        MessageUi (ผลการสำรวจ)        │
+│                                                                                                      │
+│       ● Easy        ● Hard                                                  ┌──────────────────┐     │
+│                                    ◆ ฐาน / Scout                            │  BaseWorkPanel   │     │
+│   ● Normal                  ● Easy                                          │  [Cook][Heal][Craft]   │
+│                 ● Hard            ● Normal                                  │  Worker ▼        │     │
+│                                                                             │  Patient ▼ / − n +│    │
+│                                                                             │  Preview         │     │
+│                                                                             │  [Confirm]       │     │
+│                                                                             └──────────────────┘     │
+│ [Ann][Boon][Cia][Dan]  ← การ์ดยูนิต      ☐Ann ☐Boon ☐Cia ☐Dan  ← เลือกส่งสำรวจ                       │
+│                                               [Dispatch]          [EndDay]                           │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Panel Sizes
+ถ้ำสุ่มตำแหน่งทุก run แต่เว้นขอบขวา 420 px ไว้ให้ BaseWorkPanel และขอบล่าง 260 px ไว้ให้การ์ด/ปุ่ม — รายละเอียดดู [Core Scene Hierarchy](../software/06-unity-core-scene-hierarchy.md#32-canvas--ui-layer)
 
-| Panel | X, Y | Width, Height |
-|-------|------|---------------|
-| Resource Panel | 1090, 60 | 180×230 |
-| Crew Panel | 30, 520 | 1240×130 |
-| Planning Panel | 30, 680 | 1240×55 |
-| Mission Display | Center overlay | Dynamic |
-| Notification | Top center | Dynamic |
+## 5. Target Visual Direction (ยังไม่ทำ)
 
----
+1. **Pixel art 16×16** ต่อยอดจาก tileset ที่ใช้อยู่ — ฐาน, ปากถ้ำ 3 แบบตามระดับ, ไอคอนทรัพยากร
+2. **ภาพพื้นหลังแมป** (tilemap หรือภาพวาด) แทนพื้นสีเรียบ
+3. **Portrait ตัวละคร 4 คน** สำหรับการ์ดยูนิต — แสดงสถานะ Hurt / Hungry / Lost Signal ด้วยภาพ ไม่ใช่แค่ข้อความ
+4. **Animation ทอยเต๋า D100** (`DiceRollView`) — แสดงเลขที่ทอยเทียบเส้น Hard Success / Success / Fumble ให้ผู้เล่นเห็นความเสี่ยง
+5. **Scout เดินแบบ sprite sheet** แทนการเลื่อนตำแหน่ง
+6. **หน้าจอจบเกม** Win / Lose
+7. **ไอคอนทรัพยากร** บน StatusBar แทนข้อความล้วน
 
-## Art Direction for Future (Not Yet Implemented)
+## 6. UI Feedback (ปัจจุบัน)
 
-### Target Visual Direction
-When transitioning from prototype to polished game:
+| เหตุการณ์ | Feedback |
+|---|---|
+| เลือกถ้ำ | กรอบ `SelectedHighlight` ขึ้นที่ถ้ำนั้น |
+| เลือกยูนิตเกิน 2 | toggle ที่เพิ่งติ๊กถูกยกเลิกเอง |
+| ส่งสำรวจ | ปุ่ม Dispatch ปิด, ข้อความ "Traveling...", Scout เดินไป-กลับ |
+| ผลการสำรวจ | ข้อความหลายบรรทัด: ระดับผล + เลขทอย/SV, ของที่ได้, สถานะแต่ละคน, trait ที่ได้, Core Item |
+| งานในฐาน | preview ต้นทุน/ผลได้ก่อนกด, เหตุผลสีแดงเมื่อกดไม่ได้, ข้อความผลหลัง Confirm |
+| Food ไม่พอสำหรับคืนนี้ | ข้อความ Food บน StatusBar เป็นสีแดง |
 
-1. **Pixel art sprites** for crew, monsters, base (16×16 or 32×32)
-2. **Tile-based terrain** for wasteland (sand, rocks, ruins)
-3. **Day/Night color shift** for visual distinction
-4. **Particle effects** for gathering, combat, building
-5. **Animated UI** with transitions between phases
-6. **Character portraits** for crew selection
+## 7. Accessibility Notes
 
-### Current State: PROTOTYPE
-All visual elements are **placeholder primitives** (arcs, text, emojis).
-No art assets loaded (only a `logo.png` reference in Preloader).
+- ระดับถ้ำสื่อด้วย **สีอย่างเดียว** (เขียว/เหลือง/แดง) — ผู้เล่นตาบอดสีแดง-เขียวแยก Easy กับ Hard ยาก → ควรเพิ่มรูปทรงหรือตัวอักษร (E/N/H) บนไอคอน
+- ความถนัดในรายชื่อผู้ทำงานใช้สีเขียว/แดงเช่นกัน → ควรเพิ่มสัญลักษณ์ (★ / ✕)
+- ยังไม่มีตัวเลือกขนาดตัวอักษร
 
----
-
-## UI Interactions
-
-### Hover Effects
-- Buttons: color shift (`#f9ca24` → `#ffffff`)
-- Start button: scale 1.0 → 1.05
-- Crew text: color shift to amber on hover
-- All clickable text: cursor changes to pointer
-
-### Feedback
-- Click: immediate visual update
-- Mission confirm: toast notification
-- Time warnings: red text overlay
-- Damage: camera shake + floating damage number
-- Completion: green text + success icon
-
----
-
-## Accessibility Notes
-
-### Current Limitations
-- All text uses monospace (no font loading)
-- No colorblind mode
-- No text scaling options
-- Small text (10–12px) for stats
-
-### Future Considerations
-- Add high-contrast mode
-- Larger text options
-- Icon-based labels for colorblind players
-- Hover tooltips for crew stats
+## Related Documents
+- [Game Concept](00-concept.md)
+- [Core Scene Hierarchy](../software/06-unity-core-scene-hierarchy.md)

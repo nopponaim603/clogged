@@ -1,6 +1,7 @@
 # Sprint Planning & Roadmap — clogged
 
-**Last Updated:** 2026-08-08 | **Version:** 1.1
+**Last Updated:** 2026-08-21 | **Version:** 1.2  
+**External Progress Sheet:** 📊 [Prototype 1 - progress (Google Sheets)](https://docs.google.com/spreadsheets/d/1pk30ay-eOYQDyRr4WvwK9zgK1uGMtaCp0Cl7WxYSMDU/edit?gid=1961642005#gid=1961642005)  
 > Migrated from the original `plan.md` roadmap (4 เดือน, ~18 สัปดาห์, เริ่ม 29 มิ.ย. 2026 → ส่งมอบ ~1 พ.ย. 2026, ทีม 4 คน — ดู [Team Roster](team.md))
 
 ## 📅 Sprint Schedule Overview
@@ -18,7 +19,7 @@
 
 | # | Date | Milestone | Deliverable | ความก้าวหน้า |
 |:---|:---|:---|:---|:---|
-| M1 | 2026-08-09 | Sprint 01 Decision Gate | Core loop vertical slice เสร็จ | ✅ ใกล้เสร็จ |
+| M1 | 2026-08-09 | Sprint 01 Decision Gate | Core loop vertical slice เสร็จ ([สไลด์นำเสนอครั้งที่ 1](https://www.canva.com/design/DAHSC0yfx-w/GwRlzDGOZ8BZYP7UyeZClw/edit)) | 🟢 เสร็จสิ้น |
 | **M2** | **~2026-09-01** | **Presentable Playable Loop** | **Playable demo — ทีมเล่นครบ loop ได้, มีระบบหลักครบทุกอย่าง** | **⬜** |
 | M3 | 2026-09-20 | Feature-complete (Alpha) | Must Have ครบทั้งหมด + เริ่ม Should Have | ⬜ |
 | M4 | 2026-10-18 | Content-complete (Beta) | Should Have ครบ,  balance, polish แล้ว | ⬜ |

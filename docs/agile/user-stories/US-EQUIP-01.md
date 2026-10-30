@@ -28,4 +28,4 @@
 
 ## 🔗 Related Files
 - Backlog: [Product Backlog](../01-product-backlog.md)
-- GDD: [Concept — Unique Selling Points](../../gdd/00-concept.md#unique-selling-points-usp)
+- GDD: [Concept — Unique Selling Points](../../wiki/archive/gdd-v1-prototype/00-concept.md#unique-selling-points-usp)

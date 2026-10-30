@@ -1,95 +1,85 @@
-# Survival Base — Audio Direction
+# clogged — Audio Direction
 
-**Version:** 1.0 (Prototype) | **Last Updated:** 2026-07-30
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+> แผนเสียงสำหรับระบบ V2 — แผนเดิมของ Web Prototype (เสียงกลางคืน/monster) ดูที่ [archive](../wiki/archive/gdd-v1-prototype/04-audio-direction.md)
 
-## Current State: NO AUDIO
+## 1. Current State: NO AUDIO
 
-The prototype has **no audio implementation**. Phaser's audio system is available but not used.
-
----
-
-## Proposed Audio Design
-
-### Music
-
-| Scene | Mood | Tempo | Notes |
-|-------|------|-------|-------|
-| Menu | Tense, atmospheric | Slow | Ambient wasteland ambience |
-| Day Phase (Planning) | Tense but focused | Medium | Driving rhythm for time pressure |
-| Day Phase (Execution) | Urgent, action | Fast | Increased intensity |
-| Night Phase | Horror, suspense | Slow+ | Dark, ominous, monster threat |
-| Game Over (Win) | Triumphant, relief | Medium | Celebration, hope |
-| Game Over (Lose) | Tragic, somber | Very slow | Loss, despair |
-
-### Sound Effects
-
-| Action | SFX | Notes |
-|--------|-----|-------|
-| Click / Select | Short blip | UI feedback |
-| Confirm chain | Positive chime | Mission accepted |
-| Execute | Whoosh | All missions begin |
-| Travel complete | Thud | Crew arrives at target |
-| Gather success | Crunch / metallic | Resource collected |
-| Relic found | Magical chime | Success sound |
-| Monster defeated | Impact + roar | Combat success |
-| Monster damage | Crunch / scratch | Crew takes damage |
-| Crew death | Silence / low tone | Permanent loss |
-| Night starts | Wind / howl | Transition |
-| Monster attack | Growl / impact | Base under attack |
-| Base destroyed | Explosion / crash | Game over |
-| Day ends | Bell / horn | New day announcement |
-| Food consumed | Chomp / eat | Daily cycle |
-
-### UI Sounds
-- Button hover: soft click
-- Button press: confirmation tone
-- Error notification: buzz / low warning
-- Notification dismiss: fade out
+`Core.unity` มีแค่ `AudioListener` บน Main Camera — **ไม่มี AudioSource, เพลง หรือ SFX** ใดๆ
 
 ---
 
-## Implementation Notes
+## 2. Proposed Audio Design
 
-### Phaser Audio API
-Phaser 3 supports:
-- **Web Audio API** (primary, high quality)
-- **HTML Audio** (fallback, lower quality)
-- **Looping** for background music
-- **Spatial audio** for directional sound
+### 2.1 Music
 
-### Suggested File Format
-- **Music:** OGG (best support, small size)
-- **SFX:** OGG or WAV (short sounds, WAV is fine)
-- **Max size:** 500KB per SFX, 5MB per music track
+| ช่วง | อารมณ์ | Tempo | หมายเหตุ |
+|---|---|---|---|
+| วางแผนในฐาน (วันที่ 1–5) | ตึงเครียดแต่มีสมาธิ | ช้า–กลาง | loop ยาว ฟังซ้ำได้ไม่เบื่อ เพราะผู้เล่นคิดได้ไม่จำกัดเวลา |
+| วันท้ายๆ (วันที่ 6–7) | กดดันขึ้น | กลาง | เพิ่มชั้นเครื่องดนตรี/จังหวะ บอกว่าเส้นตายใกล้ |
+| Scout เดินทาง | ลุ้น | — | ลด volume เพลงหลัก + เสียงฝีเท้า/ambient ถ้ำ |
+| ชนะ (ได้ Core Item) | โล่งใจ มีความหวัง | กลาง | |
+| แพ้ | เศร้า เงียบ | ช้ามาก | หมดเวลา vs ทีมหายหมด อาจใช้ cue ต่างกัน |
 
-### Volume Control
-- Master volume slider (future)
-- Separate music/SFX volume (future)
-- Mute button (future)
-- Default: 70% music, 100% SFX
+### 2.2 Sound Effects (ผูกกับเหตุการณ์ที่มีอยู่ในระบบแล้ว)
+
+| เหตุการณ์ | SFX ที่เสนอ | จุดเชื่อมในโค้ด |
+|---|---|---|
+| คลิกถ้ำ | blip สั้น (ระดับเสียงต่างกันตามระดับถ้ำ) | `MapNodeView.OnAnyNodeClicked` |
+| กด Dispatch / Scout ออกเดิน | ฝีเท้า / whoosh | `GatherMapController.ConfirmTrip` |
+| **ทอยเต๋า** | เสียงเต๋ากลิ้ง → เสียงผล | `GatherDispatchController.OnGatherResolved` |
+| Hard Success | chime สว่าง | `result.tier` |
+| Regular | tone บวกสั้นๆ | |
+| Failure + ยูนิตบาดเจ็บ | กระแทก / ร้องเจ็บ | `result.hurtUnit` |
+| Fumble / **Lost Signal** | สัญญาณวิทยุขาดหาย (static → เงียบ) | `result.missingUnit`, starvation ครบ 3 |
+| ได้ Trait | ดี: sparkle · เสีย: เสียงต่ำ | `result.traitAwarded` |
+| ปลดล็อก / ได้ Core Item | stinger พิเศษ | `result.unlockedCoreItemMaterial` / `obtainedCoreItem` |
+| Cook / Heal / Craft | กระทะ / ผ้าพันแผล / ค้อน | `BaseWorkPanel.OnConfirm` |
+| End Day — กินอาหาร | เสียงกิน (1 ครั้ง/คน) | `DayManager.EndDay` |
+| ยูนิตหิว (+1 stack) | ท้องร้อง | `UnitCharacter.ApplyStarvationStack` |
+| เริ่มวันใหม่ | ระฆัง / นกร้อง | `DayManager.OnDayStarted` |
+| ชนะ / แพ้ | stinger จบเกม | `DayManager.OnRunEnded` |
+
+### 2.3 UI Sounds
+- กดปุ่ม: คลิกเบาๆ
+- ปุ่มที่กดไม่ได้ / เหตุผลสีแดงขึ้น: buzz ต่ำ
+- เลือก toggle / dropdown: tick
 
 ---
 
-## Audio Priorities (If Adding Audio)
+## 3. Implementation Notes (Unity)
 
-| Priority | Audio | Justification |
-|----------|-------|---------------|
-| **P0** | Night phase SFX | Monster attacks need audio impact |
-| **P0** | Mission complete sound | Feedback loop for player satisfaction |
-| **P1** | Menu music | Sets mood before game starts |
-| **P1** | Click/select sounds | UI feedback |
-| **P2** | Day phase music | Ambience during planning |
-| **P2** | Combat SFX | Monster hunt feedback |
-| **P3** | Ambient wasteland | Background atmosphere |
-| **P3** | Victory/defeat music | End-of-game emotions |
+- ทำ `AudioManager` (singleton แบบเดียวกับระบบอื่นใน V2) ที่ subscribe event ในตาราง §2.2 — **ไม่ต้องแก้ controller เดิม** เพราะ event ส่วนใหญ่มีอยู่แล้ว
+- เหตุการณ์ที่ยังไม่มี event (Base Work, starvation stack, คลิกปุ่ม) เรียกจาก UI โดยตรง หรือเพิ่ม event ใน controller
+- ใช้ **AudioMixer** แยก group `Music` / `SFX` / `UI` เพื่อทำ volume slider ทีหลัง
+- เพลง: OGG Vorbis, Load Type = Streaming · SFX: WAV, Load Type = Decompress On Load
+- ค่าเริ่มต้น: Music 70%, SFX 100%
 
 ---
 
-## Reference Games (Audio Inspiration)
+## 4. Audio Priorities
 
-| Game | What to Learn |
-|------|---------------|
-| **FTL** | Tense ambient music, minimal SFX |
-| **They Are Billions** | Horror night theme, base build audio |
-| **Loop Hero** | Minimalist, mood-setting audio |
-| **Against the Storm** | Time pressure audio cues |
+| Priority | Audio | เหตุผล |
+|---|---|---|
+| **P0** | เสียงทอยเต๋า + ผล 4 ระดับ | ช่วงเวลาที่ลุ้นที่สุดของเกม |
+| **P0** | Lost Signal | การเสียยูนิตถาวรต้องรู้สึกหนัก |
+| **P1** | UI click / error | feedback พื้นฐาน |
+| **P1** | Core Item stinger + เพลงชนะ/แพ้ | ปิด run ให้มีความหมาย |
+| **P2** | เพลงวางแผน (loop) | บรรยากาศ |
+| **P2** | SFX งานในฐาน, End Day | จังหวะของวัน |
+| **P3** | เพลงวันท้ายๆ แบบเพิ่มชั้น | ความกดดันของเส้นตาย |
+
+---
+
+## 5. Reference Games
+
+| เกม | สิ่งที่เรียนรู้ |
+|---|---|
+| **Darkest Dungeon** | เสียงผลลัพธ์ที่หนักแน่น + เสียงบรรยายสถานะความเครียด |
+| **FTL** | ambient ตึงเครียด SFX น้อยแต่ชัด |
+| **This War of Mine** | บรรยากาศหดหู่ของการเอาชีวิตรอดในฐาน |
+| **Call of Cthulhu (เกม/TRPG)** | การทอย D100 ที่ลุ้นและเสียงตอบสนองผล |
+
+## Related Documents
+- [Game Concept](00-concept.md)
+- [Core Mechanics](01-mechanics.md)

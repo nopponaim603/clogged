@@ -4,22 +4,23 @@
 **Status:** Active | **Current Sprint:** [Sprint 01 — Prototype](./agile/sprint-backlogs/sprint-01.md)
 **Last Updated:** 2026-10-28 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
 
-> ⚠️ GDD ได้อัปเดต **v1.0 (Prototype Reverse-Engineered)** — เอกสาร GDD ฉบับใหม่Reverse Engineering จาก source code `prototype_resource_game/` — ดู [Design Evolution](./gdd/00-concept.md#6-design-evolution)
+> ⚠️ GDD อัปเดตเป็น **v2.0 (Unity V2)** — อ้างอิงระบบจริงใน `Unity-Projects/Assets/V2/` ดู [Design Evolution](./gdd/00-concept.md#5-design-evolution) · GDD v1.0 ของ Web Prototype ย้ายไป [archive](./wiki/archive/gdd-v1-prototype/README.md)
 
 ---
 
 ## 📘 Game Design (GDD)
-- [Concept & Architecture](./gdd/00-concept.md) — Game loop, systems, architecture
-- [Core Mechanics](./gdd/01-mechanics.md) — Day/Night cycle, missions, crews, time system
-- [Narrative & World](./gdd/02-narrative.md) — Setting, factions, characters
-- [Art Direction](./gdd/03-art-direction.md) — Visual style, UI layout, colors
-- [Audio Direction](./gdd/04-audio-direction.md) — Music, SFX plan
+- [Concept](./gdd/00-concept.md) — Elevator pitch, design pillars, game loop, win/lose, design evolution
+- [Core Mechanics](./gdd/01-mechanics.md) — Unit/AP, End Day, D100 gather, base work, starvation, Core Item, ตัวเลข balance
+- [Narrative & World](./gdd/02-narrative.md) — สิ่งที่มีในเกม V2 + open questions ด้าน lore
+- [Art Direction](./gdd/03-art-direction.md) — สภาพภาพปัจจุบัน, color language, layout, ทิศทางภาพ
+- [Audio Direction](./gdd/04-audio-direction.md) — แผนเพลง/SFX ผูกกับ event ของ V2
 
 ---
 
 ## 💻 Software Design
-- [System Design](./software/01-system-design.md)
-- [Class Diagram](./software/02-class-diagram.md)
+- [System Design](./software/01-system-design.md) — Web Prototype (Phaser)
+- [Class Diagram](./software/02-class-diagram.md) — Web Prototype (Phaser)
+- [Class Design (Comprehensive)](./software/03-class-design.md) — Web Prototype (Phaser)
 - [Unity V2 System Design](./software/04-unity-system-design.md)
 - [Unity V2 Class Diagram](./software/05-unity-class-diagram.md)
 - [Unity V2 Core Scene Hierarchy](./software/06-unity-core-scene-hierarchy.md)
@@ -32,7 +33,8 @@
 - [Sprint Planning & Roadmap](./agile/02-sprint-planning.md)
 - [Meeting Backlogs](./agile/03-meeting-backlogs.md)
 - [Retrospectives Backlog](./agile/04-retrospectives-backlog.md)
-- [Report Backlog & System Audits](./agile/05-report-backlog.md) ([Latest Weekly Report W32](./agile/reports/weekly/weekly-2026-W32.md))
+- [Report Backlog & System Audits](./agile/05-report-backlog.md) ([Latest Weekly Report W34](./agile/reports/weekly/weekly-2026-W34.md))
+- [External Progress Sheet (Google Sheets)](https://docs.google.com/spreadsheets/d/1pk30ay-eOYQDyRr4WvwK9zgK1uGMtaCp0Cl7WxYSMDU/edit?gid=1961642005#gid=1961642005)
 - [Kanban Board](./agile/kanban.md)
 - [Team Roster](./agile/team.md)
 

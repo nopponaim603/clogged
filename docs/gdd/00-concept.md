@@ -1,171 +1,141 @@
-# Survival Base — Game Concept & Architecture
+# clogged — Game Concept
 
-**Version:** 1.0 (Prototype) | **Last Updated:** 2026-07-30 | **Owner:** ทีม clogged
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14 | **Owner:** ทีม clogged
+> อ้างอิงจากระบบที่ทำงานจริงใน `Unity-Projects/Assets/V2/` (scene `Core.unity`) — GDD v1.0 ของ Web Prototype (Phaser) เก็บไว้ที่ [wiki/archive/gdd-v1-prototype](../wiki/archive/gdd-v1-prototype/README.md)
 
 ## 1. Introduction
 
 ### Elevator Pitch
-ผู้เล่นต้องกำกับการดำรงรอดของฐานพึ่งพาตนเองในภูมิภาคร้อนรัง โดยส่งเหล่ามืออาชีพออกเก็บทรัพยากร ค้นหารีลิกส์โบราณ และล่าสัตว์ประหลาดในเวลากลางวัน ก่อนจะป้องกันฐานจากคลาสัตว์ประหลาดในเวลากลางคืน เป้าหมายคือการรอดชีวิต 30 วันในภูมิภาคที่ไม่มีความปราณี
+ผู้เล่นคุมทีมยูนิต 4 คนที่ติดอยู่ในฐาน และต้องหา **Core Item** ให้ได้ภายใน **7 วัน** ในแต่ละวันต้องตัดสินใจว่าจะใช้ **Action Point (AP)** ที่มีอยู่น้อยนิดไปกับ **การออกสำรวจถ้ำ** (ได้ของดีแต่เสี่ยงบาดเจ็บหรือหายตัว ตัดสินด้วยการทอย D100) หรือกับ **งานในฐาน** (ทำอาหาร รักษา ทำยา) ทั้งหมดนี้ภายใต้แรงกดดันของอาหารที่ต้องจ่ายทุกคืน
 
-**คำถ้าหลัก:** จัดการทรัพยากรและเวลาอย่างไรให้รอด 30 วัน โดยไม่ให้ฐานถูกทำลาย ไม่ให้คนอดอาหาร และไม่ให้ทุกคนตาย
+**คำถามหลักของผู้เล่น:** วันนี้จะเสี่ยงส่งใครไปไหน แล้วจะเหลือ AP ไว้เลี้ยงทุกคนให้รอดถึงวันที่หา Core Item เจอได้อย่างไร
 
 ### Target Audience
-- เกมเมอร์ที่ชอบ survival / resource management / time management (FTL, Barotrauma, They Are Billions, State of Decay)
-- วัย 16+ ที่ชอบการวางแผนและจัดการทรัพยากรจำกัด
+- ผู้เล่นที่ชอบ resource management แบบ turn-based และการตัดสินใจภายใต้ความเสี่ยง (Darkest Dungeon, FTL, This War of Mine)
+- ชอบระบบทอยเต๋าแบบ TRPG (roll-under D100 แบบ Call of Cthulhu)
 
 ### Genre & Platform
-- **Genre:** Real-time Strategy + Resource Management + Base Defense (Action Survival)
-- **Perspective:** Top-down, continuous coordinate map
-- **Platform:** PC Browser (HTML5 / Phaser 3)
-- **Session Length:** 1 Run = 30 วัน ≈ 10–20 นาที (prototype)
+- **Genre:** Turn-based Resource Management + Risk/Dice Expedition
+- **Perspective:** UI แมปมุมบน (ฐานกลางจอ ถ้ำกระจายรอบๆ)
+- **Engine / Platform:** Unity (UGUI + TextMeshPro, URP 2D) — PC
+- **Session Length:** 1 run = 7 วัน (เกมวัน) ≈ 10–15 นาที
 
-### Unique Selling Points (USP)
-- ระบบ **Mission Chain** — ส่ง Crew ไปหลายจุดต่อเนื่องกันในคิวเดียว ไม่ต้องส่งทีละคั้น
-- ระบบ **Collaboration** — หลาย Crew ทำงานที่จุดเดียวกันพร้อมกัน แล้วรวมความถนัด
-- **Day/Night Pressure** — กลางวันมีเวลาจำกัด กลางคืนถูกโจมตี ไม่สามารถ interrupt ระหว่าง execution ได้
-- **Perk + Equipment Synergy** — Crew แต่ละตัวมีความถนัดเฉพาะที่ทำงานร่วมกันกับ equipment ได้
+### Design Pillars
+
+| Pillar | ความหมาย | ระบบที่รองรับ |
+|---|---|---|
+| **AP ทุกแต้มมีค่า** | ทุกการกระทำแย่ง AP ก้อนเดียวกัน (3/คน/วัน) | AP, Base Work vs Gather, Starvation (+AP cost) |
+| **ความเสี่ยงที่อ่านออก** | ผู้เล่นเห็นโอกาสก่อนตัดสินใจ และรับผลได้ทั้งดีและร้าย | D100 roll-under, Aptitude, Duo bonus, Trait |
+| **อาหารไม่เคยพอ** | ทุกคืนต้องจ่ายอาหาร ขาดแล้วทุกอย่างแพงขึ้นจนเสียคน | Food, Starvation stack, Lost Signal |
+| **เส้นตายบีบให้เสี่ยง** | ถ้ำง่ายปลอดภัยแต่ไม่พาไปถึง Core Item | 7-day deadline, Core Item ต้องผ่าน Normal → Hard |
+
+### Unique Selling Points
+- **ทอย D100 แบบ roll-under 4 ระดับผล** (Hard Success / Regular / Failure / Fumble) — ผลแต่ละระดับให้ทั้งของ, บาดแผล และ trait ถาวร
+- **ยูนิตเปลี่ยนไปตามประสบการณ์** — ทริปที่ดีหรือแย่ให้ trait ที่ติดตัวไปตลอด run
+- **ความหิวเป็นภาษีของ AP** — หิว 1 stack = ทุกการกระทำแพงขึ้น 1 AP, 3 stack = ยูนิตขาดการติดต่อ (Lost Signal)
 
 ---
 
 ## 2. Game Loop
 
+### Core Loop (1 วัน)
+
 ```mermaid
 flowchart TD
-    A[Day 1] --> B[Planning Phase]
-    B --> C[Select Crew + Build Mission Chain]
-    C --> D[Confirm Chain → Add to Queue]
-    D --> E[Execute All Missions]
-    E --> F[Units Travel → Act → Return]
-    F --> G[Night Phase — Monster Attack]
-    G --> H[Base HP Down, Resources Lost]
-    H --> I[New Day — New Map]
-    I --> B
-    I --> J{Day > 30?}
-    J -->|Yes| K[WIN — Survived 30 Days]
-    B --> L{All Crew Dead?}
-    L -->|Yes| M[LOST]
-    B --> N{No Food?}
-    N -->|Yes| M
+    Start([เริ่มวัน — ทุกคน AP 3]) --> Plan{ผู้เล่นเลือกทำ}
+    Plan -->|ส่งสำรวจ| G[เลือกถ้ำ + 1–2 ยูนิต → Dispatch]
+    G --> Roll[ทอย D100 → ได้ของ / บาดเจ็บ / trait]
+    Roll --> Plan
+    Plan -->|งานในฐาน| B[ทำอาหาร / รักษา / ทำยา]
+    B --> Plan
+    Plan -->|End Day| Eat[ทุกคนในฐานกินอาหารคนละ 1<br/>ไม่มีกิน → Starvation +1]
+    Eat --> Check{ตรวจผล}
+    Check -->|มี Core Item| Win([ชนะ])
+    Check -->|ทุกคน Lost Signal| Lose1([แพ้])
+    Check -->|เลยวันที่ 7| Lose2([แพ้ — หมดเวลา])
+    Check -->|ยังไม่จบ| Start
 ```
+
+### Run Loop (เป้าหมายระยะยาว)
+
+```mermaid
+flowchart LR
+    A[ถ้ำ Easy<br/>วัตถุดิบอาหาร] --> F[ทำอาหาร<br/>เลี้ยงทีม]
+    B[ถ้ำ Normal<br/>ยา] --> H[รักษา]
+    B -->|Hard Success| U[ปลดล็อก<br/>วัสดุ Core Item]
+    C[ถ้ำ Hard<br/>Materials] --> W[Workshop ทำยา]
+    U --> C2[ถ้ำ Hard<br/>Hard Success]
+    C2 --> Core([ได้ Core Item → ชนะทันที])
+```
+
+### Win / Lose Conditions
+
+| เงื่อนไข | ผล |
+|---|---|
+| ได้ Core Item ภายในวันที่ 7 | **WIN** (ชนะทันทีที่ได้) |
+| กด End Day ในวันที่ 7 แล้วยังไม่มี Core Item | **LOSE** — หมดเวลา |
+| ยูนิตทั้ง 4 คน Lost Signal (Missing) | **LOSE** — ไม่เหลือใคร |
 
 ---
 
 ## 3. Technical Stack
 
 | Layer | Technology | Notes |
-|-------|-----------|-------|
-| Engine | Phaser 3 (v4.0) | Scene-based 2D game engine |
-| Language | TypeScript ~5.7 | |
-| Build | Vite ^6.3 | dev / prod configs in `vite/` |
-| Renderer | Phaser Arcade Physics | Grid-free, continuous coordinates |
-| UI | Pure Phaser GameObjects | No external UI framework |
-| Platform | Browser (HTML5) | Runs via `npm run dev` (Vite dev server) |
+|---|---|---|
+| Engine | Unity (URP) | โฟลเดอร์ระบบหลัก `Assets/V2/` |
+| Language | C# | MonoBehaviour singleton + plain serializable data class |
+| UI | Unity UGUI + TextMeshPro | Canvas 1920×1080 Scale With Screen Size |
+| Input | Unity Input System (`InputSystemUIInputModule`) | |
+| Scene | `V2/Scenes/Core.unity` | scene เดียวสำหรับทั้ง run |
+
+รายละเอียดสถาปัตยกรรม: [Unity V2 System Design](../software/04-unity-system-design.md) · [Class Diagram](../software/05-unity-class-diagram.md) · [Core Scene Hierarchy](../software/06-unity-core-scene-hierarchy.md)
 
 ---
 
-## 4. Game Architecture
+## 4. System Overview
 
-### Scene Flow
-
-```mermaid
-flowchart LR
-    Boot[BootScene — 1.5s loading] --> Menu[MenuScene — Title + Start]
-    Menu --> Game[GameScene — Main gameplay]
-    Game --> Over[GameOverScene — Win / Lose]
-    Over --> Game
-```
-
-### Scene Responsibilities
-
-| Scene | Responsibility |
-|-------|---------------|
-| **BootScene** | แสดง loading animation, หน่วง 1.5s แล้วไป MenuScene |
-| **MenuScene** | Title screen, decorative arcs, feature list, Start button |
-| **GameScene** | ทุกอย่าง: map, crews, missions, time, night defense, UI |
-| **GameOverScene** | แสดงผลชนะ/แพ้, day count, restart button |
-
-### Core Systems (GameScene)
-
-```mermaid
-flowchart TD
-    subgraph Systems
-        TimeSys[TimeSystem]
-        CrewMgr[CrewManager]
-        ResMgr[ResourceManager]
-        MissionSys[MissionSystem]
-        MapGen[MapGenerator]
-    end
-
-    subgraph Entities
-        Crew[Crew Entity]
-        ResourceNode[ResourceNode Entity]
-        Monster[Monster Entity]
-        Base[Base Entity]
-    end
-
-    subgraph UI
-        ResourcePanel
-        CrewPanel
-        PlanningPanel
-        MissionDisplay
-        NotificationSystem
-    end
-
-    TimeSys -->|Tick| CrewMgr
-    CrewMgr -->|Hire/Assign| Crew
-    MissionSys -->|Execute| ResourceNode
-    ResourceNode -->|Loot| ResMgr
-    TimeSys -->|Day/Night| MapGen
-    MapGen -->|Map Data| ResourceNode
-    Crew -->|Combat| Monster
-```
+| ระบบ | สรุป | รายละเอียด |
+|---|---|---|
+| **Unit** | 4 ยูนิตคงที่ มี AP, Aptitude/Non-aptitude, Trait, สถานะ 5 แบบ | [Mechanics §2](01-mechanics.md#2-unit-system) |
+| **Day / AP** | วันละ 3 AP ต่อคน, End Day = กินอาหาร + รีเฟรช AP | [Mechanics §3](01-mechanics.md#3-day-system) |
+| **Send-to-Gather** | ส่ง 1–2 คนไปถ้ำ 3 ระดับ ทอย D100 ตัดสินผล | [Mechanics §4](01-mechanics.md#4-send-to-gather--การออกสำรวจ) |
+| **Base Work** | ทำอาหาร / รักษา / Workshop ทำซ้ำได้ไม่จำกัด | [Mechanics §5](01-mechanics.md#5-base-work--งานในฐาน) |
+| **Starvation** | ไม่ได้กิน = +1 stack (+1 AP ทุกการกระทำ), 3 stack = Lost Signal | [Mechanics §6](01-mechanics.md#6-starvation--ความหิว) |
+| **Core Item** | Hard Success ที่ Normal → ปลดล็อก, Hard Success ที่ Hard → ได้ของ | [Mechanics §7](01-mechanics.md#7-core-item--เงื่อนไขชนะ) |
 
 ---
 
-## 5. System Overview
+## 5. Design Evolution
 
-### Time System
-- วนลูป 30 วัน (day 1 → day 30)
-- วันละ 1 รอบ: **Day Phase** (plan + execute) → **Night Phase** (defense)
-- Day time limit: 12000 time units
-- Simulation tick: +100 units every 1 second (real-time simulation)
-- Night duration: 5 seconds (short, transitions quickly)
+| Version | Concept | สถานะ | Source |
+|---|---|---|---|
+| **v2.0 Unity V2** | Turn-based AP + D100 expedition, 4 ยูนิตคงที่, หา Core Item ใน 7 วัน, ไม่มีช่วงกลางคืน | **ปัจจุบัน** | `Unity-Projects/Assets/V2/` |
+| v1.5 Unity Day/Night | Ship Navigator + Day scene (crew mission, real-time clock) ↔ Night scene (tower defense) | เลิกใช้ (legacy) | `Unity-Projects/Assets/Day/`, `Assets/Night/` |
+| v1.0 Web Prototype | Real-time mission chain + night monster attack, รอด 30 วัน | เลิกใช้ (ระยะที่ 1) | `prototype_resource_game/`, [GDD archive](../wiki/archive/gdd-v1-prototype/00-concept.md) |
+| v0.3 Concept | Turn-based Strategy + Tower Defense — Ship → Day → Night + Node Map Roguelike | แนวคิด | [Clogged_GDD_v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
 
-### Mission System
-- 3 ประเภท: **Gather**, **Relic Search**, **Monster Hunt**
-- ผู้เล่น build mission chain: Crew → Target 1 → Target 2 → ... → Base
-- Each mission phase: Travel → Action → Travel back
-- Collaborative mode: หลาย crew ไปจุดเดียวกัน → ใช้ total proficiency
-
-### Resource System
-- 7 resources: Wood, Stone, Iron, Food, Water, Circuit, Aluminum
-- Monster parts: Fangs, Hides, Claws
-- Base HP: 100, decreases from night attacks
-- Food consumed daily per crew (2 food/crew/day)
-
-### Win / Lose Conditions
-
-| Condition | Result |
-|-----------|--------|
-| Survive 30 days | **WIN** |
-| Base HP ≤ 0 | **LOST** — Base Destroyed |
-| Food ≤ 0 | **LOST** — Starvation |
-| All crews dead | **LOST** — No one left |
+**สิ่งที่เปลี่ยนจาก v1.0 → v2.0**
+- ตัด real-time clock และ mission chain ออก → เปลี่ยนเป็น **AP ต่อวัน** (turn-based)
+- ตัด **ช่วงกลางคืน / ป้องกันฐาน** และ Base HP ออกทั้งหมด
+- ผลการสำรวจจาก proficiency + สูตรต่อเนื่อง → **ทอย D100 แบบแบ่งระดับผล**
+- ลูกเรือสุ่ม/จ้างได้ → **4 ยูนิตคงที่** ที่โตขึ้นด้วย Trait
+- รอด 30 วัน → **หา Core Item ใน 7 วัน** (เป้าหมายเชิงรุก ไม่ใช่แค่ประคองตัว)
+- ทรัพยากร 7 ชนิด + ชิ้นส่วนสัตว์ → **4 ชนิด** (Food, Cooking Material, Medicine, Materials)
 
 ---
 
-## 6. Design Evolution
+## 6. Open Questions
 
-| Version | Concept | Source |
-|---------|---------|--------|
-| **v1.0 Prototype** | Resource Management + Action Survival — send crew for missions in day, defend base at night | Source code `prototype_resource_game/` |
-| v0.3 Concept | Turn-based Strategy + Tower Defense Hybrid — 3 Phase (Ship → Day → Night) + Node Map Roguelike | [Clogged_GDD_v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
-
-> Prototype นี้เป็นการ test concept ของ v1.0 ที่ได้ระบุไว้ใน Design Evolution — ตรวจสอบว่าการส่ง crew ออกไป mission + ป้องกัน night ให้ความรู้สึก "survival pressure" แบบไหน
+- หน้าจอจบเกม (Win/Lose) ยังไม่มี — ต้องออกแบบสิ่งที่แสดงหลังจบ run
+- ปุ่ม "ให้อาหารลด Starvation" มีระบบแล้วแต่ยังไม่มี UI
+- Aptitude `Speed`, `Endurance`, `Gathering`, `Combat` ยังไม่มีผล — จะผูกกับกลไกอะไร
+- Trait ทุกตัวให้ ±10 เท่ากัน — จะให้ trait แต่ละชื่อมีผลเฉพาะหรือไม่
+- Lore ของโลก, ฐาน และ Core Item ยังไม่กำหนด (ดู [Narrative](02-narrative.md))
 
 ---
 
 ## Related Documents
-- Mechanics: [Core Mechanics](01-mechanics.md)
-- System Design: [System Design](../software/01-system-design.md)
-- Product Backlog: [Backlog](../agile/01-product-backlog.md)
+- [Core Mechanics](01-mechanics.md)
+- [Narrative & World](02-narrative.md) · [Art Direction](03-art-direction.md) · [Audio Direction](04-audio-direction.md)
+- [Unity V2 System Design](../software/04-unity-system-design.md)
+- [Product Backlog](../agile/01-product-backlog.md)

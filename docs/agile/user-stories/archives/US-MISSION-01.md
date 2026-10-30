@@ -30,5 +30,5 @@
 
 ## 🔗 Related Files
 - Backlog: [Product Backlog](../01-product-backlog.md)
-- GDD: [Mechanics — Mission System](../../gdd/01-mechanics.md#mission-system)
+- GDD: [Mechanics — Mission System](../../../wiki/archive/gdd-v1-prototype/01-mechanics.md#mission-system)
 - Software: [System Design — MissionSystem](../../software/01-system-design.md)

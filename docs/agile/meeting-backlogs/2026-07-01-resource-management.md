@@ -64,6 +64,6 @@
 - เอกสารต้นฉบับยังเปิดให้แก้ไข/เพิ่มเติมได้ ณ ตอนบันทึก — ถือเป็น brainstorm ที่ยังไม่ปิดจบ
 
 ---
-> ข้อเสนอในรอบนี้ (Turn-based, ระบบลูกเต๋า, unit 4 ตัว, bullet hell ฯลฯ) เป็น brainstorm ที่กว้างกว่าทิศทางที่ prototype ปัจจุบันเลือกใช้จริง (Resource Management + Action Survival, Day/Night cycle, crew dispatch) — ดู [Design Pivot](../../gdd/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน) สำหรับทิศทางที่สรุปในภายหลัง
+> ข้อเสนอในรอบนี้ (Turn-based, ระบบลูกเต๋า, unit 4 ตัว, bullet hell ฯลฯ) เป็น brainstorm ที่กว้างกว่าทิศทางที่ prototype ปัจจุบันเลือกใช้จริง (Resource Management + Action Survival, Day/Night cycle, crew dispatch) — ดู [Design Pivot](../../wiki/archive/gdd-v1-prototype/00-concept.md#2-️-design-pivot--บันทึกไว้เพื่อความชัดเจน) สำหรับทิศทางที่สรุปในภายหลัง
 
 **Related:** [Meeting Backlogs Hub](../03-meeting-backlogs.md) · [GDD Concept](../../gdd/00-concept.md) · [GDD Mechanics](../../gdd/01-mechanics.md)

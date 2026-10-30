@@ -30,5 +30,5 @@
 
 ## 🔗 Related Files
 - Backlog: [Product Backlog](../01-product-backlog.md)
-- GDD: [Concept — Game Loop](../../gdd/00-concept.md#2-game-loop)
+- GDD: [Concept — Game Loop](../../wiki/archive/gdd-v1-prototype/00-concept.md#2-game-loop)
 - Software: [System Design — TimeSystem](../../software/01-system-design.md)
