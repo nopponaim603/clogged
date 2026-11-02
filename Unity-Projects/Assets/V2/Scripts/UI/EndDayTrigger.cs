@@ -30,6 +30,24 @@ public class EndDayTrigger : MonoBehaviour, IPointerClickHandler
     private void Start()
     {
         if (hintLabel != null && !string.IsNullOrEmpty(hintText)) hintLabel.text = hintText;
+
+        HudTooltipTrigger.Attach(this, DescribeDay);
+    }
+
+    /// <summary>
+    /// Hover breakdown of the day frame: how many days are left and what pressing
+    /// it will do. Rebuilt on hover so the countdown is always the live one.
+    /// </summary>
+    private HudTooltipContent DescribeDay()
+    {
+        var days = DayManager.Instance;
+        if (days == null) return new HudTooltipContent("END DAY", "FEED THE CREW AND START A NEW DAY.");
+
+        int left = Mathf.Max(0, days.DeadlineDay - days.CurrentDay);
+        string rush = left <= 1 ? " THIS IS THE LAST DAY." : $"{left} DAY(S) LEFT BEFORE THE MONSTERS WIN.";
+
+        return new HudTooltipContent("END DAY",
+            $"CLICK THE FRAME TO END DAY {days.CurrentDay}.\nFOOD IS PAID FOR EVERYONE AT CAMP, THEN AP REFRESHES.{rush}");
     }
 
     /// <summary>

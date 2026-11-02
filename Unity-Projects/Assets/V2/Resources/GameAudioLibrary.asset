@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c89e990fa5fc4be43a0358676e30bc1d, type: 3}
+  m_Name: GameAudioLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::GameAudioLibrary
+  mixer: {fileID: 24100000, guid: 3affd4bbdd7c0494eb87b1dcff1ff082, type: 2}
+  titleMusic: {fileID: 8300000, guid: 59ef8b6690289fc46bb2c4e5108cfdeb, type: 3}
+  runMusic:
+  - {fileID: 8300000, guid: f3f23ead578d565449376c47624dce03, type: 3}
+  - {fileID: 8300000, guid: c96a7fc714f50c741bbbb93a8129c2c6, type: 3}
+  - {fileID: 8300000, guid: 6226a2d49823fb743adefd599c742687, type: 3}
+  - {fileID: 8300000, guid: 3e1c974fd0210cf41bc21eacd7c56007, type: 3}
+  - {fileID: 8300000, guid: 426f7080844d1b644b8a31e4eccfd122, type: 3}
+  success: {fileID: 8300000, guid: 506ce3dc187da044fb0ffb46b68baa6b, type: 3}
+  fail: {fileID: 8300000, guid: 93c19108d36f8d3419d4b46968e2f6a8, type: 3}
+  error: {fileID: 8300000, guid: 57369bd54945b70418f2439066975026, type: 3}
+  win:
+  - {fileID: 8300000, guid: e6da4ed36cd9b564d8ec60abccc0b4d7, type: 3}
+  - {fileID: 8300000, guid: 31fb7ad214a23ba44804b9e51fa9cf17, type: 3}
+  gameOver: {fileID: 8300000, guid: d2dc5014e1c35b84a9ad5cc8665cf05c, type: 3}
+  click: {fileID: 8300000, guid: 394f7e1a9fe36cb4dbf8e4ee6d5c357d, type: 3}
+  select: {fileID: 8300000, guid: a265c62ffba250a4e8bc19367c4ea3f4, type: 3}
+  cook: {fileID: 8300000, guid: 9b17c5966b78ce54f914587eb8cfdbde, type: 3}
+  heal: {fileID: 8300000, guid: ca30d2616bd2c1a44b58072c5f33e020, type: 3}
+  craft: {fileID: 8300000, guid: 7471c9a2b0775ed47a52f04292ad0a27, type: 3}
+  popup: {fileID: 8300000, guid: 724751d70647823499915a006520e38b, type: 3}

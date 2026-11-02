@@ -24,24 +24,53 @@ public class GatherOutcome
 /// </summary>
 public static class GatherResolver
 {
+    /// <summary>Team bonus when at least one sent unit is a natural at the zone's tier (counted once).</summary>
+    public const int AptitudeBonus = 25;
+
+    /// <summary>Bonus for sending two units instead of one.</summary>
+    public const int DuoBonus = 25;
+
+    /// <summary>Cost per tier of distance between a unit's specialty and the zone.</summary>
+    public const int AptitudeMismatchPerTier = 10;
+
+    public const int TraitBonus = 10;
+    public const int BlessedBonus = 10;
+
+    /// <summary>Negative modifier for one unit: -10 per tier away from its specialty (same tier = 0).</summary>
+    public static int AptitudeMismatchPenalty(ZoneAptitude unitAptitude, ZoneAptitude zone)
+    {
+        return -AptitudeMismatchPerTier * Mathf.Abs((int)unitAptitude - (int)zone);
+    }
+
     /// <summary>
-    /// Success value = zone base + aptitude bonus/penalty (each counted once,
-    /// regardless of how many of the 1-2 sent units qualify) + duo bonus +
-    /// solo-far penalty + trait bonus/penalty (each counted once).
+    /// Success value = zone base + aptitude bonus/penalty (per unit) + duo bonus
+    /// + trait bonus/penalty (each counted once) + Blessed per blessed unit
+    /// + the party-wide buff-potion bonus.
+    ///
+    /// There is no solo-Hard penalty any more.
     /// </summary>
     public static int ComputeSuccessValue(GatherZoneConfig config, List<UnitCharacter> sentUnits)
+    {
+        return ComputeSuccessValue(config, sentUnits, RunResources.Instance != null ? RunResources.Instance.PartySuccessBonus : 0);
+    }
+
+    /// <summary>Overload for tests/tools that must not touch the live singletons.</summary>
+    public static int ComputeSuccessValue(GatherZoneConfig config, List<UnitCharacter> sentUnits, int partySuccessBonus)
     {
         int value = config.baseSuccessValue;
 
         bool hasApt = false;
-        bool hasNonApt = false;
         bool hasPositiveTrait = false;
         bool hasNegativeTrait = false;
+        int blessedUnits = 0;
 
         foreach (var unit in sentUnits)
         {
-            if (unit.HasAptitude(config.ZoneTag)) hasApt = true;
-            if (unit.HasNonAptitude(config.ZoneTag)) hasNonApt = true;
+            if (unit.HasAptitude(config.RequiredAptitude)) hasApt = true;
+
+            value += AptitudeMismatchPenalty(unit.primaryAptitude, config.RequiredAptitude);
+
+            if (unit.blessed) blessedUnits++;
 
             foreach (var trait in unit.traits)
             {
@@ -50,22 +79,29 @@ public static class GatherResolver
             }
         }
 
-        if (hasApt) value += 20;
-        if (hasNonApt) value -= 15;
+        if (hasApt) value += AptitudeBonus;
+        if (sentUnits.Count == 2) value += DuoBonus;
 
-        if (sentUnits.Count == 2) value += 15;
-        if (config.zone == GatherZone.Hard && sentUnits.Count == 1) value -= 20;
+        if (hasPositiveTrait) value += TraitBonus;
+        if (hasNegativeTrait) value -= TraitBonus;
 
-        if (hasPositiveTrait) value += 10;
-        if (hasNegativeTrait) value -= 10;
+        value += blessedUnits * BlessedBonus;
+        value += partySuccessBonus;
 
         return value;
     }
 
     /// <summary>
-    /// Rolls 1D100 and resolves it against successValue. Fumble range depends
-    /// on successValue (96-100 if under 50, exactly 100 otherwise) and is
-    /// checked before Hard Success/Regular/Failure.
+    /// Hard Success is the top third of the success value (floor). Exposed so the
+    /// HUD and the tests can quote the same number the roll uses.
+    /// </summary>
+    public static int HardSuccessThreshold(int successValue) => Mathf.Max(0, successValue / 3);
+
+    /// <summary>
+    /// Rolls 1D100 and resolves it against successValue. Hard Success is the top
+    /// third of the success value (SV / 3). Fumble range depends on successValue
+    /// (96-100 if under 50, exactly 100 otherwise) and is checked before
+    /// Hard Success/Regular/Failure.
     /// </summary>
     public static GatherOutcome Roll(int successValue)
     {
@@ -82,7 +118,7 @@ public static class GatherResolver
         }
         else
         {
-            int hardThreshold = successValue / 2; // floor, per the doc's example (75 -> 37)
+            int hardThreshold = HardSuccessThreshold(successValue);
             if (rollValue <= hardThreshold) tier = GatherResultTier.HardSuccess;
             else if (rollValue <= successValue) tier = GatherResultTier.Regular;
             else tier = GatherResultTier.Failure;

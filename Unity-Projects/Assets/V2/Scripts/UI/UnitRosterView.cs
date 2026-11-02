@@ -129,7 +129,13 @@ public class UnitRosterView : MonoBehaviour
             // While aiming a heal, every legal patient is highlighted so the
             // eligible cards stand out from the merely-disabled ones.
             view.SetTargetable(healing && pickable);
-            view.SetApCostPreview(pendingCost);
+
+            // The preview belongs to whoever pays: the medic while healing,
+            // otherwise the selected card(s).
+            UnitCharacter payer = CurrentApCostPayer();
+            bool pays = payer != null ? view.Unit == payer : view.IsSelected;
+            view.SetApCostPayer(pays);
+            view.SetApCostPreview(pays ? pendingCost : 0);
             view.Refresh();
 
             // A unit can become unavailable mid-day (AP spent on base work,
@@ -170,6 +176,18 @@ public class UnitRosterView : MonoBehaviour
         return config != null ? config.apCost : 0;
     }
 
+    /// <summary>
+    /// Which unit will actually pay the pending cost, or null when every
+    /// selected card pays for itself (a gather trip). Healing is the odd one
+    /// out: the selected card is the patient while the medic spends the AP.
+    /// </summary>
+    private UnitCharacter CurrentApCostPayer()
+    {
+        var skills = SkillFlowController.Instance;
+        if (skills == null || !skills.IsSkillActive) return null;
+        return skills.Worker;
+    }
+
     private void OnDestroy()
     {
         foreach (var view in views)
@@ -197,6 +215,8 @@ public class UnitRosterView : MonoBehaviour
         for (int i = 0; i < units.Count; i++)
         {
             UnitIconView view = Instantiate(iconPrefab, container);
+            // Size the chrome to the slot it will live in before it is built.
+            if (handPanel != null) view.SetCardSize(handPanel.CardSize);
             view.Bind(units[i], ColorForSlot(i), true);
             view.Clicked += HandleCardClicked;
 

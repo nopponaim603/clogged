@@ -44,6 +44,17 @@ public class WarningView : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(message)) return;
 
+        // Played here, not in the queue: a banner that arrives while another is
+        // still holding would otherwise stay silent for seconds, and the sting
+        // belongs to the click that was refused. The director throttles it, so a
+        // player hammering a blocked button hears a short buzz, not a machine gun.
+        //
+        // The button that caused this refusal is about to play its own click in
+        // the same frame; silencing it is what makes the refusal read as one
+        // sound instead of a chime under an error.
+        UiClickSound.SuppressThisFrameClick();
+        AudioDirector.Instance?.PlayError();
+
         queue.Enqueue(new KeyValuePair<string, LogKind>(message, kind));
         if (routine == null) routine = StartCoroutine(RunQueue());
     }

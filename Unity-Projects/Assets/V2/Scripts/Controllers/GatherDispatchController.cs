@@ -14,8 +14,14 @@ public class GatherDispatchResult
     public LootAmount? mainLootGranted;
     public LootAmount? bonusLootGranted;
 
-    public UnitCharacter hurtUnit;
-    public UnitCharacter missingUnit;
+    /// <summary>Everyone hurt by this trip. A Failure injures one unit, a Fumble injures the whole party.</summary>
+    public readonly List<UnitCharacter> hurtUnits = new List<UnitCharacter>();
+
+    /// <summary>Units that picked up a trait here. A Fumble hands one to every unit that went.</summary>
+    public readonly List<UnitCharacter> traitRecipients = new List<UnitCharacter>();
+
+    /// <summary>First injured unit - the single victim a Failure produces.</summary>
+    public UnitCharacter hurtUnit => hurtUnits.Count > 0 ? hurtUnits[0] : null;
 
     public bool traitAwarded;
     public TraitPolarity traitPolarity;
@@ -36,6 +42,40 @@ public class GatherDispatchController : MonoBehaviour
     public static GatherDispatchController Instance { get; private set; }
 
     public event Action<GatherDispatchResult> OnGatherResolved;
+
+    /// <summary>Success value added to a zone's Core Item chance when an Exploring talent is on the trip.</summary>
+    public const int ExploringCoreItemChanceBonus = 25;
+
+    // Consecutive Hard Success trips that dropped no Core Item, per pity zone.
+    private int pityNormal;
+    private int pityHard;
+
+    public int PityNormal => pityNormal;
+    public int PityHard => pityHard;
+
+    /// <summary>How many Hard Success trips in a row before the next one is guaranteed (0 = zone has no pity).</summary>
+    public int PityThreshold(GatherZone zone)
+    {
+        var config = GatherZoneDatabase.Instance != null ? GatherZoneDatabase.Instance.GetConfig(zone) : null;
+        return config != null ? config.coreItemPityTrips : 0;
+    }
+
+    /// <summary>Current pity progress for the zone, for the map card to display.</summary>
+    public int PityCounter(GatherZone zone)
+    {
+        switch (zone)
+        {
+            case GatherZone.Normal: return pityNormal;
+            case GatherZone.Hard: return pityHard;
+            default: return 0;
+        }
+    }
+
+    public void RestorePity(int normal, int hard)
+    {
+        pityNormal = Mathf.Max(0, normal);
+        pityHard = Mathf.Max(0, hard);
+    }
 
     private void Awake()
     {
@@ -68,7 +108,9 @@ public class GatherDispatchController : MonoBehaviour
         {
             if (!unit.CanBeSentGathering)
             {
-                reasonIfNot = $"{unit.unitName} is not available to gather.";
+                reasonIfNot = unit.state == UnitState.Idle
+                    ? $"{unit.unitName} has no sword left today."
+                    : $"{unit.unitName} is not available to gather.";
                 return false;
             }
 
@@ -95,10 +137,11 @@ public class GatherDispatchController : MonoBehaviour
         var config = GatherZoneDatabase.Instance.GetConfig(zone);
 
         // Each unit pays the full zone AP cost - duo doesn't split it, per the doc.
+        // The sword is the dispatch ticket: one per unit, refreshed with AP.
         foreach (var unit in selectedUnits)
         {
             unit.TrySpendActionPoints(config.apCost);
-            unit.MarkGatheredToday();
+            unit.TrySpendSword();
             unit.state = UnitState.Away;
         }
 
@@ -107,18 +150,39 @@ public class GatherDispatchController : MonoBehaviour
 
         GatherDispatchResult result = ApplyOutcome(zone, config, selectedUnits, rollOutcome);
 
-        // Anyone still Away (not reassigned to Hurt/Missing by the outcome) returns to Idle or Resting.
+        // Blessed only covers the trip right after the heal, so it burns off here.
+        foreach (var unit in selectedUnits) unit.blessed = false;
+
+        // Anyone still Away (not reassigned to Hurt by the outcome) returns to Idle or Resting.
         foreach (var unit in selectedUnits)
         {
-            if (unit.state == UnitState.Away)
-            {
-                unit.state = unit.currentActionPoints > 0 ? UnitState.Idle : UnitState.Resting;
-            }
+            if (unit.state == UnitState.Away) unit.ReturnToPlay();
         }
 
         OnGatherResolved?.Invoke(result);
         RunStats.CountGather(result);
+
+        // Checked last, after everyone who was still Away is back in a real
+        // state. A Fumble that wounds an already broken crew leaves nobody to
+        // heal anyone, and that is a loss rather than a game that limps on.
+        DayManager.Instance?.CheckImmediateLoss();
+
         return result;
+    }
+
+    /// <summary>
+    /// Applies a known outcome without rolling. <see cref="Dispatch"/> is the
+    /// normal entry point; this exists so the verification pass can force a
+    /// tier (a Fumble cannot be waited for) and is safe to call for one trip.
+    /// </summary>
+    public GatherDispatchResult ApplyKnownOutcome(GatherZone zone, List<UnitCharacter> selectedUnits,
+        GatherResultTier tier, int rollValue = 1, int successValue = 50)
+    {
+        var config = GatherZoneDatabase.Instance != null ? GatherZoneDatabase.Instance.GetConfig(zone) : null;
+        if (config == null || selectedUnits == null || selectedUnits.Count == 0) return null;
+
+        return ApplyOutcome(zone, config, selectedUnits,
+            new GatherOutcome { tier = tier, rollValue = rollValue, successValue = successValue });
     }
 
     private GatherDispatchResult ApplyOutcome(GatherZone zone, GatherZoneConfig config, List<UnitCharacter> selectedUnits, GatherOutcome rollOutcome)
@@ -135,48 +199,69 @@ public class GatherDispatchController : MonoBehaviour
         switch (rollOutcome.tier)
         {
             case GatherResultTier.HardSuccess:
-                GrantMainLoot(config.mainLoot, 1f, result);
-                GrantBonusLoot(config, result);
+                GrantMainLoot(config.mainLoot, 1f, selectedUnits, result);
+                GrantBonusLoot(config, selectedUnits, result);
                 MaybeAwardTrait(selectedUnits, 0.5f, TraitPolarity.Positive, result);
-                TryRollCoreItems(config, result);
+                TryRollCoreItems(config, selectedUnits, result);
                 break;
 
             case GatherResultTier.Regular:
-                GrantMainLoot(config.mainLoot, 1f, result);
+                GrantMainLoot(config.mainLoot, 1f, selectedUnits, result);
                 break;
 
             case GatherResultTier.Failure:
-                GrantMainLoot(config.mainLoot, 0.5f, result);
+                GrantMainLoot(config.mainLoot, 0.5f, selectedUnits, result);
                 InjureRandomUnit(selectedUnits, result);
                 MaybeAwardTrait(selectedUnits, 0.5f, TraitPolarity.Negative, result);
                 break;
 
             case GatherResultTier.Fumble:
-                if (zone == GatherZone.Hard)
+                // Spec (2026-11-02): a fumble costs the whole party - no loot,
+                // every unit that went is Hurt, and every one of them picks up a
+                // bad trait. Nobody dies from a roll; Death only comes from
+                // starvation reaching its third stack.
+                foreach (var unit in selectedUnits)
                 {
-                    LoseRandomUnit(selectedUnits, result);
+                    HurtUnit(unit, result);
+                    AwardTrait(unit, TraitPolarity.Negative, result);
                 }
-                MaybeAwardTrait(selectedUnits, 1f, TraitPolarity.Negative, result);
                 break;
         }
 
         return result;
     }
 
-    private void GrantMainLoot(LootAmount mainLoot, float fraction, GatherDispatchResult result)
+    /// <summary>An Exploring talent on the trip doubles the loot taken out of the dungeon.</summary>
+    private static int LootMultiplier(List<UnitCharacter> selectedUnits)
     {
-        int amount = Mathf.FloorToInt(mainLoot.amount * fraction);
+        foreach (var unit in selectedUnits)
+        {
+            if (unit.HasTalent(UnitTalent.Exploring)) return 2;
+        }
+        return 1;
+    }
+
+    private static bool HasExploringTalent(List<UnitCharacter> selectedUnits)
+    {
+        return LootMultiplier(selectedUnits) > 1;
+    }
+
+    private void GrantMainLoot(LootAmount mainLoot, float fraction, List<UnitCharacter> selectedUnits, GatherDispatchResult result)
+    {
+        int amount = Mathf.FloorToInt(mainLoot.amount * fraction) * LootMultiplier(selectedUnits);
         if (amount <= 0) return;
 
         RunResources.Instance?.AddItem(mainLoot.type, amount);
         result.mainLootGranted = new LootAmount { type = mainLoot.type, amount = amount };
     }
 
-    private void GrantBonusLoot(GatherZoneConfig config, GatherDispatchResult result)
+    private void GrantBonusLoot(GatherZoneConfig config, List<UnitCharacter> selectedUnits, GatherDispatchResult result)
     {
         if (config.hardSuccessBonusPool == null || config.hardSuccessBonusPool.Count == 0) return;
 
         LootAmount pick = config.hardSuccessBonusPool[UnityEngine.Random.Range(0, config.hardSuccessBonusPool.Count)];
+        pick.amount *= LootMultiplier(selectedUnits);
+
         RunResources.Instance?.AddItem(pick.type, pick.amount);
         result.bonusLootGranted = pick;
     }
@@ -186,51 +271,107 @@ public class GatherDispatchController : MonoBehaviour
         if (UnityEngine.Random.value > chance) return;
 
         UnitCharacter recipient = selectedUnits[UnityEngine.Random.Range(0, selectedUnits.Count)];
+        AwardTrait(recipient, polarity, result);
+    }
+
+    /// <summary>Gives one trait to one unit and records it for the popup/log.</summary>
+    private static void AwardTrait(UnitCharacter recipient, TraitPolarity polarity, GatherDispatchResult result)
+    {
         UnitTrait trait = TraitLibrary.CreateRandom(polarity, recipient);
         recipient.traits.Add(trait);
 
-        result.traitName = trait.traitName;
-        result.traitRecipient = recipient;
         result.traitAwarded = true;
         result.traitPolarity = polarity;
+        result.traitRecipients.Add(recipient);
+
+        // The single-value fields describe the first award - that is what the
+        // dice popup prints for a one-victim outcome.
+        if (string.IsNullOrEmpty(result.traitName))
+        {
+            result.traitName = trait.traitName;
+            result.traitRecipient = recipient;
+        }
+    }
+
+    private static void HurtUnit(UnitCharacter unit, GatherDispatchResult result)
+    {
+        unit.state = UnitState.Hurt;
+        if (!result.hurtUnits.Contains(unit)) result.hurtUnits.Add(unit);
     }
 
     private void InjureRandomUnit(List<UnitCharacter> selectedUnits, GatherDispatchResult result)
     {
-        UnitCharacter victim = selectedUnits[UnityEngine.Random.Range(0, selectedUnits.Count)];
-        victim.state = UnitState.Hurt;
-        result.hurtUnit = victim;
-    }
-
-    private void LoseRandomUnit(List<UnitCharacter> selectedUnits, GatherDispatchResult result)
-    {
-        UnitCharacter victim = selectedUnits[UnityEngine.Random.Range(0, selectedUnits.Count)];
-        victim.state = UnitState.Missing;
-        result.missingUnit = victim;
+        HurtUnit(selectedUnits[UnityEngine.Random.Range(0, selectedUnits.Count)], result);
     }
 
     /// <summary>
     /// Rolls each Core Item piece the run is still missing against the zone's
     /// drop chance. Pieces are rolled independently, so one trip can yield both.
     /// Only reachable from Hard Success - Regular/Failure/Fumble never drop one.
+    ///
+    /// Pity: <see cref="GatherZoneConfig.coreItemPityTrips"/> Hard Success trips
+    /// in a row without a piece guarantee one on the following trip. A missing
+    /// piece is picked at random; obtaining anything resets that zone's counter.
+    /// An Exploring talent adds <see cref="ExploringCoreItemChanceBonus"/> to the chance.
     /// </summary>
-    private void TryRollCoreItems(GatherZoneConfig config, GatherDispatchResult result)
+    private void TryRollCoreItems(GatherZoneConfig config, List<UnitCharacter> selectedUnits, GatherDispatchResult result)
     {
         if (RunResources.Instance == null) return;
 
+        int threshold = config.coreItemPityTrips;
+        int counter = PityCounter(config.zone);
+        bool pityReady = threshold > 0 && counter + 1 >= threshold;
+
+        int chance = Mathf.Clamp(config.coreItemChancePercent + (HasExploringTalent(selectedUnits) ? ExploringCoreItemChanceBonus : 0), 0, 100);
+
+        var missing = new List<CoreItemKind>();
         foreach (CoreItemKind kind in new[] { CoreItemKind.A, CoreItemKind.B })
         {
-            if (RunResources.Instance.HasCoreItem(kind)) continue;
-            if (UnityEngine.Random.Range(0, 100) >= config.coreItemChancePercent) continue;
-
-            RunResources.Instance.ObtainCoreItem(kind);
-            result.coreItemsObtained.Add(kind);
+            if (!RunResources.Instance.HasCoreItem(kind)) missing.Add(kind);
         }
 
+        if (missing.Count > 0)
+        {
+            if (pityReady)
+            {
+                // Guarantee exactly one piece so one trip cannot also win off pity.
+                CoreItemKind pick = missing[UnityEngine.Random.Range(0, missing.Count)];
+                RunResources.Instance.ObtainCoreItem(pick);
+                result.coreItemsObtained.Add(pick);
+            }
+            else
+            {
+                foreach (CoreItemKind kind in missing)
+                {
+                    if (UnityEngine.Random.Range(0, 100) >= chance) continue;
+
+                    RunResources.Instance.ObtainCoreItem(kind);
+                    result.coreItemsObtained.Add(kind);
+                }
+            }
+        }
+
+        // Drop success clears the counter; a dry Hard Success nudges it up.
+        bool gotSomething = result.coreItemsObtained.Count > 0;
+        AddPity(config.zone, gotSomething ? -counter : 1);
+
         // Win check once per trip, not once per piece - a trip can complete the set.
-        if (result.coreItemsObtained.Count > 0)
+        if (gotSomething)
         {
             DayManager.Instance?.CheckImmediateWin();
+        }
+    }
+
+    private void AddPity(GatherZone zone, int delta)
+    {
+        switch (zone)
+        {
+            case GatherZone.Normal:
+                pityNormal = Mathf.Max(0, pityNormal + delta);
+                break;
+            case GatherZone.Hard:
+                pityHard = Mathf.Max(0, pityHard + delta);
+                break;
         }
     }
 }

@@ -47,7 +47,8 @@ public class GatherZoneDatabase : MonoBehaviour
             zone = GatherZone.Normal,
             apCost = 2,
             baseSuccessValue = 55,
-            coreItemChancePercent = 5,
+            coreItemChancePercent = 25,
+            coreItemPityTrips = 3,
             mainLoot = new LootAmount { type = InventoryItemType.Medicine, amount = 1 },
             hardSuccessBonusPool = new List<LootAmount>
             {
@@ -60,7 +61,8 @@ public class GatherZoneDatabase : MonoBehaviour
             zone = GatherZone.Hard,
             apCost = 3,
             baseSuccessValue = 30,
-            coreItemChancePercent = 15,
+            coreItemChancePercent = 50,
+            coreItemPityTrips = 2,
             mainLoot = new LootAmount { type = InventoryItemType.Materials, amount = 2 },
             hardSuccessBonusPool = new List<LootAmount>
             {

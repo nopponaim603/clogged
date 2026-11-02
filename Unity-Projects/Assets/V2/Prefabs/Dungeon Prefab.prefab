@@ -212,3 +212,11 @@ MonoBehaviour:
   button: {fileID: 5673997280430686814}
   iconImage: {fileID: 7290499142841948271}
   selectedHighlight: {fileID: 8469095315611786913}
+  cardSize: {x: 240, y: 380}
+  caveSprite: {fileID: 0}
+  cookingMaterialSprite: {fileID: 21300000, guid: 3d6b14d0810b7b54abdd64cad3813a3f, type: 3}
+  medicineSprite: {fileID: 21300000, guid: e24d9177ca03f244cbb7aec80579f2ce, type: 3}
+  materialsSprite: {fileID: 21300000, guid: 95caec19d8b74b74aae0982ab7ab5124, type: 3}
+  panelColor: {r: 0.09, g: 0.1, b: 0.15, a: 0.96}
+  labelColor: {r: 0.78, g: 0.82, b: 0.92, a: 1}
+  warningColor: {r: 1, g: 0.72, b: 0.35, a: 1}

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 /// <summary>
 /// Per-run tallies shown on the win/lose screen.
@@ -65,7 +65,7 @@ public static class RunStats
         DaysPlayed = Math.Max(DaysPlayed, report.dayAfter - 1);
         FoodConsumed += report.fed.Count;
         StarvationTicks += report.starved.Count;
-        UnitsLost += report.lostSignal.Count;
+        UnitsLost += report.died.Count;
     }
 
     /// <summary>Called from the gather roll with the resolved trip.</summary>
@@ -74,7 +74,6 @@ public static class RunStats
         if (result == null) return;
 
         GatherTrips++;
-        if (result.missingUnit != null) UnitsLost++;
     }
 
     public static RunStatsSnapshot TakeSnapshot()

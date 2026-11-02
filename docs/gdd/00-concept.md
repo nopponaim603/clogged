@@ -1,4 +1,4 @@
-# clogged — Game Concept
+﻿# clogged — Game Concept
 
 **Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14 | **Owner:** ทีม clogged
 > อ้างอิงจากระบบที่ทำงานจริงใน `Unity-Projects/Assets/V2/` (scene `Core.unity`) — GDD v1.0 ของ Web Prototype (Phaser) เก็บไว้ที่ [wiki/archive/gdd-v1-prototype](../wiki/archive/gdd-v1-prototype/README.md)
@@ -26,13 +26,13 @@
 |---|---|---|
 | **AP ทุกแต้มมีค่า** | ทุกการกระทำแย่ง AP ก้อนเดียวกัน (3/คน/วัน) | AP, Base Work vs Gather, Starvation (+AP cost) |
 | **ความเสี่ยงที่อ่านออก** | ผู้เล่นเห็นโอกาสก่อนตัดสินใจ และรับผลได้ทั้งดีและร้าย | D100 roll-under, Aptitude, Duo bonus, Trait |
-| **อาหารไม่เคยพอ** | ทุกคืนต้องจ่ายอาหาร ขาดแล้วทุกอย่างแพงขึ้นจนเสียคน | Food, Starvation stack, Lost Signal |
+| **อาหารไม่เคยพอ** | ทุกคืนต้องจ่ายอาหาร ขาดแล้วทุกอย่างแพงขึ้นจนเสียคน | Food, Starvation stack, Death |
 | **เส้นตายบีบให้เสี่ยง** | ถ้ำง่ายปลอดภัยแต่ไม่พาไปถึง Core Item | 7-day deadline, Core Item ต้องผ่าน Normal → Hard |
 
 ### Unique Selling Points
 - **ทอย D100 แบบ roll-under 4 ระดับผล** (Hard Success / Regular / Failure / Fumble) — ผลแต่ละระดับให้ทั้งของ, บาดแผล และ trait ถาวร
 - **ยูนิตเปลี่ยนไปตามประสบการณ์** — ทริปที่ดีหรือแย่ให้ trait ที่ติดตัวไปตลอด run
-- **ความหิวเป็นภาษีของ AP** — หิว 1 stack = ทุกการกระทำแพงขึ้น 1 AP, 3 stack = ยูนิตขาดการติดต่อ (Lost Signal)
+- **ความหิวเป็นภาษีของ AP** — หิว 1 stack = ทุกการกระทำแพงขึ้น 1 AP, 3 stack = ยูนิตตาย (Death)
 
 ---
 
@@ -51,7 +51,7 @@ flowchart TD
     Plan -->|End Day| Eat[ทุกคนในฐานกินอาหารคนละ 1<br/>ไม่มีกิน → Starvation +1]
     Eat --> Check{ตรวจผล}
     Check -->|มี Core Item| Win([ชนะ])
-    Check -->|ทุกคน Lost Signal| Lose1([แพ้])
+    Check -->|ทุกคน Death| Lose1([แพ้])
     Check -->|เลยวันที่ 7| Lose2([แพ้ — หมดเวลา])
     Check -->|ยังไม่จบ| Start
 ```
@@ -74,7 +74,7 @@ flowchart LR
 |---|---|
 | ได้ Core Item ภายในวันที่ 7 | **WIN** (ชนะทันทีที่ได้) |
 | กด End Day ในวันที่ 7 แล้วยังไม่มี Core Item | **LOSE** — หมดเวลา |
-| ยูนิตทั้ง 4 คน Lost Signal (Missing) | **LOSE** — ไม่เหลือใคร |
+| ยูนิตทั้ง 4 คน Death | **LOSE** — ไม่เหลือใคร |
 
 ---
 
@@ -100,7 +100,7 @@ flowchart LR
 | **Day / AP** | วันละ 3 AP ต่อคน, End Day = กินอาหาร + รีเฟรช AP | [Mechanics §3](01-mechanics.md#3-day-system) |
 | **Send-to-Gather** | ส่ง 1–2 คนไปถ้ำ 3 ระดับ ทอย D100 ตัดสินผล | [Mechanics §4](01-mechanics.md#4-send-to-gather--การออกสำรวจ) |
 | **Base Work** | ทำอาหาร / รักษา / Workshop ทำซ้ำได้ไม่จำกัด | [Mechanics §5](01-mechanics.md#5-base-work--งานในฐาน) |
-| **Starvation** | ไม่ได้กิน = +1 stack (+1 AP ทุกการกระทำ), 3 stack = Lost Signal | [Mechanics §6](01-mechanics.md#6-starvation--ความหิว) |
+| **Starvation** | ไม่ได้กิน = +1 stack (+1 AP ทุกการกระทำ), 3 stack = Death | [Mechanics §6](01-mechanics.md#6-starvation--ความหิว) |
 | **Core Item** | Hard Success ที่ Normal → ปลดล็อก, Hard Success ที่ Hard → ได้ของ | [Mechanics §7](01-mechanics.md#7-core-item--เงื่อนไขชนะ) |
 
 ---

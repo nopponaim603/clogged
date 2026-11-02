@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 /// <summary>
@@ -28,6 +28,15 @@ public class SaveData
     public bool coreItemA;
     public bool coreItemB;
     public int variant;
+    public int partySuccessBonus;
+
+    // GatherDispatchController pity counters (Hard Success trips without a Core Item)
+    public int pityNormal;
+    public int pityHard;
+
+    // AudioDirector - which BGM track this run is looping, so Continue resumes
+    // the same song instead of rolling a new one mid-run.
+    public int musicTrack = -1;
 
     // UnitManager
     public List<UnitSnapshot> units = new List<UnitSnapshot>();
@@ -42,6 +51,8 @@ public class SaveData
         public string unitName;
         public int state;
         public int currentActionPoints;
+        public int currentSwords = 1;
         public int starvationStacks;
+        public bool blessed;
     }
 }

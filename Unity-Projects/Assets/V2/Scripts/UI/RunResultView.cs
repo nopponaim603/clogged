@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,7 +26,8 @@ public class RunResultView : MonoBehaviour
     [SerializeField] private string winReason = "BOTH CORE ITEMS SECURED. THE CREW ESCAPES.";
     [SerializeField] private string loseTitle = "YOU CANNOT FIND A CRYSTAL";
     [SerializeField] private string loseDeadlineReason = "THE DEADLINE PASSED AND THE BOX IS STILL SEALED.";
-    [SerializeField] private string loseCrewReason = "THE WHOLE CREW IS GONE. NOBODY IS LEFT TO SEARCH.";
+    [SerializeField] private string loseCrewReason = "THE WHOLE CREW IS DEAD. NOBODY IS LEFT TO SEARCH.";
+    [SerializeField] private string loseHurtReason = "THE WHOLE CREW IS HURT. NOBODY IS LEFT TO HEAL ANYONE.";
 
     private CanvasGroup group;
     private Image emblem;
@@ -97,6 +98,11 @@ public class RunResultView : MonoBehaviour
         Build();
         Populate(outcome == RunOutcome.Win, outcome);
 
+        // Win and loss share the one funnel, so the audio belongs here: the run
+        // track stops either way and the sting names the result.
+        if (outcome == RunOutcome.Win) AudioDirector.Instance?.PlayWin();
+        else AudioDirector.Instance?.PlayGameOver();
+
         // The crystal reveal is the mid-run flourish; the result screen replaces it.
         var reveal = FindAnyObjectByType<CrystalRevealView>();
         if (reveal != null) reveal.Hide(instant: true);
@@ -107,13 +113,21 @@ public class RunResultView : MonoBehaviour
         transform.SetAsLastSibling();
     }
 
+    private string ReasonFor(RunOutcome outcome)
+    {
+        switch (outcome)
+        {
+            case RunOutcome.LoseAllUnitsLost: return loseCrewReason;
+            case RunOutcome.LoseAllUnitsHurt: return loseHurtReason;
+            default: return loseDeadlineReason;
+        }
+    }
+
     private void Populate(bool won, RunOutcome outcome)
     {
         titleLabel.text = won ? winTitle : loseTitle;
         titleLabel.color = won ? UiFactory.Accent : UiFactory.Fail;
-        reasonLabel.text = won
-            ? winReason
-            : outcome == RunOutcome.LoseAllUnitsLost ? loseCrewReason : loseDeadlineReason;
+        reasonLabel.text = won ? winReason : ReasonFor(outcome);
 
         bool yellow = RunResources.Instance != null && RunResources.Instance.Variant == CoreItemVariant.Yellow;
         var art = won
@@ -139,7 +153,7 @@ public class RunResultView : MonoBehaviour
         AddStatRow("HEALS", RunStats.HealsPerformed.ToString(), 0, 3);
         AddStatRow("CRAFTED", RunStats.MedicineCrafted.ToString(), 1, 0);
         AddStatRow("GATHER TRIPS", RunStats.GatherTrips.ToString(), 1, 1);
-        AddStatRow("CREW LOST", RunStats.UnitsLost.ToString(), 1, 2);
+        AddStatRow("CREW DEAD", RunStats.UnitsLost.ToString(), 1, 2);
         AddStatRow("SURVIVORS", Survivors().ToString(), 1, 3);
     }
 

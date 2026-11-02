@@ -33,6 +33,25 @@ public class RunResources : MonoBehaviour
     public int Medicine => medicine;
     public int Materials => materials;
 
+    [Header("Party Buff")]
+    [Tooltip("Permanent +success value from buff potions. Stacks and lasts for the rest of the run.")]
+    [SerializeField] private int partySuccessBonus = 0;
+    public int PartySuccessBonus => partySuccessBonus;
+
+    /// <summary>Adds a buff-potion stack (+10 success value by default) for the whole team.</summary>
+    public void AddPartySuccessBonus(int amount)
+    {
+        partySuccessBonus += amount;
+        OnChanged?.Invoke();
+    }
+
+    /// <summary>Overwrites the party bonus - used when restoring a save or resetting a test run.</summary>
+    public void SetPartySuccessBonus(int value)
+    {
+        partySuccessBonus = Mathf.Max(0, value);
+        OnChanged?.Invoke();
+    }
+
     [Header("Core Items")]
     [Tooltip("The sealed box. Drops independently of the key.")]
     [SerializeField] private bool coreItemA = false;
@@ -113,6 +132,10 @@ public class RunResources : MonoBehaviour
                 return;
         }
 
+        // Loot from a trip arrives here too, but the dice already stung for that
+        // roll; the item cue belongs to base work and core items instead, so this
+        // stays silent and the callers that own a "you gained something" moment
+        // play the clip themselves.
         OnChanged?.Invoke();
     }
 
@@ -146,6 +169,10 @@ public class RunResources : MonoBehaviour
         if (kind == CoreItemKind.A) coreItemA = true;
         else coreItemB = true;
 
+        // A core item is the loudest thing that can land in the bag, so it gets
+        // the same Success sting as a good roll.
+        AudioDirector.Instance?.PlaySuccess();
+
         OnChanged?.Invoke();
     }
 
@@ -162,6 +189,7 @@ public class RunResources : MonoBehaviour
         cookingMaterial = Mathf.Max(0, data.cookingMaterial);
         medicine = Mathf.Max(0, data.medicine);
         materials = Mathf.Max(0, data.materials);
+        partySuccessBonus = Mathf.Max(0, data.partySuccessBonus);
         coreItemA = data.coreItemA;
         coreItemB = data.coreItemB;
 

@@ -17,16 +17,23 @@ public class BaseWorkController : MonoBehaviour
     [SerializeField] private int cookApCost = 1;
     [SerializeField] private int cookMaterialCostPerRound = 1;
     [SerializeField] private int cookFoodOutputBase = 1;
+    [Tooltip("Output for a unit with the Cooking talent (Cia).")]
     [SerializeField] private int cookFoodOutputWithAptitude = 2;
 
     [Header("Healing")]
     [SerializeField] private int healApCostWithMedicine = 1;
-    [SerializeField] private int healApCostWithoutMedicine = 2;
+    [SerializeField] private int healApCostWithoutMedicine = 3;
 
-    [Header("Workshop")]
+    [Header("Workshop — Medicine")]
     [SerializeField] private int workshopApCost = 1;
     [SerializeField] private int workshopMaterialsCost = 2;
     [SerializeField] private int workshopMedicineOutput = 1;
+
+    [Header("Workshop — Buff Potion")]
+    [Tooltip("Brews a potion that gives the whole party a permanent success-value bonus (stacks).")]
+    [SerializeField] private int buffPotionApCost = 2;
+    [SerializeField] private int buffPotionMaterialsCost = 4;
+    [SerializeField] private int buffPotionSuccessBonus = 10;
 
     private void Awake()
     {
@@ -43,15 +50,15 @@ public class BaseWorkController : MonoBehaviour
     // Base costs, before each unit's starvation surcharge - callers that paint
     // more than one unit's card need the unmodified number.
     public int CookBaseApCost => cookApCost;
-    public int WorkshopBaseApCost => workshopApCost;
     public int HealBaseApCost(bool useMedicine) => useMedicine ? healApCostWithMedicine : healApCostWithoutMedicine;
 
     public int CookApPerRound(UnitCharacter worker) => worker.GetActualApCost(cookApCost);
     public int CookMaterialPerRound => cookMaterialCostPerRound;
 
+    /// <summary>Cia's Cooking talent doubles what a round produces.</summary>
     public int CookFoodPerRound(UnitCharacter worker)
     {
-        return worker.HasAptitude(AptitudeTag.Cooking) ? cookFoodOutputWithAptitude : cookFoodOutputBase;
+        return worker.HasTalent(UnitTalent.Cooking) ? cookFoodOutputWithAptitude : cookFoodOutputBase;
     }
 
     /// <summary>How many cooking rounds this unit can afford right now (limited by AP and Cooking Material).</summary>
@@ -81,13 +88,25 @@ public class BaseWorkController : MonoBehaviour
     public int WorkshopMaterialsPerRound => workshopMaterialsCost;
     public int WorkshopMedicinePerRound => workshopMedicineOutput;
 
+    // Base crafting costs per mode, before the worker's starvation surcharge.
+    public int WorkshopBaseApCost(WorkshopMode mode) => mode == WorkshopMode.BuffPotion ? buffPotionApCost : workshopApCost;
+    public int WorkshopBaseMaterialCost(WorkshopMode mode) => mode == WorkshopMode.BuffPotion ? buffPotionMaterialsCost : workshopMaterialsCost;
+    public int BuffPotionBonusPerRound => buffPotionSuccessBonus;
+
+    public int WorkshopApPerRound(UnitCharacter worker, WorkshopMode mode) => worker.GetActualApCost(WorkshopBaseApCost(mode));
+
     /// <summary>How many workshop rounds this unit can afford right now (limited by AP and Materials).</summary>
-    public int GetMaxWorkshopRounds(UnitCharacter worker)
+    public int GetMaxWorkshopRounds(UnitCharacter worker) => GetMaxWorkshopRounds(worker, WorkshopMode.Medicine);
+
+    public int GetMaxWorkshopRounds(UnitCharacter worker, WorkshopMode mode)
     {
         if (RunResources.Instance == null) return 0;
 
-        int byAp = worker.currentActionPoints / Mathf.Max(1, WorkshopApPerRound(worker));
-        int byMaterials = RunResources.Instance.Materials / Mathf.Max(1, workshopMaterialsCost);
+        int apPerRound = Mathf.Max(1, WorkshopApPerRound(worker, mode));
+        int materialsPerRound = Mathf.Max(1, WorkshopBaseMaterialCost(mode));
+
+        int byAp = worker.currentActionPoints / apPerRound;
+        int byMaterials = RunResources.Instance.Materials / materialsPerRound;
         return Mathf.Min(byAp, byMaterials);
     }
 
@@ -115,7 +134,7 @@ public class BaseWorkController : MonoBehaviour
             return Emit(result);
         }
 
-        int foodPerRound = worker.HasAptitude(AptitudeTag.Cooking) ? cookFoodOutputWithAptitude : cookFoodOutputBase;
+        int foodPerRound = worker.HasTalent(UnitTalent.Cooking) ? cookFoodOutputWithAptitude : cookFoodOutputBase;
 
         for (int i = 0; i < desiredRepeats; i++)
         {
@@ -178,31 +197,47 @@ public class BaseWorkController : MonoBehaviour
             RunResources.Instance.TryConsumeItem(InventoryItemType.Medicine, 1);
         }
 
-        patient.state = UnitState.Idle;
+        // Healed, but only back to play if the AP is still there - a patient who
+        // spent everything on the trip that hurt them goes to Resting instead.
+        patient.ReturnToPlay();
+
+        // Ann's Heal talent: the patient is patched up properly, so their next
+        // trip gets +10 success value and then the buff is spent.
+        bool blessedByTalent = healer.HasTalent(UnitTalent.Heal);
+        if (blessedByTalent) patient.blessed = true;
 
         result.healedUnit = patient;
         result.usedMedicine = useMed;
+        result.blessedApplied = blessedByTalent;
         return Emit(result);
     }
 
     // --- Workshop ---
 
-    public bool CanUseWorkshop(UnitCharacter worker)
+    public bool CanUseWorkshop(UnitCharacter worker) => CanUseWorkshop(worker, WorkshopMode.Medicine);
+
+    public bool CanUseWorkshop(UnitCharacter worker, WorkshopMode mode)
     {
         if (!worker.CanBeDispatched) return false;
-        if (worker.currentActionPoints < worker.GetActualApCost(workshopApCost)) return false;
-        if (RunResources.Instance == null || RunResources.Instance.Materials < workshopMaterialsCost) return false;
+        if (worker.currentActionPoints < worker.GetActualApCost(WorkshopBaseApCost(mode))) return false;
+        if (RunResources.Instance == null || RunResources.Instance.Materials < WorkshopBaseMaterialCost(mode)) return false;
         return true;
     }
+
     public BaseWorkResult UseWorkshop(UnitCharacter worker) => UseWorkshop(worker, 1);
+
+    public BaseWorkResult UseWorkshop(UnitCharacter worker, int desiredRepeats) => UseWorkshop(worker, desiredRepeats, WorkshopMode.Medicine);
 
     /// <summary>
     /// Crafts up to desiredRepeats rounds in one confirm (the doc's "จำนวนสูงสุดที่สร้างได้").
     /// Stops early if AP or Materials run out; blocked only if not even one round was possible.
+    ///
+    /// Medicine mode brews healing stock (Boon's Crafting talent doubles it).
+    /// BuffPotion mode brews a permanent party-wide success-value buff that stacks.
     /// </summary>
-    public BaseWorkResult UseWorkshop(UnitCharacter worker, int desiredRepeats)
+    public BaseWorkResult UseWorkshop(UnitCharacter worker, int desiredRepeats, WorkshopMode mode)
     {
-        var result = new BaseWorkResult { workType = BaseWorkType.Workshop, worker = worker };
+        var result = new BaseWorkResult { workType = BaseWorkType.Workshop, worker = worker, workshopMode = mode };
 
         if (!worker.CanBeDispatched || RunResources.Instance == null)
         {
@@ -210,16 +245,30 @@ public class BaseWorkController : MonoBehaviour
             return Emit(result);
         }
 
+        int apCost = WorkshopBaseApCost(mode);
+        int materialCost = WorkshopBaseMaterialCost(mode);
+        int medicinePerRound = worker.HasTalent(UnitTalent.Crafting) ? workshopMedicineOutput * 2 : workshopMedicineOutput;
+
         for (int i = 0; i < desiredRepeats; i++)
         {
-            if (worker.currentActionPoints < worker.GetActualApCost(workshopApCost)) break;
-            if (!RunResources.Instance.TryConsumeItem(InventoryItemType.Materials, workshopMaterialsCost)) break;
+            if (worker.currentActionPoints < worker.GetActualApCost(apCost)) break;
+            if (!RunResources.Instance.TryConsumeItem(InventoryItemType.Materials, materialCost)) break;
 
-            worker.TrySpendActionPoints(workshopApCost);
-            RunResources.Instance.AddItem(InventoryItemType.Medicine, workshopMedicineOutput);
+            worker.TrySpendActionPoints(apCost);
+
+            if (mode == WorkshopMode.BuffPotion)
+            {
+                RunResources.Instance.AddPartySuccessBonus(buffPotionSuccessBonus);
+                result.buffPotionsProduced++;
+                result.successBonusGranted += buffPotionSuccessBonus;
+            }
+            else
+            {
+                RunResources.Instance.AddItem(InventoryItemType.Medicine, medicinePerRound);
+                result.medicineProduced += medicinePerRound;
+            }
 
             result.repeatsPerformed++;
-            result.medicineProduced += workshopMedicineOutput;
         }
 
         if (result.repeatsPerformed == 0)
@@ -234,6 +283,22 @@ public class BaseWorkController : MonoBehaviour
     {
         RunStats.CountBaseWork(result);
         OnBaseWorkCompleted?.Invoke(result);
+
+        // Cook, heal and craft all end here, so this is the one place that can
+        // tell "something came out of it" from "nothing happened". The success
+        // sting is the game's generic "you gained something" cue.
+        if (ProducedSomething(result)) AudioDirector.Instance?.PlaySuccess();
+
         return result;
+    }
+
+    private static bool ProducedSomething(BaseWorkResult result)
+    {
+        if (result == null || result.blocked) return false;
+
+        return result.foodProduced > 0
+            || result.healedUnit != null
+            || result.medicineProduced > 0
+            || result.buffPotionsProduced > 0;
     }
 }

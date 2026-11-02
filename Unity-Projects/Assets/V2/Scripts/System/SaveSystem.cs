@@ -110,7 +110,18 @@ public static class SaveSystem
             data.coreItemA = res.HasCoreItemA;
             data.coreItemB = res.HasCoreItemB;
             data.variant = (int)res.Variant;
+            data.partySuccessBonus = res.PartySuccessBonus;
         }
+
+        var gather = GatherDispatchController.Instance;
+        if (gather != null)
+        {
+            data.pityNormal = gather.PityNormal;
+            data.pityHard = gather.PityHard;
+        }
+
+        // -1 when direct-run fell back to no roll at all; Continue then re-rolls.
+        data.musicTrack = AudioDirector.PendingRunTrack;
 
         var units = UnitManager.Instance;
         if (units != null)
@@ -122,7 +133,9 @@ public static class SaveSystem
                     unitName = unit.unitName,
                     state = (int)unit.state,
                     currentActionPoints = unit.currentActionPoints,
-                    starvationStacks = unit.starvationStacks
+                    currentSwords = unit.currentSwords,
+                    starvationStacks = unit.starvationStacks,
+                    blessed = unit.blessed
                 });
             }
         }

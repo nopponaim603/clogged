@@ -374,10 +374,11 @@ MonoBehaviour:
   nameText: {fileID: 7185889880816689851}
   statusText: {fileID: 3507133217154922058}
   cardSize: {x: 195, y: 265}
-  cardBackground: {r: 0.07, g: 0.09, b: 0.14, a: 0.9}
+  cardBackground: {r: 0.07, g: 0.09, b: 0.14, a: 1}
   padding: 10
   portraitHeight: 155
-  statusColor: {r: 0.82, g: 0.87, b: 1, a: 1}
+  hurtBackground: {r: 0.42, g: 0.12, b: 0.12, a: 1}
+  hungryBackground: {r: 0.42, g: 0.26, b: 0.08, a: 1}
   frameThickness: 4
   selectedFrameThickness: 7
   unselectedFrameAlpha: 0.6
@@ -394,6 +395,20 @@ MonoBehaviour:
   apPipHeight: 22
   apPipSpacing: 4
   apPipRowHeight: 22
+  restingOffset: 70
+  liftSpeed: 900
+  swordSprite: {fileID: 21300000, guid: 2d529982be1e4057b63272a9a3f6534d, type: 3}
+  hurtIcon: {fileID: 0}
+  hungryIcon: {fileID: 0}
+  positiveTraitIcon: {fileID: 0}
+  negativeTraitIcon: {fileID: 0}
+  blessedIcon: {fileID: 0}
+  buffPotionIcon: {fileID: 0}
+  hurtColor: {r: 1, g: 0.35, b: 0.35, a: 1}
+  hungryColor: {r: 1, g: 0.62, b: 0.22, a: 1}
+  goodColor: {r: 0.45, g: 0.8, b: 1, a: 1}
+  buffPotionColor: {r: 0.72, g: 0.55, b: 1, a: 1}
+  lampOffColor: {r: 0.35, g: 0.36, b: 0.4, a: 0.55}
 --- !u!225 &2848246395873638416
 CanvasGroup:
   m_ObjectHideFlags: 0

@@ -70,17 +70,17 @@
 | Panel | anchorMin/Max | pivot | anchoredPosition | size |
 |---|---|---|---|---|
 | `LogPanel` | (0,0) | (0,0) | (24, 24) | 700 × 300 |
-| `CharacterHandPanel` | (0.5, 0) | (0.5, 0) | (**190**, 20) | **830** × 300 |
+| `CharacterHandPanel` | (0.5, 0) | (0.5, 0) | (**232**, **92**) | **936** × 300 |
 | `SkillTriggerPanel` | (1, 0) | (1, 0) | (−24, 244) | 236 × 300 |
 | `DispatchActionPanel` | (1, 0) | (1, 0) | (−24, 24) | 300 × 200 |
 | `Warning` | (0.5, 0.5) | (1, 1) | (300, 60) | **620 × 120** |
 | `Warning/WarningBackdrop` | stretch | (0.5, 0.5) | (0, 0) | inset 0 |
 | `Warning/WarningText` | stretch | (0.5, 0.5) | (0, 0) | inset 8 / 6 |
 
-- การ์ดในมือ: **195 × 265**, spacing **12** → 4 ใบ = 816 px พอดีกับพื้นที่ 830 px
+- การ์ดในมือ: **218 × 300**, spacing **12** → 4 ใบ = 908 px พอดีกับพื้นที่ 936 px
 - เหตุผลที่ hand เยื้อง +190: พื้นที่ว่างจริงคือระหว่าง Log (จบที่ x = 724) กับ Dispatch (เริ่มที่ x = 1596) → จุดกึ่งกลาง = 1148 = 960 + 188, ปัดเป็น +190 ให้เหลือขอบเท่ากันสองข้าง
 - ช่องไฟ: Log→การ์ด 24 px · การ์ด→Dispatch 48 px → ไม่มีอะไรทับกัน
-- **MAP AREA:** `GatherMapController` กัน node ไว้ด้วย margin L150 / R**400** / T**300** / B420 (นับครึ่งความสูงของ portal ~65 px แล้ว) → ไม่มีถ้ำไปอยู่ใต้ Log / มือการ์ด / คอลัมน์สกิล / DayFrame · ค่า R400/T300 ปรับเพิ่มใน §7.11 เพราะ rect ของถ้ำยังคาบเกี่ยวกรอบ DAY
+- **MAP AREA:** `GatherMapController` กัน node ไว้ด้วย margin L32 / R**300** / T**110** / B**330** และ maxCardHeight **700** → ไม่มีถ้ำไปอยู่ใต้ Log / มือการ์ด / คอลัมน์สกิล / DayFrame และการ์ดใช้พื้นที่แนวตั้งเต็ม (ค่าล่าสุดดู §8.6)
 
 ### 3.4 ป้ายบนปุ่มสลับโหมด Heal
 
@@ -155,6 +155,7 @@
 - ไฮไลต์เมื่อได้ครบทั้ง 2 (แจ้งเตือนภาวะชนะ)
 - **Win = มีครบ A + B**
 - **ไม่มีลำดับการดรอป** — A และ B สุ่มแยกกัน อันไหนก่อนก็ได้ (B ไม่ใช่เงื่อนไขให้ A ดรอป)
+- **เลย์เอาต์ (รอบ 3):** `CoreItemGroup` เป็นคอลัมน์ **2×1 (ตั้ง)** ขนาด 118×240 วางซ้อนกันแนวตั้ง (ช่อง A y = 0, ช่อง B y = −122) **ไม่มีข้อความ `CoreItemStatus` แล้ว** และ `HudTopBar.RelocateCoreItemGroup` จัดขอบขวาให้ตรงกับ `DayFrame` แล้ววางใต้ลงมาระหว่าง DayFrame กับแถบสกิล
 
 ### 4.4 `DayFrame` — รวม End Day
 
@@ -163,7 +164,7 @@
 | เนื้อหา | `DAY n / deadline` + จำนวนวันเหลือ (เหมือน `StatusBarView.RefreshDay`) |
 | อินพุต | **คลิกที่ frame = `DayManager.EndDay()`** (ไม่มีปุ่ม End Day แยก) — implement ด้วย `EndDayTrigger` (`IPointerClickHandler`) บน `DayFrame` |
 | **พื้นผิวที่กดได้** | **ต้องมี Graphic ที่ `raycastTarget = true` อยู่ใต้ `DayFrame`** — ตัวที่ใช้คือ `DayBackground` (ปิด `Day`/border ไม่ให้แย่งคลิก) · `EndDayTrigger.EnsureClickSurface()` เติม transparent hit area ให้เองถ้าไม่มี และเตือนใน console |
-| **ห้ามมีถ้ำอยู่ใต้ frame** | `GatherMapController` margin ต้องกัน rect ของ node (160×30) ออกจากกรอบ — ปัจจุบัน `marginRight = 400`, `marginTop = 300` |
+| **ห้ามมีถ้ำอยู่ใต้ frame** | `GatherMapController` margin ต้องกัน rect ของ node ออกจากกรอบ — ปัจจุบัน `marginRight = 300`, `marginTop = 110` |
 | สถานะปิด | **run จบแล้วเท่านั้น** (ไม่มีสถานะ "ระหว่างทริป" เพราะทริป resolve ทันที) — `EndDayTrigger` เช็ค `DayManager.Outcome != InProgress` แล้วขึ้น warning "The run is already over." + log |
 | คำเตือนก่อนจบวัน | **ไม่มี confirm dialog** — คลิกเดียวจบวันทันที (ผลการกิน/AWOL ลง log หลังจบวัน) |
 
@@ -334,11 +335,12 @@ public class GatherZoneConfig
 
 | Zone | SV | P(HardSuccess) | ยังไม่มีทั้ง A,B | มีอยู่แล้ว 1 ชิ้น | ได้อย่างน้อย 1 ชิ้น/ทริป |
 |---|---|---|---|---|---|
-| Normal | 90 | 45% | 9.75% | 5% | 45% × 9.75% ≈ **4.4%** |
-| Hard | 65 | 32% | 27.75% | 15% | 32% × 27.75% ≈ **8.9%** |
+| Normal | 90 | 30% | 9.75% | 5% | 30% × 9.75% ≈ **2.9%** |
+| Hard | 65 | 21% | 27.75% | 15% | 21% × 27.75% ≈ **5.8%** |
 
 - คอลัมน์ "ยังไม่มีทั้ง A,B" = `1 − (1 − p)²` เพราะ **ทอยแยกอิสระต่อชิ้น**
-- คอลัมน์สุดท้ายคือตัวเลขที่ผู้เล่นรู้สึกจริง = **Hard ≈ 8.9% > Normal ≈ 4.4%** (ประมาณ 2 เท่า)
+- คอลัมน์สุดท้ายคือตัวเลขที่ผู้เล่นรู้สึกจริง = **Hard ≈ 5.8% > Normal ≈ 2.9%** (ประมาณ 2 เท่า)
+- **(2026-11-02)** `P(HardSuccess)` คำนวณจากกฎใหม่ ⌊SV ÷ 3⌋ (เดิม ÷2) — ตัวเลขในตารางอัปเดตตามแล้ว
 
 #### กติกาการทอย (ตกลงแล้ว)
 
@@ -428,7 +430,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 | `Assets/V2/Prefabs/UI/LogPanel.prefab` | `LogMessagePanel` | `Header` (Title + MinMaxButton), `Expanded` (ScrollRect → Viewport → Content → EntryTemplate), `Collapsed` (บรรทัดเดียว) |
 | `Assets/V2/Prefabs/UI/CharacterHandPanel.prefab` | `CharacterHandPanel` | `Cards` (HorizontalLayoutGroup) + `CardPlaceholder` |
 | `Assets/V2/Prefabs/UI/DispatchActionPanel.prefab` | `DispatchActionPanel` | `Icon` (placeholder 120×120), `Label` (TMP "DISPATCH"), Button บน root |
-| `Assets/V2/Prefabs/UI/SkillTriggerPanel.prefab` | `SkillTriggerPanel` | `CookButton` (+Count), `HealRow` (`HealButton` + `HealModeButton` MED/AP), `CraftButton` (+Count) |
+| `Assets/V2/Prefabs/UI/SkillTriggerPanel.prefab` | `SkillTriggerPanel` | `CookButton` (+Count), `HealRow` (`HealButton` + `HealModeButton` MED/AP), `CraftRow` (`CraftButton` + `CraftModeButton` MED/BUFF) |
 
 **ตรวจด้วยภาพแล้ว** (render ผ่าน Canvas ชั่วคราว 1920×1080) — พบและแก้ 2 ปัญหา:
 1. การ์ด 4 ใบกว้าง 1040 ทับ `LogPanel` → ลด hand เป็น 800 px, การ์ด 190 px, เยื้อง +188
@@ -484,7 +486,7 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 | ไฟล์ | สิ่งที่ทำ |
 |---|---|
-| `Scripts/UI/SkillTriggerPanel.cs` | `SkillKind { None, Cook, Heal, Craft }` · event `CookClicked/CookCleared/CraftClicked/CraftCleared/HealClicked/HealCancelled/HealModeToggled` · `SetCookCount()` / `SetCraftCount()` / `SetArmed()` (ไฮไลต์ปุ่มที่ active) / `SetHealAvailable()` / `SetHealMode()` |
+| `Scripts/UI/SkillTriggerPanel.cs` | `SkillKind { None, Cook, Heal, Craft }` · event `CookClicked/CookCleared/CraftClicked/CraftCleared/HealClicked/HealCancelled/HealModeToggled/CraftModeToggled` · `SetCookCount()` / `SetCraftCount()` / `SetArmed()` (ไฮไลต์ปุ่มที่ active) / `SetHealAvailable()` / `SetHealMode()` / `SetCraftMode()` — ปุ่มโหมดของทั้ง Heal และ Craft ผูกมาจากพรีแฟบ (`HealRow` / `CraftRow`) ไม่สร้างตอน `Awake` |
 | `Scripts/UI/RightClickHandler.cs` **(ใหม่)** | `IPointerClickHandler` ที่ยิง event เฉพาะคลิกขวา (Unity `Button` มีแต่คลิกซ้าย) — ประกอบเข้าปุ่มอัตโนมัติใน `Awake` |
 | `Scripts/UI/SkillFlowController.cs` **(ใหม่)** | เจ้าของ flow ทั้งหมด: counter ของ Cook/Craft, โหมด Heal, การเลือกผู้ป่วย, `IsSkillActive` + `StateChanged` ให้ gather flow รู้ว่าใครถือปุ่มอยู่ |
 | `Scripts/UI/GatherDispatchPanel.cs` | gate ด้วย `IsSkillActive()` ทั้งตอนกดและตอน `RefreshActionPanel()` + กลับมาใช้ปุ่มเองเมื่อ `StateChanged` |
@@ -1057,3 +1059,532 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 - [V2 Task Overview](../agile/user-stories/V2-TASK-OVERVIEW.md)
 - [US-V2-UI-01 UI หลัก](../agile/user-stories/US-V2-UI-01.md) · [US-V2-FACTORY-01 โรงงาน](../agile/user-stories/US-V2-FACTORY-01.md)
 - [GDD §5 Base Work](../gdd/01-mechanics.md) · [Art Direction §4 Layout](../gdd/03-art-direction.md)
+
+---
+
+## 8. Addendum 2026-10-30 — sprint review (16 ข้อ)
+
+รอบนี้เปลี่ยนจาก "layout redesign" เป็นการลงรายละเอียด UI ตามสเก็ตช์ 4 รูป:
+
+### 8.1 การ์ดตัวละคร (ภาพที่ 2)
+```
++---------------------------+
+| [state/dab]         [E]   |  ดาบ = พร้อมออกสำรวจ · E/N/H = ความถนัดหลัก (สีตามระดับถ้ำ)
+|                     [tal] |  ไอคอน talent ใต้อักษร
+|        portrait           |
++-------------+-------------+
+| NAME        | [][]  lamps |  AP pip ซ้ายล่าง · buff/debuff 6 ดวงขวาล่าง
+| [][][]      | [][]        |
++-------------+-------------+
+```
+- Buff/Debuff 6 ดวงแบบไฟหน้าปัด: Hurt / Hungry / trait ดี / trait เสีย / Blessed / Buff Potion
+- สี: Hurt+trait เสีย = แดง · Hungry = ส้ม · trait ดี + Blessed = ฟ้า · Buff Potion = ม่วง · ยังไม่มี = เทา
+- พื้นหลังการ์ด: Hurt = แดง (มาก่อน) → ถ้าหาย Hurt แล้วยังหิว = ส้ม
+- Outline = สีความถนัดหลัก (Easy เขียว / Normal เหลือง / Hard แดง)
+- อนิเมชันหยิบการ์ด: idle จมลง 70px → เลือกแล้วสไลด์ขึ้น (restingOffset, liftSpeed)
+
+### 8.2 แมป + การ์ดดันเจี้ยน (ภาพที่ 3–4)
+- 3 การ์ดเรียงตายตัว Easy | Normal | Hard (ไม่สุ่ม ไม่มีลำดับก่อน–หลัง)
+- ลูกศรชี้เฉพาะใบที่เลือก
+- การ์ดมี: ชื่อระดับ · pity x/y · sprite ถ้ำ (ใช้ภาพเดียวกันไปก่อน) · โอกาส (base → SV จริงเมื่อเลือกครบ) · AP · ไอคอนของที่ดรอป
+  - **pity อยู่ใต้ชื่อ** ไม่ใช่ล่างสุด — การ์ดตัวละครที่ถูกยกขึ้นมาทับขอบล่างของการ์ดดันเจี้ยน ถ้า pity อยู่ล่างจะถูกบัง
+  - **SV แสดงเป็นสี** ตาม ramp แดง (0) → ส้ม (40) → เหลือง (70) → เขียว (100) และเปลี่ยนสีทันทีเมื่อ SV เปลี่ยน
+  - การ์ดที่เลือก: SV ขยายเป็น 34pt + สเกล 1.18× + แถบพื้นหลังอ่อนกว่าตัวการ์ด (ดู §8.10)
+- Easy ไม่มีแถว pity
+
+### 8.3 HUD
+- ซ้ายบน: **MENU** และ **HELP** (Help = หน้าเปล่า รอ content)
+- Core Item ย้ายจากซ้ายบนไปข้าง DayFrame (คำนวณตอนรันใน HudTopBar.RelocateCoreItemGroup)
+- ปุ่มสลับโหมด **Craft** (Medicine / Buff Potion) แบบเดียวกับปุ่มสลับโหมด Heal
+
+### 8.4 สิ่งที่ยังค้าง
+- ทอยเต๋า DiceRollView ยังไม่ถูกต่อเข้า flow (ข้อ 15 ถูกเลื่อนไปทำ branch ทดสอบ)
+- DayFrame ยังไม่ได้ย่อ (พื้นที่พอ) — ปรับได้ถ้า Core Item ทับ
+- Help page ยังไม่มีเนื้อหา
+- สไปรต์จริง: ดาบ/ไอคอนบัพ/ถ้ำ ใช้ placeholder ที่สร้างจากโค้ด (แทนได้ผ่าน field ใน Inspector)
+### 8.5 Addendum รอบ 2 (2026-10-30)
+
+| ข้อ | สิ่งที่แก้ |
+|---|---|
+| 1 | Player card **218×300** (สูงเท่า LogPanel) · CharacterHandPanel 936×300 · Dungeon card คำนวณจาก margin ≈**480×450** |
+| 2 | อนิเมชันหยิบการ์ด: idle จม **70 px** → เลือกแล้วสไลด์ขึ้น (ความเร็ว 900 px/s) |
+| 3 | CoreItemGroup อยู่คอลัมน์เดียวกับ DayFrame ใต้ลงมา (ระหว่าง DayFrame กับแถบสกิล) และย่อ scale ให้กว้างเท่า DayFrame |
+| 4 | ปุ่มสลับโหมด Craft ย้ายเข้า CraftRow แบบเดียวกับ HealRow (156×64 + 56×64) |
+| 5 | MainMenu ข้อความหาย: ตั้ง defaultFontAsset ให้ TMP Settings ทั้ง 3 ชุด + UiFactory.CreateText เรียก TmpFont.Apply |
+| 6 | MENU → **OPTIONS** และเพิ่มปุ่ม **RETURN TO MENU** ในหน้า options |
+
+> Overlay (Options/Help) ใช้ CanvasGroup แทน SetActive — overlay ที่ inactive ตอนสร้างจะไม่ถูก batch เข้า canvas (depth ค้าง -1) ทำให้การ์ดดันเจี้ยนบังทั้งการวาดและการคลิก
+
+### 8.6 Addendum รอบ 3 (2026-10-30)
+
+| ข้อ | สิ่งที่แก้ |
+|---|---|
+| 1 | **การ์ดเลื่อนทั้งใบ:** `Background` + `Frame0..3` ย้ายไปอยู่ใต้ `Lift` (เดิมอยู่ใต้ root) และ root `iconImage` เหลือแค่พื้นกดใส — พื้นหลัง/ขอบ/ข้อความจึงเลื่อนขึ้นพร้อมกัน · พื้นหลังการ์ดทำเป็นสีทึบ (เดิม `a = 0.90/0.95` ทำให้เห็นการ์ดดันเจี้ยนทะลุ) |
+| 2 | `CharacterHandPanel` ยกขึ้น y **20 → 92** เพื่อให้การ์ดที่พัก (จม 70 px) ไม่หลุดขอบล่าง |
+| 3 | การ์ดที่ยกขึ้นวาดเหนือการ์ดดันเจี้ยน (มือไพ่อยู่ canvas order สูงกว่าแมป) — เทสต์ยืนยัน draw order |
+| 4 | **ดันเจี้ยนกินพื้นที่แนวตั้งเต็ม:** marginTop **300 → 110** · maxCardHeight **470 → 700** (ทั้งค่า default ในสคริปต์และ override ใน `Core.unity`) → การ์ด ≈**480×630** เริ่มราว 75 px จากขอบบน จบชิด LogPanel |
+| 5 | CoreItemGroup เปลี่ยนจาก 1×2 (นอน) เป็น **2×1 (ตั้ง)** 118×240 (y = 0 / −122) ตัดข้อความ `CoreItemStatus` ออก และจัดขวาชิด DayFrame |
+
+> `Run In Background` ของ Editor ต้องเปิดก่อนเก็บภาพ (`editor.playmode.set_run_in_background --enable true` — ต้องเรียกหลังเข้า play mode ทุกครั้ง) ไม่งั้น player loop หยุดที่เฟรม 2 และภาพ/อนิเมชันที่ได้จะเป็นภาพค้าง
+
+### 8.7 หน้ากาก OPTIONS ใช้ร่วมกัน (รอบ 4)
+
+หน้า options เดียวกันถูกใช้ทั้งใน `MainMenu` และในเกม — สร้างจาก `OptionsPanelView.Create(parent, primary, primaryAction, secondary?, secondaryAction?)`
+
+| ส่วน | สเปก |
+|---|---|
+| โครง | `OptionsPanel` (จอทึบ คลุมเต็ม) → `Card` 820×520 → `Heading` "OPTIONS" |
+| RESOLUTION | `ResolutionField` 340×48 (มี caret `>` หมุน −90°) + `ResolutionList` 340×204 เลื่อนได้; เลือกแถวแล้ว `Screen.SetResolution` ทันที |
+| DISPLAY | `WindowedButton` / `FullscreenButton` — ปุ่มที่เลือกใช้สี `UiFactory.ChoiceSelected` |
+| VOLUME | `VolumeSlider` 270×28 + ค่าเป็น % (เขียน `AudioListener.volume`) |
+| Footer | ไม่ส่ง `secondary` → ปุ่มเดียว **BACK** กลางล่าง · ส่ง `secondary` → **RETURN TO GAME** (x −158) + **RETURN TO MENU** (x +158) ที่ y −206 |
+| ค่าเก็บถาวร | `PlayerPrefs`: `clogged.resolution` / `clogged.fullscreen` / `clogged.volume` (คีย์เดิม ใช้ค่าเก่าได้) |
+| ในเกม | `HudTopBar` ห่อด้วย `OptionsOverlay` + `CanvasGroup` (ไม่ใช้ `SetActive` — overlay ที่ inactive จะไม่ถูก batch) และเรียก `CloseResolutionList()` ทุกครั้งที่เปิด |
+
+### 8.8 ชุด asset ที่สแกนไว้ (ยังไม่ import)
+
+| ชุด | จำนวน | ขนาด | ที่ใช้ได้กับเกมนี้ |
+|---|---|---|---|
+| `kenney_board-game-icons` | 513 PNG | 64 / 128 px | **คุ้มที่สุด** — `d4..d20`, `dice_1..6`, `dice_3D`, `sword`, `shield`, `skull`, `campfire` (Cook), `flask_empty/half/full` (Craft/Heal), `resource_apple` (Food), `resource_wood/lumber/planks/iron` (Materials), `pouch` (inventory), `lock_open/closed` (Core Item), `hourglass` (day), `crown`/`skull` (win/lose), `structure_gate` (ถ้ำ), `tag_1..10` (เลขวัน), `target` (SV), `cards_fan`/`hand_card`/`card_lift` (มือการ์ด) |
+| `kenney_game-icons` | 210 PNG (ขาว/ดำ) | 50 / 100 px | **HUD chrome** — `gear` (OPTIONS), `question` (HELP), `exitLeft/exitRight/door` (return to menu), `return` (return to game), `home`, `audioOn/Off`, `musicOn/Off`, `pause`, `save`, `locked/unlocked`, `warning`, `information`, `checkmark`, `cross`, `star`, `trophy` |
+| `kenney_cursor-pack` | 182 PNG | 32 / 64 px | ไอคอนเครื่องมือ/มาสค์ — `tool_sword_a/b`, `tool_torch`, `tool_pickaxe`, `tool_wrench`, `lock`/`lock_unlocked`, `mark_question`, `target_round_a/b`, `door_enter/exit`, `cursor_help`, `cursor_menu`, `progress_*` (แถบ AP) |
+| `kenney_cursor-pixel-pack` | 220 ไทล์ | 16 px | ไทล์พิกเซลล้วน (tilemap) — ใช้เป็นเมาส์/ลวดลาย pixel หรือ patter พื้นหลัง |
+
+> ทุกชุดเป็น **CC0** (ใช้เชิงพาณิชย์ได้ ไม่ต้องให้เครดิต) · ไฟล์ `.zip` ที่วางไว้ใน `Assets/V2/Sprites/` ยังไม่ถูกแตกและไม่ถูก Unity ใช้ — ควรย้ายออกนอก `Assets` แล้ว import เฉพาะไฟล์ที่เลือก
+
+### 8.9 ป๊อปอัปทอยเต๋า (รอบ 5)
+
+`DiceRollView` สร้าง UI เองทั้งหมด (ไม่มี prefab) และถูกสร้างครั้งเดียวต่อซีนใน `RunBootstrap.Awake` ผ่าน `DiceRollView.EnsureExists()`
+
+| หัวข้อ | สเปก |
+|---|---|
+| เลเยอร์ | GameObject มี **Canvas ของตัวเอง** (`overrideSorting`, `sortingOrder = 500`) + `GraphicRaycaster` — แผนที่อยู่คนละ canvas จึงต้องยกขึ้นมาเป็น modal จริง |
+| การซ่อน/แสดง | **`CanvasGroup`** (alpha / blocksRaycasts / interactable) ไม่ใช้ `SetActive` — วัตถุที่ inactive ตอน canvas batch จะได้ `graphic.depth = -1` และ Graphic Raycaster ข้าม graphic พวกนี้ (ปุ่มกดไม่ได้) |
+| Panel | 680×560 กลางจอ + dim ดำ 0.7 คลุมเต็มจอ (คลิก = ข้ามอนิเมชัน) |
+| เนื้อหา | ชื่อโซน · SV + เงื่อนไขทอย (SV ≥ 100 ขึ้นข้อความ "always a success unless the dice fumble") · เต๋า percentile 2 ลูก (tens 00–90 / ones 0–9) · แถบผล Hard/Regular/Failure/Fumble + marker · legend บรรทัดเดียว (ตัดช่วงที่ว่างออก) · ผลรวม + สรุปของที่ได้ · ปุ่ม CONTINUE |
+| Animation | tumble 1.5s → settle 0.25s → marker 0.8s → เผยผล (ทั้งหมด unscaled time) |
+| เปิดผลทันที | `RevealImmediately()` — หยุด coroutine แล้วไปสถานะสุดท้าย (ใช้ในเทสต์ที่รันเฟรมเดียว) |
+| เรียกจาก | `GatherDispatchPanel.OnDispatchClicked()` หลัง `ConfirmTrip()` (ผลถูกเก็บไว้ใน `pendingRoll` เพราะ event ยิงภายใน call เดียวกัน) |
+
+> **ยกเลิกเลือกถ้ำ:** `GatherMapController.ConfirmTrip()` เรียก `ClearSelection()` หลัง `Dispatch()` — การ์ดดันเจี้ยนคลายไฮไลต์และ readout กลับไปเป็น base SV ทันทีที่กด DISPATCH
+
+### 8.10 การ์ดดันเจี้ยน — ลำดับชั้น + สี SV + pop (รอบ 6)
+
+| หัวข้อ | สเปก |
+|---|---|
+| ลำดับแนวตั้ง | `ชื่อ` (46) → `pity` (28, จองเสมอ) → `sprite ถ้ำ` (ยืดเต็มที่เหลือ) → `SV / AP` (44) → `ของที่ดรอป` (56) |
+| เหตุผลที่ pity อยู่บน | การ์ดตัวละครที่ถูกเลือกจะยกขึ้นและทับ **ขอบล่าง** ของการ์ดดันเจี้ยน — pity เดิมอยู่ล่างสุดจึงถูกบังก่อนอย่างอื่น |
+| สีของ SV | `MapNodeView.ColorForChance(int)`: `0` แดง `(0.91,0.30,0.30)` → `40` ส้ม `(0.95,0.58,0.24)` → `70` เหลือง `(0.93,0.84,0.30)` → `100` เขียว `(0.42,0.85,0.45)`; ค่าเกิน 100 clamp เป็นเขียว |
+| อัปเดตสี | `RefreshReadout()` ถูกเรียกทุกครั้งที่ค่าเปลี่ยน (เลือกถ้ำ / เลือกยูนิต / ยกเลิก) จึงเปลี่ยนสีตาม SV ของทีมจริง |
+| pop ตอนเลือก | ฟอนต์ SV **26 → 34**, `localScale` **1 → 1.18** (`PopSpeed = 6.5`/วินาที, unscaled), แถบพื้นหลัง `SelectedBackdrop (0.21,0.25,0.35)` alpha `0 → 0.95` |
+| Pivot ของ SV | `(0.5, 0.5)` เพื่อให้ pop ขยายออกสองข้างเท่ากัน (pivot เดิมเป็น `(0.5, 1)` จะขยายลงไปทับแถวของที่ดรอป) |
+| แถบพื้นหลัง | ต้องเป็น **sibling ที่สร้างก่อน** ข้อความ — Unity UI วาด graphic ของ parent ก่อนลูกเสมอ ถ้าเป็นลูกจะทับตัวเลข |
+| `SnapPop()` | กระโดดไปสถานะสุดท้ายทันที ใช้ในเทสต์ที่รันทุกอย่างในเฟรมเดียว (เหมือน `DiceRollView.RevealImmediately()`) |
+
+### 8.11 การ์ดดันเจี้ยน — บีบโซนล่าง + ย่อปุ่ม DISPATCH (รอบ 7)
+
+**ตัวเลขที่วัดได้จริงจาก runtime (canvas 1920×1080)** — สถานะสุดท้ายหลังปรับรอบ 7.1
+
+| องค์ประกอบ | ตำแหน่ง world |
+|---|---|
+| การ์ดดันเจี้ยน (ทั้งสามใบ) | `y[330..970]`, **สูง 640** (กลับมาเท่าเดิมก่อนบีบ) |
+| `Title` / `Pity` / `Cave` / `Chance` / `Drops` | `y[916..962]` / `y[886..914]` / `y[526..880]` / `y[480..520]` / `y[428..474]` |
+| การ์ดตัวละคร (ตอนพัก) | root `y[92..392]`, `Lift.y = −70` → เนื้อการ์ดอยู่ `y[22..322]` |
+| **การ์ดตัวละคร (ตอนถูกเลือก)** | `y[83..401]` (`Lift.y = 0`, `localScale = 1.06`) |
+| ปุ่ม DISPATCH | `x[1666..1896] y[24..176]` (230×152) |
+| มือการ์ด | `x[724..1660] y[92..392]` |
+
+**เส้นตาย:** ข้อความของดันเจี้ยนต้องมี `y_bottom ≥ 401` — พื้นหลัง/ภาพถ้ำถูกบังได้ แต่ label ห้ามถูกบัง
+ตอนนี้ `Drops` ล่างสุด = **428** → clearance 27 px
+
+| การเปลี่ยนแปลง | เดิม → ใหม่ | ไฟล์ |
+|---|---|---|
+| `oddsBand` | 44 → **40** | `MapNodeView.cs` |
+| `dropBand` | 56 → **46** | `MapNodeView.cs` |
+| ช่องว่างระหว่างแถบ | 10 / 8 → **6 / 6** | `MapNodeView.cs` |
+| `bottomSafeBand` (แถบตายใต้ `Drops`) | — → **98** (ระยะจากขอบล่างการ์ดถึง `Drops`) | `MapNodeView.cs` |
+| `marginBottom` | **คงไว้ 330** (ทดลอง 420 แล้วย้อนกลับ — ทำให้การ์ดเตี้ยลง 90 px โดยไม่จำเป็น) | `GatherMapController.cs` **และ** `Core.unity` |
+| ขนาดปุ่ม DISPATCH | 300×200 → **230×152** | `DispatchActionPanel.prefab` **และ** override `m_SizeDelta` ใน `Core.unity` |
+| Icon ของปุ่ม | 120×120 @ y=12 → **80×80 @ y=10** | `DispatchActionPanel.prefab` |
+| Label ของปุ่ม | 44 สูง @ y=8 → **40 สูง @ y=6** | `DispatchActionPanel.prefab` |
+| `LogPanel` → `Content` | `m_ChildControlHeight 0 → 1` | `LogPanel.prefab` |
+| `EntryTemplate` → `LayoutElement.m_PreferredHeight` | 24 → **−1** | `LogPanel.prefab` |
+
+**วิธีคิดของ `bottomSafeBand`** — เลขทั้งชุดมาจากการวัด ไม่ใช่การเดา:
+
+```
+ขอบล่างการ์ด (world)            = 330
+การ์ดตัวละครที่ยกขึ้นไปถึง (world) = 401
+ระยะที่ต้องเว้น                  = 401 − 330 = 71
++ clearance 27                  = 98  ← bottomSafeBand
+```
+
+ผลข้างเคียงที่ตั้งใจ: พื้นที่ 98 px ล่างสุดมีแต่พื้นหลังการ์ดกับ highlight — **ไม่มีข้อความ** จึงถูกการ์ดตัวละครทับได้ตามที่ต้องการ
+และเพราะ `LayoutCard()` วัดจากขอบบน/ล่างของความสูงการ์ด ภาพถ้ำจึงยังได้พื้นที่เท่าเดิม (`caveBand 354`)
+ส่วน 90 px ที่ได้คืนมาจากการย้อน `marginBottom` ไปลงในแถบตายทั้งหมด ไม่ไปดันข้อความขึ้น
+
+**กับดักที่เจอรอบนี้**
+
+1. **Prefab ที่แก้แล้วไม่พอ** — ค่าที่ใช้จริงมาจาก **override ฝั่งซีน** (`m_Modifications` → `m_SizeDelta` ของ `fileID 958683726539179671`) แก้ prefab อย่างเดียวขนาดยังเป็น 300×200 ตอนรัน → ต้องแก้ทั้งสองที่
+2. **`marginBottom` มี override ในซีน** — ค่า default ในสคริปต์ (`[SerializeField]`) ไม่มีผลกับ instance ที่ถูก serialize ไว้แล้ว
+3. **`ChildControlHeight = 1` อย่างเดียวไม่พอสำหรับ log** — ยังมี `LayoutElement.m_PreferredHeight: 24` บน `EntryTemplate` ที่ปีนแถวทุกแถวไว้ที่ 24 px ทำให้บรรทัดที่ wrap 2 บรรทัดถูกตัด/ทับ ต้องตั้งเป็น **−1** (ค่า −1 = "ไม่บังคับ" ใน `LayoutElement`) ให้ layout ใช้ preferred height ของ TMP แทน
+4. **หลังแก้ `.prefab`/`.unity` ด้วยมือระหว่างที่ Editor เปิดอยู่ ต้องเรียก `AssetDatabase.Refresh`** ก่อน `scene.open` — ถ้าไม่ refresh, Unity จะยังใช้สำเนาในหน่วยความจำและดูเหมือน "แก้แล้วไม่ติด" (รอบนี้เจออาการนี้กับ `LogPanel.prefab`: เทสต์จับได้ว่าแถวยังสูง 24 px)
+5. **Editor ค้างหลัง `script.recompile`** — main thread ไม่ตอบคำสั่งใด ๆ (`editor.status` timeout) แต่ `console.status` ยังตอบเพราะมาจาก cache; ทางออกคือปิด process แล้ว `unity open` ใหม่ (ไม่เสียข้อมูลเพราะแก้ไฟล์บนดิสก์อยู่แล้ว)
+6. **เทสต์ที่วัด layout ต้องวัดหลัง `Canvas.ForceUpdateCanvases()`** — ไม่งั้นจะอ่านค่าเก่าและรายงาน PASS หลอก ๆ
+
+**เทสต์ที่ป้องกันปัญหานี้แล้ว** (`TestUiRedesign`, ALL PASS 111)
+
+| เทสต์ | กันอะไร |
+|---|---|
+| `no dungeon label hides under a lifted card` | ไล่ทุก label × ทุกการ์ดที่ยกขึ้น แล้วเทียบ `y_bottom` กับ `liftTop` |
+| `the dungeon card keeps its full height` | การ์ดต้องสูง ≥ 620 (กันการเผลอย่อการ์ดเพื่อหนีปัญหา) |
+| `the dispatch button clears the character cards` | `Rect.Overlaps` ระหว่าง `DispatchActionPanel` กับทุกการ์ด |
+| `a wrapped log line gets the height it needs` | เทียบ `row.rect.height` กับ `TMP.preferredHeight` |
+
+### 8.12 ไอค่อนจริงบนปุ่มและ state (รอบ 8)
+
+**แผนที่ไอค่อน** — ทุกตัวเป็น PNG ขาวบนโปร่งใส 16×16 (tint ได้ด้วย `Image.color`)
+
+| ใช้ที่ | ไฟล์ | ต้นทาง (CC0) | ที่ผูก |
+|---|---|---|---|
+| OPTIONS | `ui_gear.png` | Kenney *Game Icons* → `White/1x/gear.png` | `RunBootstrap.optionsIcon` → `HudTopBar` |
+| HELP | `ui_question.png` | Kenney *Game Icons* → `White/1x/question.png` | `RunBootstrap.helpIcon` → `HudTopBar` |
+| READY state (มุมซ้ายบนการ์ด) | `state_sword.png` | Kenney *Board Game Icons* → `Default (64px)/sword.png` | `ScoutIcon.swordSprite` |
+| ปุ่ม DISPATCH (ยืนยันทริป) | `state_sword.png` | ตัวเดียวกับ READY | `DispatchActionPanel.dispatchIcon` |
+| ปุ่ม COOK / HEAL / CRAFT | ตามสกิล | `SkillCandidates/cook_a_stove_arch`, `heal_a_cabinet`, `craft_a_workbench` | `SkillFlowController` ส่ง `SkillTriggerPanel.*Icon` เข้า `Show()` |
+
+**ทำไมต้องวาดใหม่เป็น 16×16 ไม่ใช้ไฟล์ต้นฉบับ**
+ต้นฉบับเป็น 50×50 / 64×64 ที่มี anti-alias (alpha 51–200 ตามขอบ) เมื่อตั้ง Point filter จะได้ขอบเป็นขั้นบันไดสีเทา
+ซึ่งขัดกับชุดไอค่อนเดิมของโปรเจกต์ที่เป็น 1-bit แท้ (`ap_45` 10×12, `heal_a_cabinet` 16×16)
+การ trace ลงกริด 16×16 จึงทำให้ไอค่อนใหม่ "หน้าเดียวกัน" กับของเดิม — ขนาดแสดงผลจริงคือ 30 px (ช่อง state) และ 20 px (ปุ่ม top bar)
+
+**สนามที่ต้องคำนวณก่อนใส่ไอค่อนในปุ่ม**
+
+```
+ปุ่ม 136 × 38
+├─ gutter ซ้าย 6 + ไอค่อน 20        = 26
+└─ label กว้าง 136 − 26 − 4 (ขวา)   = 106   ← ต้อง ≥ ความกว้าง "OPTIONS" ที่ 22pt (วัดได้ 103.2)
+```
+
+ถ้าลืมข้อนี้ label จะถูกตัดเป็น `OPT ION` (เจอจริงตอนปุ่มยังกว้าง 92) — เทสต์ `... label fits beside its icon`
+วัดที่ **font size ที่ออกแบบ** (ปิด auto-size ชั่วคราวก่อนวัด) ไม่ใช่วัดหลัง auto-size หดแล้ว
+เพื่อไม่ให้เทสต์ผ่านทั้งที่ปุ่มแคบเกิน
+
+**ไอค่อนบนปุ่ม DISPATCH/CONFIRM**
+
+| สถานะ | label | ไอค่อน |
+|---|---|---|
+| ยังไม่มีอะไรให้ยืนยัน | — (ซ่อน) | — |
+| เลือกถ้ำ + การ์ดแล้ว | `DISPATCH` | `state_sword` |
+| COOK / CRAFT มีคิว | `COOK` / `CRAFT` | ไอค่อนสกิลนั้น |
+| HEAL มีคนเจ็บเป็นเป้า | `HEAL` | ไอค่อน heal |
+
+ไอค่อนเดิมใน prefab เป็น `m_Color.a = 0.1` + `m_Sprite: {fileID: 0}` จึงมองไม่เห็นตลอด —
+รอบนี้ตั้ง alpha `1`, `m_PreserveAspect: 1`, `m_RaycastTarget: 0` และย่อจาก 80×80 เป็น **64×64 ที่ y = 23**
+(anchor กลางของพาเนล 230×152 → center_y = 76 + 23 = 99 → กล่อง `y[67..131]`, label อยู่ `y[6..46]` จึงไม่ทับ)
+
+### 8.13 ที่เก็บ third-party art pack (รอบ 9)
+
+```
+clogged/
+├─ asset-sources/                        ← git-ignored (raw downloads)
+│  ├─ kenney_board-game-icons.zip        ← 4 zip ที่ย้ายออกจาก Assets
+│  ├─ kenney_cursor-pack.zip
+│  ├─ kenney_cursor-pixel-pack.zip
+│  ├─ kenney_game-icons.zip
+│  ├─ kenney_input-prompts-pixel*.zip
+│  └─ _extracted/
+│     ├─ board-game-icons-vector/        ← 255 SVG (+ .ai/.swf) ย้ายออกจาก Assets
+│     ├─ cursor-pack-vector/             ← 364 SVG
+│     └─ game-icons-vector/              ← 2 SVG + .ai + .swf
+│
+└─ Unity-Projects/Assets/V2/Sprites/
+   ├─ Icons/                             ← **track ใน git** (เกมใช้จริง)
+   ├─ InputPrompts/
+   └─ Packs/                             ← **git-ignored** 1,890 PNG / 4.63 MB
+      ├─ board-game-icons/   513 png
+      ├─ cursor-pack/        729 png
+      ├─ cursor-pixel-pack/  223 png
+      └─ game-icons/         425 png
+```
+
+**ทำไม Packs ไม่ track:** Unity import PNG ทุกไฟล์เป็น asset (สร้าง `.meta` + เข้า texture database) ถ้า commit ไว้จะได้ diff ~1,890 ไฟล์ต่อการ bump เวอร์ชันแพ็ก และ repo บวมขึ้นโดยไม่ได้อะไร เพราะไอค่อนที่ใช้จริงถูก **trace/copy ลง `Icons/`** แล้ว (16×16, 1-bit) ซึ่งเป็นไฟล์เดียวที่ component อ้างถึง
+
+**asset hierarchy note:** `Packs/` เป็น Texture2D ปกติจะใช้กับ `Image.sprite` ไม่ได้ เพราะโปรเจกต์อยู่โหมด 3D — `Assets/V2/Editor/PacksSpriteImporter.cs` แก้ให้เฉพาะโฟลเดอร์นี้:
+
+| setting | ค่า | เหตุผล |
+|---|---|---|
+| `textureType` | `Sprite` | ให้ลากใส่ `Image.sprite` ได้ |
+| `spriteImportMode` | `Single` | แพ็กเป็นไฟล์เดี่ยว ไม่ใช่ sheet |
+| `spritePixelsPerUnit` | `16` | ตรงกับ `Icons/` ที่ใช้อยู่ |
+| `filterMode` | `Point` | pixel art ห้าม blur |
+| `mipmapEnabled` | `false` | ไม่มีระยะไกลให้ sample |
+| `maxTextureSize` | `512` | ต้นฉบับใหญ่สุด 100 px ไม่ต้องเผื่อ 2048 |
+
+**ผลลัพธ์ที่ตรวจแล้ว:** `AssetDatabase.LoadAssetAtPath<Sprite>("…/Packs/game-icons/PNG/White/1x/gear.png")` คืน sprite ปกติ, `FindAssets("t:Texture2D", Packs)` = **1,890**
+
+### 8.14 ดาบจากแพ็ก + ปุ่มไอค่อนล้วน (รอบ 10)
+
+**ดาบ**
+
+| | ก่อน | หลัง |
+|---|---|---|
+| ไฟล์ | `state_sword.png` (วาดเอง ดาบตั้ง) | `state_sword.png` (**ดาบเฉียงจาก `board-game-icons`**) |
+| สี | ขาวล้วน (silhouette) | **ขอบดำ + เนื้อขาว** (2 โทน ตามภาพต้นฉบับ) |
+| ขนาด | 16×16 | 16×16 (คงเดิม) |
+| GUID | `2d529982be1e4057b63272a9a3f6534d` | **ไม่เปลี่ยน** → prefab/scene ไม่ต้องแก้ |
+
+การเลือก 2 โทนแทน silhouette เพราะทดลองแล้ว: ถ้ารวมขอบกับเนื้อเป็นขาวล้วน รูปร่างจะกลายเป็นก้อนทึบ
+อ่านไม่ออกว่าเป็นดาบ (เทียบภาพ 8× แล้ว) — แบบขอบดำ+เนื้อขาวอ่านเป็นดาบได้ทั้งที่ 30 px (ช่อง state) และ 64 px (ปุ่ม DISPATCH)
+
+**ปุ่มมุมซ้ายบน**
+
+| | ก่อน | หลัง |
+|---|---|---|
+| ขนาด | 136 × 38 (แนวนอน) | **48 × 48 (จัตุรัส)** |
+| ข้อความ | `OPTIONS` / `HELP` | **ไม่มี Label เลย** |
+| ไอค่อน | 20×20 ชิดซ้าย (gutter 6) | **28×28 anchor กลาง** |
+| ตำแหน่ง | `x = 16` และ `16 + 136 + 8` | `x = 16` และ `16 + 48 + 8` |
+
+`BuildButton(..., string label, ...)` ใช้ `label` เป็นตัวตัดสินโหมด:
+
+```
+label == null/"" → icon-only : icon anchor (0.5,0.5), pivot (0.5,0.5), pos (0,0), size 28
+label != null    → มีข้อความ  : icon anchor (0,0.5), pos (gutter,0), size 20 + Label inset ซ้าย 26 ขวา 4
+```
+
+ปุ่ม `CLOSE` ในหน้ากดตัวเลือกยังใช้โหมดมีข้อความ (ไม่มีไอค่อน) ตามเดิม — ไม่กระทบ
+
+**เทสต์ที่ครอบคลุมแล้ว** (`TestUiRedesign`, ALL PASS 123)
+
+| เทสต์ | กันอะไร |
+|---|---|
+| `the OptionsButton shows the ui_gear sprite` | สไปรต์ถูกผูกจริง (ไม่ใช่ `PlaceholderIcons`) |
+| `the OptionsButton has no text label` | ไม่มี Label หลงเหลือ |
+| `the OptionsButton frame is square` | ผลต่าง `sizeDelta.x` กับ `sizeDelta.y` น้อยกว่า 0.5 |
+| `the OptionsButton icon is centred in its frame` | anchor/pivot กลาง + `anchoredPosition == 0` + icon ไม่ใหญ่กว่ากรอบ |
+### 8.7 Addendum รอบ 4 (2026-11-02) — AP บนปุ่มยืนยัน + tooltip ทั่ว HUD
+
+| ข้อ | สิ่งที่เพิ่ม |
+|---|---|
+| 1 | **ปุ่มยืนยันโชว์ AP ที่ใช้จริง:** `DispatchActionPanel` มีบรรทัดที่สอง `Cost` (`"N AP"`) ใต้ label; `SkillFlowController.PendingActualApCost` คิดรวม starvation surcharge แล้วส่งเข้า `Show(...)` — ค่า 0 = ซ่อนบรรทัด (gather ใช้ `config.apCost`) |
+| 2 | **tooltip ใช้ตัวเลขสด:** `HudTooltip` + `HudTooltipTrigger` รับ `Func<HudTooltipContent>` แล้วสร้างเนื้อหาใหม่ทุกครั้งที่ hover — ค่า AP/วัสดุ/สต็อกที่เขียนไว้ในโค้ดจึงไม่มีทางค้างเก่า (เดิม Heal เขียนตายว่า "AP ใช้ 2 AP" ทั้งที่ค่าใหม่คือ 3) |
+| 3 | **ครอบทุกส่วนของ HUD:** แถบทรัพยากร (Food / Medicine / Cooking / Materials + Core Item สองช่อง), Day frame (`EndDayTrigger`), ปุ่ม OPTIONS / HELP, LOG header, การ์ดดันเจี้ยน 3 ใบ, การ์ดตัวละครทั้ง 4 ใบ, ปุ่มสกิลทั้ง 4 ปุ่ม และปุ่มยืนยัน |
+| 4 | **`HudTooltipTrigger.Attach()`** ใช้กับ element ที่ `raycastTarget = false` ได้ — ถ้าไม่มี Graphic ที่รับ raycast ในตัวมัน จะเปิด `raycastTarget` ของ Graphic เดิม (หรือเติม `Image` โปร่งใส) ให้เอง คลิกจึงยัง bubble ขึ้นไปถึงปุ่มแม่ |
+| 5 | **Hard Success = ⌊SV ÷ 3⌋** (เดิม ÷2) — เพิ่ม `GatherResolver.HardSuccessThreshold()` ให้ HUD/test อ่านค่าตัวเดียวกับที่ใช้ทอย |
+
+**เทสต์ที่ครอบคลุมแล้ว** (`TestUiRedesign`, ALL PASS 132)
+
+| เทสต์ | กันอะไร |
+|---|---|
+| `hard success is the top third of the value (75 -> 25, 55 -> 18)` | สูตร ÷3 ไม่หลุดกลับไป ÷2 |
+| `heal tooltip quotes the live AP-only cost (3 AP)` | tooltip อ่านจาก `BaseWorkController` ไม่ใช่ข้อความตายตัว |
+| `cook tooltip quotes the live material cost` | วัสดุต่อรอบมาจาก controller |
+| `every skill button carries a hover popup` | ปุ่มสกิลทั้ง 4 (รวมปุ่มโหมด) มี `HudTooltipTrigger` |
+| `the top readouts carry popups` / `the day frame carries a popup` / `the confirm button carries a popup` | HUD ส่วนบน/วัน/ปุ่มยืนยันผูก tooltip แล้ว |
+| `dungeon and unit cards carry popups` | การ์ดทุกใบที่สร้างจากโค้ดผูก tooltip ตอน `Initialize` / `Bind` |
+| `confirm button paints '1 AP' for the queued cook` | ตัวเลขบนปุ่มยืนยัน = `PendingActualApCost` จริง |
+
+### 8.8 Addendum รอบ 5 (2026-11-02) — tooltip แยกย่อยรายองค์ประกอบ
+
+| ข้อ | สิ่งที่แก้ |
+|---|---|
+| 1 | **ขนาด popup:** `HudTooltip` กว้าง **360 px** (เดิม 290), title 21 / body 19 / hint 16 (เดิม 16/15/14), padding 14 |
+| 2 | **การ์ดตัวละคร:** ถอด tooltip ก้อนเดียวที่ root ออก แล้วผูกแยกที่ `AptitudeBadge` (+ `AptitudeLetter`), `TalentIcon`, `StateIcon`/`statustest`, `Lamps/Lamp0..5` และ `ApPips/ApPipN` |
+| 3 | **การ์ดดันเจี้ยน:** ผูกแยกที่ `Title`, `Chance`, `Pity`, `Drops/Drop0..2` + `DropLabel0..2` — ไม่มี tooltip ที่ root แล้ว |
+| 4 | **แถบสถานะ:** คงการผูกแยกต่อทรัพยากร (Food / Medicine / Cooking / Materials) และ Core Item สองช่อง |
+| 5 | **OPTIONS / HELP:** เอา tooltip ออกตามคำขอ |
+| 6 | **เนื้อหาเป็น live ทุกอัน:** provider อ่าน `unit`, `shownChance`, `shownPity`, `shownConfig`, `RunResources` ตอน hover — ตัวเลขไม่มีทางค้าง |
+
+> การเปิด `raycastTarget` ให้ badge/lamp/drop label ไม่ได้กันการคลิกการ์ด เพราะ click bubble ขึ้นไปถึง handler ที่ root — ยืนยันด้วย `EventSystem.RaycastAll` + `ExecuteEvents.GetEventHandler`
+
+**เทสต์ใหม่ (`TestUiRedesign`, ALL PASS 141)**
+
+| เทสต์ | กันอะไร |
+|---|---|
+| `OPTIONS and HELP stay tooltip-free` | ไม่มี tooltip หลงเหลือบนสองปุ่มนี้ |
+| `no card-level aggregate popup` | ไม่มี tooltip ก้อนเดียวที่ root ของการ์ด |
+| `unit-card badges each explain themselves` | aptitude / talent / state มี trigger ของตัวเอง |
+| `all six unit lamps explain themselves` | lamp ครบ 6 ดวงมีคำอธิบาย |
+| `unit AP pips explain themselves` | pip ทีละเม็ดมีคำอธิบาย |
+| `dungeon card readouts each explain themselves` | title / SV / pity / drop มี trigger ของตัวเอง |
+| `success-value popup quotes the hard-success threshold` | เนื้อหาอ้างเกณฑ์ ÷3 จริง |
+| `the popup is large enough to read` | คอลัมน์กว้าง ≥ 340 px |
+
+### 8.9 Addendum รอบ 6 (2026-11-02) — แท่งทอยเต๋าตามกฎ ÷3
+
+| ข้อ | สิ่งที่แก้ |
+|---|---|
+| 1 | `DiceRollView.BuildBar()` เลิกใช้ `successValue / 2` แล้วเรียก `GatherResolver.HardSuccessThreshold()` — แท่งสีและ legend จึงตรงกับ `Roll()` เป๊ะ (เดิมค้างที่ 1/2 ตั้งแต่เปลี่ยนกฎใน v0.35) |
+| 2 | ตัวอย่าง SV 75: `HARD 1-25 · REGULAR 26-75 · FAILURE 76-99 · FUMBLE 100` (เดิม `HARD 1-37 · REGULAR 38-75`) |
+| 3 | เพิ่ม `CurrentSuccessValue` ให้ตรวจย้อนได้ว่าแท่งที่วาดตรงกับผลที่ resolver ใช้ |
+
+**เทสต์ใหม่** (`TestUiRedesign`, ALL PASS 142): `the dice bar paints Hard Success from the top third` — เทียบข้อความ legend กับ `HardSuccessThreshold(CurrentSuccessValue)`
+
+### 8.10 Addendum รอบ 7 (2026-11-02) — ปรับระบบตามสเปก help
+
+ตรวจสเปก "วิธีเล่น / ทรัพยากร / ยูนิต / สถานะ / ดันเจี้ยน / Skill / SV" เทียบกับโค้ดจริง แล้วแก้เฉพาะข้อที่ตกลง:
+
+| ข้อ | สเปก | ก่อนแก้ | หลังแก้ |
+|---|---|---|---|
+| 1 | Fumble → ทุกคน Hurt + trait เสีย | Hard: สุ่ม 1 คนหายตัว · Easy/Normal: ไม่มีผล | **ทุกคนที่ไป Hurt + trait เสียคนละ 1 ทุกถ้ำ** |
+| 2 | สถานะชื่อ Death | `UnitState.Missing` / UI "LOST SIGNAL" / ตัว `X` | `UnitState.Death` / "DEATH" / ตัว `D` / log "died." (ค่า enum ยังเป็น 4 → save เดิมใช้ได้) |
+| 3 | Normal→Key, Hard→Treasure | ทอยได้ทั้ง 2 ชิ้นทุกโซน | **คงเดิมตามที่ตกลง** (help ต้องเขียนว่า "โอกาสได้ชิ้นที่ยังขาด" ไม่ผูกกับโซน) |
+| 4 | Sword เป็นทรัพยากร | ไม่มี — Sword คือไอคอน READY | **คงเดิม** (help ต้องไม่เขียนว่า Sword เป็นทรัพยากร) |
+
+ผลข้างเคียงที่ตั้งใจ: ไม่มีการทอยใดฆ่ายูนิตแล้ว — `Death` มาจาก starvation stack ที่ 3 เท่านั้น (ตรงกับสเปก "สภาวะของยูนิต")
+
+**เทสต์ใหม่** (`TestUiRedesign`, ALL PASS 146): `a fumble hurts every unit on the trip` · `a fumble hands a bad trait to each unit` · `a fumble grants no loot` · `a fumble never kills`
+
+### 8.11 Addendum รอบ 8 (2026-11-02) — หน้า HOW TO PLAY
+
+**ทำไมเป็น rail + pane ไม่ใช่หน้าเดียว:** เนื้อหาตามสเปกมี 8 กลุ่ม (~45 หัวข้อ) ถ้าใส่เป็นบล็อกเดียวจะยาวเกิน 2 หน้าจอและอ่านไม่ไหว จึงแยกเป็นหมวดทางซ้าย (เห็นทั้งหมดในสายตาเดียว) และเปิดทีละหมวดทางขวา — คนใหม่กด "BASICS" อ่าน 7 บรรทัดจบ ไม่ต้องเลื่อนหาที่ตัวเอง ตำแหน่งหมวดไม่เปลี่ยนทำให้กดซ้ำได้เร็ว
+
+| ส่วน | ค่า |
+|---|---|
+| การ์ด | 1200 × 720 กลางจอ, พื้น `UiFactory.Panel`, ขอบ `Border` 2px |
+| หัวเรื่อง | "HOW TO PLAY" 40px `Accent` ซ้ายบน + ตัวนับ `N / 8` ขวาบน + ปุ่ม `CLOSE` 160×48 |
+| Rail | กว้าง 300, เยื้อง 16 ซม./ขวา, `VerticalLayoutGroup` spacing 6, ปุ่มสูง 52 (ที่เลือก = `ChoiceSelected` + ตัวอักษรขาว) |
+| Pane | `RectMask2D` + `ScrollRect` (vertical, clamped), inset L 352 / R 52 / B 24 / T 140 |
+| Scrollbar | track 8×`PaneHeight` ชิดขวา 26, handle ขาว 35%, `AutoHide` |
+| แถว | `RowColor` + แท่งสีซ้าย 5px (`ignoreLayout`), หัวข้อ 22px / เนื้อ 19px, `ContentSizeFitter` ให้สูงตามข้อความ |
+
+**หมวดทั้ง 8:** BASICS · RESOURCES · UNITS · STATES · DUNGEONS · SKILLS · SUCCESS VALUE · THE ROLL
+ทุกตัวเลข (AP, วัสดุ, SV ฐาน, deadline, stock, เกณฑ์ Hard Success) อ่านจาก controller ตอน `BuildSections()` — หน้า help จึงไม่มีทางขัดกับของจริง
+
+> Copy เป็นภาษาอังกฤษพิมพ์ใหญ่ทั้งหมด เพราะฟอนต์ PixelTileset มีเฉพาะ A-Z / 0-9 / เครื่องหมายจำนวนจำกัด (เทสต์ "every printed character has a glyph" ครอบคลุมข้อความในหน้านี้ด้วย)
+
+**เทสต์ใหม่** (`TestUiRedesign`, ALL PASS 156): `help starts hidden` · `HELP opens the how-to-play page` · `the help page is a real page, not placeholder text` · `the help page has a section rail` · `the help page has a scrolling pane` · `the help page numbers its sections` · `the skills section quotes the live cook cost` · `the skills section quotes the live AP-only heal cost` · `help rows are laid out in a growing column` · `CLOSE hides the help page`
+
+### 8.12 Addendum รอบ 9 (2026-11-02) — ดาบเป็นทรัพยากรของ dispatch + ไอค่อนในหน้า help
+
+**ดาบเปลี่ยนจาก "ของประดับการ์ด" เป็น "ตั๋วเข้าถ้ำ":** เดิมการ์ดโชว์ดาบตลอดแต่ไม่ได้กันอะไร และการกันทริปที่ 2 มาจาก flag `gatheredToday` — ตอนนี้ยุบเหลือค่าเดียวคือ `currentSwords` (1/วัน, รีเฟรชพร้อม AP) แล้วให้ `HasGatheredToday` เป็นค่าอนุพันธ์ (`currentSwords <= 0`) โค้ดเก่าทุกจุดจึงยังทำงานโดยไม่ต้องแก้ และไม่มีทางที่ flag กับดาบจะขัดกันเอง
+
+| ส่วน | ก่อน | หลัง |
+|---|---|---|
+| ตัวกันทริปที่ 2 | `gatheredToday` (bool) | `currentSwords <= 0` |
+| `CanBeSentGathering` | `Idle && !HasGatheredToday` | `Idle && HasSword` |
+| การหักตอน dispatch | `MarkGatheredToday()` | `TrySpendSword()` (−1 ต่อคน) |
+| Badge บนการ์ด | โผล่เฉพาะตอนไปแล้ว | โผล่ตลอดตอน Idle, **จาง alpha 0.28** เมื่อใช้แล้ว |
+| ปุ่มยืนยัน | `N AP` | `N AP + M SWORD(S)` |
+| งานในฐาน | ไม่กินดาบ | ไม่กินดาบ (เหมือนเดิม) |
+
+**ไอค่อนในหน้า help:** `Entry` เพิ่ม `WithIcon(Sprite)` และ `WithGlyph(string)` → `BuildMark()` วาง badge 28×28 หน้าข้อความ; `Rebuild()` เรียกทุกครั้งที่เปิดหน้า เพื่อดึง sprite สดจาก `StatusBarView` / `UnitIconView` / `MapNodeView` / `DispatchActionPanel` (หน้า help สร้างครั้งเดียวตอน `Awake` ไอค่อนจึงต้อง re-resolve ไม่ใช่ผูกตอน build)
+- ไอค่อนจริงใช้ **สีเดิมของ art** (ไม่ tint ขาว) เพราะเป็นภาพ pixel art สีสันในตัว
+- สถานะที่ไม่มี art (SWORD SPENT) ใช้ glyph ตัวอักษรแทน — เลือก `W`/`0` เพราะฟอนต์ PixelTileset ไม่มี `*`
+
+**ลบแถว "NO SOLO PENALTY":** ผู้ใช้ไม่ต้องการให้บอกกติกานี้กับผู้เล่น (ระบบยังคิดโบนัส duo/mismatch ตามเดิม แต่ไม่ประกาศใน help)
+
+**เทสต์ใหม่:** `a trip spends the unit's sword` · `CheckSwordRules` (ดาบ 1 เล่ม/วัน, ทริปที่ 2 ถูกปฏิเสธ, งานในฐานยังทำได้, รีเฟรชตอนวันใหม่, backend ปฏิเสธเอง) · ดาบบนการ์ดจางลงหลังใช้ · `StateInitial` ตัดพารามิเตอร์ `gatheredToday` ที่ไม่ใช้แล้ว → **ALL PASS 163**
+
+### 8.13 Addendum รอบ 10 (2026-11-02) — หน้า Options แยกช่องเสียง 3 ช่อง + Mixer
+
+**ทำไมต้องเป็น mixer ไม่ใช่ `AudioListener.volume`:** ของเดิมมีสไลเดอร์ `VOLUME` อันเดียวที่หมุน `AudioListener.volume` ทั้งเกม ทำให้ปรับเพลงเบาไม่ได้เลยถ้าไม่อยากเสียเสียงเอฟเฟกต์ ตอนนี้เสียงแยกเป็น 3 กลุ่มใน `GameMixer` (Master → Music / SFX) และหน้า Options มีสไลเดอร์ต่อกลุ่ม
+
+| ส่วน | ก่อน | หลัง |
+|---|---|---|
+| Mixer | ไม่มี | `Assets/V2/Audio/GameMixer.mixer` — Master / Music / SFX, expose `MasterVolume` / `MusicVolume` / `SfxVolume` |
+| สไลเดอร์ | `VOLUME` 1 อัน → `AudioListener.volume` | `MASTER` / `MUSIC` / `SFX` → `AudioDirector.SetVolume` → PlayerPrefs + mixer |
+| ชื่อ object | `VolumeSlider` / `VolumeValue` | `MasterSlider` / `MusicSlider` / `SfxSlider` + `*Value` |
+| หมายเหตุท้ายหน้า | "AUDIO IS WIRED BUT HAS NO CLIPS YET" | ลบแล้ว (มีคลิปจริง) |
+
+**ตำแหน่งแถว (การ์ด 820×520):** RESOLUTION `y=118` · DISPLAY `y=48` · MASTER `−24` · MUSIC `−84` · SFX `−144` · footer `−206` — ระยะห่างเท่ากันทุกแถวและไม่ชนปุ่มล่าง; dropdown ของ resolution ขยับขึ้นเป็น `y=94` ให้ยังเปิดใต้ช่องพอดี
+
+**linear → dB:** สไลเดอร์เป็น 0–1 แต่ mixer รับ dB → `AudioDirector` แปลงด้วย `20·log10(v)` และ map 0 ไปที่ −80 dB (ไม่ใช่ −∞) เช่น 80% = −1.94 dB, 25% = −12.04 dB
+
+**เทสต์:** `the options page splits audio into master, music and sfx faders` · `each fader has its own percentage readout` · `the music fader reaches the mixer and leaves sfx alone`
+
+### 8.14 Addendum รอบ 11 (2026-11-02) — เสียงคลิก 2 แบบ (chrome / action)
+
+**ทำไมต้องแยก:** ผู้เล่นควรได้ยินความต่างระหว่าง "กำลังเลื่อนดู UI" กับ "กำลังทำอะไรบางอย่างกับรัน" จึงแยกเป็น 2 คลิป: เสียงแหลมสั้นสำหรับ chrome และเสียงทึบหนักกว่าสำหรับปุ่มที่ทำงานจริง
+
+| กลุ่ม | ปุ่ม | คลิป |
+|---|---|---|
+| Chrome (Plain) | menu, options, help, close, mode toggle, CONTINUE, สไลเดอร์ | `Ui_Click` (`click_iron_01`, active 0.08s, ZCR 0.165) |
+| Action (Playable) | cook, heal, craft, การ์ดดันเจี้ยน, การ์ดยูนิต, ปุ่มยืนยัน | `Ui_Click_Playable` (`click_stone_01`, active 0.04s, ZCR 0.064) |
+
+**วิธีผูก (กันลืม):** `UiFactory.CreateButton` ติด `Plain` ให้ทุกปุ่มเป็นค่าเริ่มต้น → ปุ่มที่ทำงานจริงเรียก `UiClickSound.MarkPlayable()` (idempotent: `Attach` ใช้ `GetComponent` ก่อน จึงไม่มี listener ซ้อน) ; ปุ่มที่สร้างมือไม่ผ่าน factory (HudTopBar, DiceRollView CONTINUE) ติดเอง ; การ์ดยูนิต (`IPointerClickHandler`) และสไลเดอร์เรียก `UiClickSound.Play()`
+
+**throttle 0.1s:** `Slider.onValueChanged` ยิงทุกเฟรมระหว่างลาก ถ้าไม่จำกัดจะกลายเป็นเสียงรบกวน — `UiClickSound.Play` ทิ้งคลิกที่ถี่กว่า 0.1s และ `OptionsPanelView.OnFaderChanged` ข้ามตอน `suppressVolumeCallback` (ตอนเปิดหน้าจะไม่รัวเสียง)
+
+**ที่มาของคลิป:** คัดจาก `fantasy-ui-sfx-free` — อีกแพ็ก (`GUI_Sound_Effects_by_Lokif`) ถูกวัดแล้วใช้ไม่ได้: `click.wav` peak 0.08 / RMS 0.002 (เงียบเกือบสนิท), `click_2.wav` peak 0.04 และไฟล์อื่นยาว 1.7s ไม่ใช่เสียงคลิก
+
+> archive ทั้ง 2 ชุดย้ายออกจาก `Assets/` ไป `asset-sources/` แล้ว เพราะวางใน `Assets/` ทำให้ Unity import เป็น asset + สร้าง `.meta` โดยไม่จำเป็น
+
+**เทสต์:** `the library carries both ui click clips` · `the options button carries the plain chrome click` · `cook, heal and craft use the action click` · `the craft mode toggle stays a plain click` · `the confirm button uses the action click` · `every dungeon card uses the action click` · `clicking a chrome button plays the plain clip` · `the click throttle stops a slider drag machine-gunning`
+
+### 8.15 Addendum รอบ 12 (2026-11-02) — เสียงคลิกแยกรายปุ่ม 6 แบบ
+
+**ทำไมแยกถึง 6:** 2 แบบเดิม (chrome / action) ยังหยาบเกินไป — ผู้เล่นควรได้ยิน "ฉันกำลังจะทำอะไร" ตั้งแต่กดปุ่ม ไม่ใช่รอตอนผลออก ตอนนี้แต่ละปุ่มประกาศเสียงของตัวเอง จึงแยกได้ว่า COOK ต่างจาก CRAFT ต่างจาก HEAL โดยไม่ต้องอ่านป้าย
+
+| UiClickKind | ปุ่มที่ใช้ | ไฟล์ | ยาว |
+|---|---|---|---|
+| `Plain` | menu, options, help, close, mode toggle, CONTINUE, slider | `Click.wav` | 0.20s |
+| `Select` | การ์ดยูนิต, การ์ดดันเจี้ยน, ปุ่มยืนยัน | `Select.mp3` | 1.07s |
+| `Cook` | ปุ่ม COOK | `Food Ready.wav` | 1.59s |
+| `Heal` | ปุ่ม HEAL | `Heal.mp3` | 8.04s |
+| `Craft` | ปุ่ม CRAFT | `Craft.mp3` | 1.70s |
+| `Popup` | เปิดหน้า OPTIONS / HELP | `UI Popup.wav` | 0.18s |
+
+**จุดที่ต้องระวัง:** ปุ่ม OPTIONS/HELP ยิง **2 เสียง** — คลิกของปุ่มเอง (`Plain`) แล้วตามด้วย `Popup` ตอนหน้าเปิด เทสต์จึงต้อง assert เป็น `count + 2` และ `LastSfx == Popup` ไม่ใช่ `+1`
+
+**การเลือกเสียง (fingerprint):** วัด 10 log-spaced bands ด้วย FFT window แบบปรับตามความยาวคลิป + spectral centroid + duration + active length + ZCR แล้วให้คะแนนถ่วงน้ำหนัก (band cosine 0.55, duration 0.16, centroid 0.13, ZCR 0.08, active 0.08) ผลคือ `Select`→`toggle_on_01` 0.889, `Craft`→`accept_01` 0.899, `Food Ready`→`spell_select_01` 0.831 แต่ `Click`/`UI Popup` ไม่มีตัวสั้นพอ และ `Heal` แพ็กสว่างเกิน (0.441) → ใช้ไฟล์ตัวอย่างทั้ง 6
+
+> บทเรียนจากการวัด: FFT window 2048 ตายตัวทำให้คลิปสั้นกว่า 46ms (เช่น click 0.03s) ได้สเปกตรัมเป็นศูนย์ทั้งหมด → ต้องย่อ window ตามความยาวคลิป ไม่งั้นการจัดอันดับจะเพี้ยนแบบเงียบ ๆ
+
+**Import setting:** `Heal.mp3` เป็น **CompressedInMemory** (8.04s หาง reverb) ส่วนอีก 5 ตัวเป็น DecompressOnLoad + preload + mono
+
+**เทสต์:** `the library carries every ui click clip` · `cook wears the food-ready click` · `heal wears the heal click` · `craft wears the craft click` · `the craft mode toggle stays a plain click` · `the confirm button uses the select click` · `every dungeon card uses the select click` · `tapping a unit card uses the select click` · `opening a page plays the popup clip` · `clicking a chrome button plays the plain clip` · `the click throttle stops a slider drag machine-gunning` → **ALL PASS 202**
+
+### 8.16 Addendum รอบ 13 (2026-11-03) — เสียง Error ตอน warning
+
+**ทำไมเสียง error ถึงอยู่ที่ banner ไม่ใช่ที่ปุ่ม:** warning ทุกทางในเกม (สกิลที่ทำไม่ได้, เลือกผิด, end-day ที่ยังไม่พร้อม) วิ่งผ่าน `WarningView.Show()` จุดเดียว ถ้าใส่เสียงที่ปุ่มแต่ละอันจะต้องแก้หลายที่และลืมง่าย — ใส่ที่ banner คือได้ครบทุกทางในบรรทัดเดียว
+
+**เสียงที่เลือก:** `error_01.wav` 0.76s · centroid 593 Hz · 66% พลังงานใต้ 250 Hz → โทน "ปฏิเสธ" แบบทึบ ไม่แสบหูเวลากดพลาดซ้ำ (ตัวเลือกอื่น: `locked_01` 3725 Hz สว่างเกิน, `negative_2` 237 Hz ทุ้มเกิน, `negative` active 1.20s ยาวเกิน)
+
+**ปัญหาที่เจอตอนทำจริง (สำคัญ):** ปุ่มที่ถูกปฏิเสธเล่นเสียงคลิกของตัวเองในเฟรมเดียวกัน แต่ลำดับ listener คือ game handler ก่อน แล้วค่อย `UiClickSound` → เสียง error ดังก่อนแล้วถูก chime 1.59s ของปุ่มกลบมิด
+
+| ทางแก้ | ผล |
+|---|---|
+| ย้ายเสียงไปใน `RunQueue` | ❌ banner ที่รอคิวอยู่จะเงียบหลายวินาที และเทสต์เฟรมเดียวจับไม่ได้ |
+| ให้ error ดังทีหลัง | ❌ ยังทับกันอยู่ (chime 1.59s + error 0.76s) |
+| **`SuppressThisFrameClick()`** | ✅ ปุ่มที่ถูกปฏิเสธดัง **แค่ error** — ตั้ง flag ผูกกับ `Time.frameCount` ไม่ใช่ bool ค้าง เพื่อไม่ให้ warning ที่ไม่ได้มาจากคลิกไปปิดเสียงคลิกครั้งถัดไป |
+
+**throttle 0.2s:** กดปุ่มที่บล็อกค้างจะได้เสียง error ออกมาทุกครั้งที่ `Show()` ถูกเรียก — throttle กันไม่ให้กลายเป็นเสียงรัว
+
+> บทเรียนสำหรับเทสต์: warning ไม่ได้แปลว่า `ErrorCount` จะเพิ่ม ถ้า throttle ยังไม่หมดอายุ — เทสต์ต้องเรียก `ResetErrorThrottle()` ก่อนวัด
+
+**เทสต์:** `the library carries an error sting for rejected clicks` · `a refused click shows a warning and plays the error sting` (ยืนยัน `SfxCount +1` และ `LastSfx == Error` = ไม่มีเสียงคลิกซ้อน) · `the error sting is throttled so a held button does not buzz` → **ALL PASS 205**
+
+### 8.17 Addendum รอบ 14 (2026-11-03) — Win เล่น 2 เพลง: บั๊กอยู่ที่ไฟล์ ไม่ใช่โค้ด
+
+**อาการ:** ได้ยินเพลงชนะ 2 เพลงซ้อนกัน
+
+**การไล่หา (สำคัญ: อย่าดูโค้ดอย่างเดียวก่อน)** — วัดที่ runtime ก่อน:
+- `AudioDirector` มีตัวเดียว, `AudioSource` 2 ตัว (Music/SFX)
+- เรียก `PlayWin()` ครั้งเดียว → `SfxCount 0 → 1`, `LastSfx = Win 2`
+- เดินเส้นทางชนะจริง (`ObtainCoreItem` A + B → `CheckImmediateWin`) → `SfxCount +1` ช็อตเดียว
+
+⇒ **โค้ดถูก** ปัญหาอยู่ที่ข้อมูลเสียง
+
+**ต้นเหตุ:** ไฟล์ mp3 เป็น stereo ที่ **ช่องซ้ายกับขวาบรรจุคนละเพลง**
+
+| ไฟล์ | L rms | R rms | correlation | best xcorr (±400 samples) | สรุป |
+|---|---|---|---|---|---|
+| `Win_1.mp3` | 0.196 | 0.207 | **0.117** | 0.451 @ lag 9 | คนละเพลง |
+| `Win 2.mp3` | 0.075 | 0.073 | **0.626** | 0.640 @ lag 0 | คนละเพลง |
+
+ประกอบกับ `AudioImporter.forceToMono = true` ที่ **บวก L+R** → ผลลัพธ์คือ 2 เพลงพร้อมกัน
+
+> กับดักในการวินิจฉัย: RMS และ spectral centroid ของ L กับ R ใกล้กันเป๊ะ (1959 vs 1923 Hz) ทำให้เดาว่า "เป็น stereo ปกติที่กว้าง" — ต้องวัด **correlation ที่ทุก lag** ถึงจะแยก "delay/phase widener" (corr จะพุ่ง > 0.8 ที่ lag หนึ่ง) ออกจาก "คนละเนื้อหา" (corr ต่ำทุก lag) ได้
+
+**วิธีแก้:** แยกช่องที่ดังกว่า (+RMS) เขียนเป็น mono 16-bit WAV ใหม่ที่ sample rate เดิม (24 kHz)
+- `Win_1.wav` 4.49s · `Win_2.wav` 3.91s · `ch = 1` ทั้งคู่
+- **Normalize เป็น −1 dBFS:** peak เดิม 0.925 vs 0.415 ต่างกัน 2.2 เท่า → สุ่มแล้วรู้สึกเหมือนเสียงดับ (gain ×0.96 / ×2.14)
+- ย้าย mp3 ต้นฉบับไป `asset-sources/win-source/` กันผูกกลับเข้าผลิตภัณฑ์
+
+**กันซ้ำ:** เทสต์ `every win sting is mono, so one file cannot hold two tracks` ตรวจ `clip.channels == 1` ของทุกคลิปใน `win[]` — ถ้าใครเปลี่ยนไปใช้ไฟล์ stereo อีก will fail ทันที
+
+**`PlayWin()` ตัด SFX ที่ค้างก่อน** (`sfxSource.Stop()`) เพราะเสียงชนะมาหลังเสียงเก็บของเสมอ
+
+> **ยังค้าง:** `Select.mp3` มีอาการเดียวกัน (correlation **−0.20**) — ใช้ทุกครั้งที่เลือกการ์ด/กดยืนยัน ยังไม่แก้เพราะต้องให้เจ้าของโปรเจกต์ตัดสินใจว่าจะแยกช่องไหน

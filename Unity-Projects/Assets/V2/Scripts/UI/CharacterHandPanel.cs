@@ -30,8 +30,8 @@ public class CharacterHandPanel : MonoBehaviour
 
     [Header("Card Layout")]
     [SerializeField] private float cardSpacing = 12f;
-    [SerializeField] private float cardWidth = 190f;
-    [SerializeField] private float cardHeight = 280f;
+    [SerializeField] private float cardWidth = 200f;
+    [SerializeField] private float cardHeight = 300f;
 
     [Header("Selection")]
     [SerializeField] private int maxDispatchSelection = 2;

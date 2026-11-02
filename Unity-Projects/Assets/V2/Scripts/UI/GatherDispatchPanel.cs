@@ -22,6 +22,9 @@ public class GatherDispatchPanel : MonoBehaviour
     // Trait counts of the sent units at dispatch time, so we can tell who gained a trait afterwards.
     private readonly Dictionary<UnitCharacter, int> traitsBefore = new Dictionary<UnitCharacter, int>();
 
+    // Set by HandleTripResolved so OnDispatchClicked can hand the roll to the popup.
+    private GatherDispatchResult pendingRoll;
+
     private void Start()
     {
         if (actionPanel != null) actionPanel.Clicked += OnDispatchClicked;
@@ -117,12 +120,23 @@ public class GatherDispatchPanel : MonoBehaviour
 
         RunLog.Add(LogKind.Action, $"Sent {JoinNames(selected)} to the {map.SelectedNode.Data.zone} cave.");
 
-        // Resolves synchronously and raises OnTripResolved inside this call.
+        // Resolves synchronously and raises OnTripResolved inside this call, so
+        // the roll to reveal is captured before the call returns.
+        pendingRoll = null;
         map.ConfirmTrip(selected);
+
+        if (pendingRoll != null)
+        {
+            var view = DiceRollView.Instance != null ? DiceRollView.Instance : DiceRollView.EnsureExists();
+            if (view != null) view.Show(pendingRoll, null);
+        }
+        pendingRoll = null;
     }
 
     private void HandleTripResolved(GatherDispatchResult result)
     {
+        pendingRoll = result;
+
         if (rosterView != null)
         {
             rosterView.ClearSelection();
@@ -217,15 +231,30 @@ public class GatherDispatchPanel : MonoBehaviour
         // Grey the button out rather than blocking the card click: a unit that
         // already gathered today can still do base work.
         bool ready = false;
+        int apCost = 0;
+        string tooltip = null;
+        string costText = null;
 
         if (hasCave)
         {
             var dispatcher = GatherDispatchController.Instance;
+            var node = map.SelectedNode;
             ready = dispatcher != null &&
-                    dispatcher.CanDispatch(map.SelectedNode.Data.zone, rosterView.GetSelectedUnits(), out _);
+                    dispatcher.CanDispatch(node.Data.zone, rosterView.GetSelectedUnits(), out _);
+
+            var config = GatherZoneDatabase.Instance != null
+                ? GatherZoneDatabase.Instance.GetConfig(node.Data.zone)
+                : null;
+            if (config != null)
+            {
+                apCost = config.apCost;
+                string sword = picked == 1 ? "1 SWORD" : $"{picked} SWORDS";
+                costText = $"{apCost} AP + {sword}";
+                tooltip = $"Send {picked} unit(s) to {node.Data.zone}. Each unit pays {apCost} AP and 1 sword.";
+            }
         }
 
-        actionPanel.ShowDispatch(interactable: ready);
+        actionPanel.ShowDispatch(interactable: ready, apCost: apCost, tooltip: tooltip, costText: costText);
     }
 
     private static bool IsSkillActive()

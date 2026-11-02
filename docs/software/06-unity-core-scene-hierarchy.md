@@ -1,6 +1,6 @@
-# clogged (Unity V2) — Core Scene Hierarchy
+﻿# clogged (Unity V2) — Core Scene Hierarchy
 
-**Version:** 3.1 | **Last Updated:** 2026-10-28
+**Version:** 4.0 | **Last Updated:** 2026-10-30
 > อธิบาย Hierarchy ทั้งหมดของ `Unity-Projects/Assets/V2/Scenes/Core.unity` — ตรวจจาก `unity command scene.get_hierarchy` ของ scene จริง
 > ตรรกะของแต่ละระบบดู [Unity V2 System Design](04-unity-system-design.md) · class ดู [Unity V2 Class Diagram](05-unity-class-diagram.md) · layout/UI ล่าสุดดู [UI Layout Redesign](07-unity-v2-ui-layout-redesign.md)
 
@@ -33,7 +33,8 @@ flowchart TD
     Canvas --> Hand["CharacterHandPanel<br/>มือไพ่ล่างกลาง"]
     Canvas --> Act["DispatchActionPanel<br/>ปุ่มยืนยันล่างขวา"]
     Canvas --> Log["LogPanel<br/>ประวัติล่างซ้าย"]
-    Canvas --> Skill["SkillTriggerPanel<br/>Cook / Heal / Craft"]
+    Canvas --> Skill["SkillTriggerPanel<br/>Cook / Heal / Craft + mode toggles"]
+    Canvas --> HTB["HudTopBar (สร้างตอนรัน)<br/>OPTIONS + HELP<br/>Options overlay = OptionsPanelView (ใช้ร่วมกับ MainMenu)<br/>Help overlay = HelpPanelView (rail 8 หมวด + pane เลื่อนได้) + ย้าย CoreItemGroup"]
 ```
 
 ## 2. Hierarchy เต็ม
@@ -107,9 +108,12 @@ Core.unity
 │       │   │   └── Count            TextMeshProUGUI (ไม่ถูกใช้)
 │       │   └── HealModeButton       Button → "MED" / "AP"
 │       │       └── Label            TextMeshProUGUI
-│       └── CraftButton              Button, LayoutElement
-│           ├── Label                TextMeshProUGUI "Craft"
-│           └── Count                TextMeshProUGUI
+│       └── CraftRow                 HorizontalLayoutGroup
+│           ├── CraftButton          Button, LayoutElement
+│           │   ├── Label            TextMeshProUGUI "Craft"
+│           │   └── Count            TextMeshProUGUI (จำนวนรอบที่ queue)
+│           └── CraftModeButton      Button → "MED" / "BUFF"
+│               └── Label            TextMeshProUGUI
 ├── EventSystem                      EventSystem, InputSystemUIInputModule
 └── GatherUI                         **GatherDispatchPanel**
 ```

@@ -1,3 +1,4 @@
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -46,6 +47,12 @@ public class StatusBarView : MonoBehaviour
     [Tooltip("When an icon sprite is assigned, hide that resource's text so the HUD can become icon-only.")]
     [SerializeField] private bool hideResourceLabelWhenIconSet = true;
 
+    /// <summary>Art the HUD is drawing right now, so the help page can repeat it.</summary>
+    public Sprite FoodSprite => foodSprite;
+    public Sprite MedicineSprite => medicineSprite;
+    public Sprite CookingMaterialSprite => cookingMaterialSprite;
+    public Sprite MaterialsSprite => materialsSprite;
+
     private const string WarningHex = "#E65C5C";
     private const string ObtainedHex = "#FFE68A";
     private const string PendingHex = "#9AA4B2";
@@ -74,7 +81,7 @@ public class StatusBarView : MonoBehaviour
         int count = 0;
         foreach (var unit in UnitManager.Instance.Units)
         {
-            if (unit.state != UnitState.Away && unit.state != UnitState.Missing) count++;
+            if (unit.state != UnitState.Away && unit.state != UnitState.Death) count++;
         }
         return count;
     }
@@ -84,6 +91,103 @@ public class StatusBarView : MonoBehaviour
         RefreshDay();
         RefreshResources();
         RefreshIcons();
+    }
+
+    private void Start()
+    {
+        WireTooltips();
+    }
+
+    /// <summary>
+    /// Hover popups for the readouts. The bodies are providers, so the numbers a
+    /// popup quotes are the numbers on screen at hover time - no cache to
+    /// invalidate after a trip or a cook.
+    /// </summary>
+    private void WireTooltips()
+    {
+        Attach(foodIcon, foodText, FoodTip);
+        Attach(medicineIcon, medicineText, MedicineTip);
+        Attach(cookingMaterialIcon, cookingMaterialText, CookingMaterialTip);
+        Attach(materialsIcon, materialsText, MaterialsTip);
+
+        HudTooltipTrigger.Attach(coreItemStatusText, CoreItemTip);
+
+        if (coreItemIcon != null)
+            HudTooltipTrigger.Attach(coreItemIcon, () => CorePieceTip(RunResources.Instance != null && RunResources.Instance.HasCoreItemA, "THE SEALED BOX"));
+        if (coreItemBIcon != null)
+            HudTooltipTrigger.Attach(coreItemBIcon, () => CorePieceTip(RunResources.Instance != null && RunResources.Instance.HasCoreItemB, "THE KEY"));
+    }
+
+    /// <summary>Both slots get a popup, whichever one the HUD is currently drawing.</summary>
+    private static void Attach(Image icon, TMP_Text label, Func<HudTooltipContent> content)
+    {
+        if (icon != null) HudTooltipTrigger.Attach(icon, content);
+        if (label != null) HudTooltipTrigger.Attach(label, content);
+    }
+
+    private static HudTooltipContent FoodTip()
+    {
+        var resources = RunResources.Instance;
+        int food = resources != null ? resources.Food : 0;
+        int need = CountMouthsTonight();
+
+        string verdict = food >= need ? "ENOUGH FOR TONIGHT." : "NOT ENOUGH FOR TONIGHT - COOK BEFORE END DAY.";
+        return new HudTooltipContent("FOOD",
+            $"{food} IN STOCK. {need} EATEN AT END DAY, ONE PER CREW MEMBER AT CAMP.\n{verdict}");
+    }
+
+    private static HudTooltipContent MedicineTip()
+    {
+        var resources = RunResources.Instance;
+        int stock = resources != null ? resources.Medicine : 0;
+        var controller = BaseWorkController.Instance;
+
+        int withMedicine = controller != null ? controller.HealBaseApCost(true) : 1;
+        int without = controller != null ? controller.HealBaseApCost(false) : 3;
+
+        return new HudTooltipContent("MEDICINE",
+            $"{stock} IN STOCK.\nHEAL USES 1 MEDICINE AND {withMedicine} AP. WITHOUT IT, HEAL COSTS {without} AP.");
+    }
+
+    private static HudTooltipContent CookingMaterialTip()
+    {
+        var resources = RunResources.Instance;
+        int stock = resources != null ? resources.CookingMaterial : 0;
+        var controller = BaseWorkController.Instance;
+        int perRound = controller != null ? controller.CookMaterialPerRound : 1;
+
+        return new HudTooltipContent("COOKING MATERIAL",
+            $"{stock} IN STOCK.\nCOOK SPENDS {perRound} PER ROUND AND MAKES FOOD.");
+    }
+
+    private static HudTooltipContent MaterialsTip()
+    {
+        var resources = RunResources.Instance;
+        int stock = resources != null ? resources.Materials : 0;
+        var controller = BaseWorkController.Instance;
+
+        int medicineCost = controller != null ? controller.WorkshopBaseMaterialCost(WorkshopMode.Medicine) : 2;
+        int buffCost = controller != null ? controller.WorkshopBaseMaterialCost(WorkshopMode.BuffPotion) : 4;
+
+        return new HudTooltipContent("MATERIALS",
+            $"{stock} IN STOCK.\nCRAFT: {medicineCost} FOR MEDICINE, {buffCost} FOR A BUFF POTION.");
+    }
+
+    private static HudTooltipContent CoreItemTip()
+    {
+        var resources = RunResources.Instance;
+        bool box = resources != null && resources.HasCoreItemA;
+        bool key = resources != null && resources.HasCoreItemB;
+
+        string state = box && key ? "BOTH PIECES FOUND - THE WAY OUT IS OPEN." : "FIND BOTH PIECES TO LEAVE.";
+        return new HudTooltipContent("CORE ITEM",
+            $"BOX {(box ? "FOUND" : "MISSING")}, KEY {(key ? "FOUND" : "MISSING")}.\n{state}");
+    }
+
+    private static HudTooltipContent CorePieceTip(bool found, string what)
+    {
+        return new HudTooltipContent("CORE ITEM",
+            found ? $"{what} IS ALREADY IN THE BAG." : $"{what} IS STILL OUT THERE. HARD SUCCESS IN THE DEEPER CAVES CAN DROP IT.");
     }
 
     private void RefreshDay()

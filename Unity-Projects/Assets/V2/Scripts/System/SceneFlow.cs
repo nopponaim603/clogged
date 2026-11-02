@@ -17,6 +17,13 @@ public static class SceneFlow
         RunStats.Reset();
         RunLog.Clear();
         SaveSystem.Delete();
+
+        // The run track is rolled here, once, and never changed again until the
+        // run ends - the director survives the scene load so the music starts
+        // without a restart.
+        AudioDirector.PendingRunTrack = AudioDirector.RollRunTrack();
+        AudioDirector.EnsureExists().BeginRun(AudioDirector.PendingRunTrack);
+
         Time.timeScale = 1f;
         SceneManager.LoadScene(GameScene);
     }
@@ -33,6 +40,9 @@ public static class SceneFlow
             return;
         }
 
+        // No roll here: the save remembers which track this run is using.
+        AudioDirector.PendingRunTrack = -1;
+
         RunLog.Clear();
         Time.timeScale = 1f;
         SceneManager.LoadScene(GameScene);
@@ -40,7 +50,7 @@ public static class SceneFlow
 
     /// <summary>
     /// Retry after a loss. The save is already gone (the run ended), so this is
-    /// the same reset as <see cref="NewGame"/>.
+    /// the same reset as <see cref="NewGame"/>, music roll included.
     /// </summary>
     public static void TryAgain() => NewGame();
 
@@ -48,6 +58,10 @@ public static class SceneFlow
     {
         Time.timeScale = 1f;
         SaveSystem.ClearPendingLoad();
+
+        // The title track owns the menu, so swap it in before the scene changes.
+        AudioDirector.EnsureExists().PlayTitleMusic();
+
         SceneManager.LoadScene(MainMenuScene);
     }
 

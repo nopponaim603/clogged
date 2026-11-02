@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using UnityEngine;
 
 /// <summary>
@@ -70,11 +70,23 @@ public class RunLogNarrator : MonoBehaviour
                 string patient = result.healedUnit != null ? result.healedUnit.unitName : "patient";
                 string method = result.usedMedicine ? "with Medicine" : "without Medicine (longer)";
                 RunLog.Add(LogKind.Success, $"{who} healed {patient} {method}.");
+                if (result.blessedApplied)
+                {
+                    RunLog.Add(LogKind.Success, $"{patient} is Blessed (+10 on the next trip).");
+                }
                 break;
 
             case BaseWorkType.Workshop:
-                RunLog.Add(LogKind.Success,
-                    $"{who} crafted {result.repeatsPerformed}x — +{result.medicineProduced} Medicine.");
+                if (result.workshopMode == WorkshopMode.BuffPotion)
+                {
+                    RunLog.Add(LogKind.Success,
+                        $"{who} brewed {result.repeatsPerformed}x buff potion — +{result.successBonusGranted} success value for the party.");
+                }
+                else
+                {
+                    RunLog.Add(LogKind.Success,
+                        $"{who} crafted {result.repeatsPerformed}x — +{result.medicineProduced} Medicine.");
+                }
                 break;
         }
     }
@@ -99,9 +111,9 @@ public class RunLogNarrator : MonoBehaviour
         }
         RunLog.Add(LogKind.Warning, sb.ToString());
 
-        foreach (var lost in report.lostSignal)
+        foreach (var died in report.died)
         {
-            RunLog.Add(LogKind.Fail, $"{lost.unitName} is Lost Signal.");
+            RunLog.Add(LogKind.Fail, $"{died.unitName} died.");
         }
     }
 
@@ -126,13 +138,9 @@ public class RunLogNarrator : MonoBehaviour
         bool bad = result.tier == GatherResultTier.Failure || result.tier == GatherResultTier.Fumble;
         RunLog.Add(bad ? LogKind.Fail : LogKind.Success, sb.ToString());
 
-        if (result.hurtUnit != null)
+        foreach (var hurt in result.hurtUnits)
         {
-            RunLog.Add(LogKind.Fail, $"{result.hurtUnit.unitName} was hurt.");
-        }
-        if (result.missingUnit != null)
-        {
-            RunLog.Add(LogKind.Fail, $"{result.missingUnit.unitName} is Lost Signal.");
+            RunLog.Add(LogKind.Fail, $"{hurt.unitName} was hurt.");
         }
 
         foreach (var kind in result.coreItemsObtained)
@@ -153,7 +161,7 @@ public class RunLogNarrator : MonoBehaviour
                 RunLog.Add(LogKind.Fail, "Day limit reached without both Core Items. LOSE.");
                 break;
             case RunOutcome.LoseAllUnitsLost:
-                RunLog.Add(LogKind.Fail, "Everyone is Lost Signal. LOSE.");
+                RunLog.Add(LogKind.Fail, "Everyone is dead. LOSE.");
                 break;
         }
     }

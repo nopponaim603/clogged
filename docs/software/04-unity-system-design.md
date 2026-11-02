@@ -1,6 +1,6 @@
-# clogged (Unity V2) — System Design
+﻿# clogged (Unity V2) — System Design
 
-**Version:** 3.0 | **Last Updated:** 2026-10-28
+**Version:** 4.0 | **Last Updated:** 2026-10-30
 > สร้างจากการอ่านโค้ดจริงใน `Unity-Projects/Assets/V2/` (scene `V2/Scenes/Core.unity`) — เป็น **ระบบหลักปัจจุบัน** ของเกมใน Unity
 > เอกสาร [01](01-system-design.md) / [02](02-class-diagram.md) / [03](03-class-design.md) อธิบาย Web Prototype (Phaser) ซึ่งเป็นระยะที่ 1 — เก็บไว้เป็นข้อมูลอ้างอิง
 
@@ -23,9 +23,9 @@ Unity-Projects/Assets/V2/
     ├── BaseWorkType.cs          (enum Cooking/Healing/Workshop)
     ├── BaseWorkResult.cs        (ผลของงานในฐาน 1 ครั้ง)
     ├── CoreItemKind.cs          (enum A/B — Core Item 2 ชิ้น)
-    ├── DiceRollView.cs          (stub ว่าง — สำรองไว้ทำ animation ทอยเต๋า)
+    ├── DiceRollView.cs          (popup ทอย D100 สองลูก + แถบ Hard/Regular/Fail/Fumble)
     ├── Entities/               ← ข้อมูลล้วน ไม่ใช่ MonoBehaviour
-    │   ├── UnitCharacter.cs     (UnitState, AptitudeTag, UnitTrait, UnitCharacter)
+    │   ├── UnitCharacter.cs     (UnitState, ZoneAptitude, UnitTalent, UnitTrait, UnitCharacter)
     │   ├── GatherZoneData.cs    (GatherZone, LootAmount, GatherZoneConfig)
     │   └── MapNodeData.cs       (ตำแหน่ง + zone ของจุดบนแมป)
     ├── System/                 ← เก็บ state กลาง / คำนวณล้วน
@@ -114,7 +114,7 @@ stateDiagram-v2
     Planning --> Win: ได้ Core Item (CheckImmediateWin)
     Planning --> EndDay: คลิก DayFrame
     EndDay --> Win: มี Core Item อยู่แล้ว
-    EndDay --> LoseAllUnitsLost: ทุกคน Missing
+    EndDay --> LoseAllUnitsLost: ทุกคน Death
     EndDay --> LoseDeadline: วัน > 7 และยังไม่มี Core Item
     EndDay --> DayStart: OnDayStarted(day)
     Win --> [*]
@@ -123,7 +123,7 @@ stateDiagram-v2
 ```
 
 - ใน 1 วัน ผู้เล่นสลับทำ Gather / Base Work ได้ไม่จำกัดลำดับ ตราบที่ยูนิตมี AP
-- ยูนิตหนึ่ง **ส่งสำรวจได้ 1 ครั้งต่อวัน** (`HasGatheredToday`) แต่ **งานในฐานทำซ้ำได้ไม่จำกัด** ทั้งก่อนและหลังออกสำรวจ
+- ยูนิตหนึ่ง **ส่งสำรวจได้ 1 ครั้งต่อวัน** เพราะมี **Sword 1 เล่ม/วัน** (`currentSwords`; `HasGatheredToday` เป็นค่าอนุพันธ์ = `currentSwords <= 0`) แต่ **งานในฐานทำซ้ำได้ไม่จำกัด** ทั้งก่อนและหลังออกสำรวจ
 - `deadlineDay = 7` → ผู้เล่นมี 7 วันเต็ม; กด End Day ในวันที่ 7 แล้ววันจะกลายเป็น 8 → แพ้ถ้ายังไม่มี Core Item
 
 ### 2.3 Legacy (นอก V2)
@@ -137,14 +137,14 @@ stateDiagram-v2
 ### UnitManager — roster
 ถือ `List<UnitCharacter>` 4 ตัว (เรียงตามลำดับ roster ซึ่ง UI ใช้ index ตรงกัน) ตั้ง `currentActionPoints = maxActionPoints` ตอน `Awake` มี `AliveCount()` และ `AllUnitsLost()` (เงื่อนไขแพ้)
 
-| ยูนิต | Aptitude (+20) | Non-aptitude (−15) |
+| ยูนิต | ความถนัดหลัก | Talent |
 |---|---|---|
-| Ann | Speed, Easy | Hard |
-| Boon | Endurance, Hard | Cooking |
-| Cia | Gathering, Normal, Cooking | Combat |
-| Dan | Combat, Hard | Cooking |
+| Ann | Easy | Heal — ผู้ป่วยได้ Blessed (+10 SV ครั้งถัดไป) |
+| Boon | Hard | Crafting — ยาที่ craft ได้ ×2 |
+| Cia | Normal | Cooking — อาหารที่ได้ ×2 |
+| Dan | Hard | Exploring — ไอเทม ×2 (ยกเว้น Core Item) + Core Item chance +25% |
 
-> มีผลจริงในโค้ดเฉพาะ tag `Easy/Normal/Hard` (สูตรทอย) และ `Cooking` (ผลผลิตทำอาหาร) — `Speed/Endurance/Gathering/Combat` ยังเป็นแค่ป้าย
+> `AptitudeTag` เดิม (`Speed/Endurance/Gathering/Combat`) ถูกถอดออกทั้งหมด — เหลือ `ZoneAptitude` (Easy/Normal/Hard) + `UnitTalent` (Heal/Crafting/Cooking/Exploring)
 
 ### UnitCharacter — สถานะยูนิต (entity)
 
@@ -156,18 +156,19 @@ stateDiagram-v2
     Idle --> Away: Dispatch (ชั่วคราวระหว่าง resolve)
     Away --> Idle: กลับมา AP > 0
     Away --> Resting: กลับมา AP = 0
-    Away --> Hurt: ผล Failure (สุ่ม 1 คน)
-    Away --> Missing: ผล Fumble ที่ Hard (สุ่ม 1 คน)
+    Away --> Hurt: ผล Failure (สุ่ม 1 คน) หรือ Fumble (ทุกคน)
     Hurt --> Idle: Heal (โดยยูนิตอื่น)
-    Idle --> Missing: Starvation ครบ 3 stack
-    Resting --> Missing: Starvation ครบ 3 stack
-    Hurt --> Missing: Starvation ครบ 3 stack
-    Missing --> [*]
+    Idle --> Death: Starvation ครบ 3 stack
+    Resting --> Death: Starvation ครบ 3 stack
+    Hurt --> Death: Starvation ครบ 3 stack
+    Away --> Death: Starvation ครบ 3 stack
+    Death --> [*]
 ```
 
-- `CanBeDispatched` = `Idle` (ใช้กับงานในฐาน), `CanBeSentGathering` = `Idle && !HasGatheredToday`
+- `CanBeDispatched` = `Idle && AP > 0` (ใช้กับงานในฐาน), `CanBeSentGathering` = `Idle && HasSword`
+- `UnitCharacter.ReturnToPlay()` เป็นที่เดียวที่ตัดสินว่า "กลับเข้าเล่นได้ไหม" → `AP > 0` = `Idle`, `AP == 0` = `Resting`; ใช้ทั้งตอนจบทริปและตอน heal
 - **ค่า AP จริง** = `baseCost + starvationStacks` (`GetActualApCost`) — หิว 2 stack แล้วไป Hard (3 AP) ต้องใช้ 5 AP ซึ่งเกิน max 3 → ทำไม่ได้
-- `Hurt` ไม่หายเองข้ามวัน ต้องมีคนรักษา; `Missing` ถาวร
+- `Hurt` ไม่หายเองข้ามวัน ต้องมีคนรักษา; **`Death` ถาวร** และเป็นสถานะเดียวที่ทำให้ยูนิตหายจาก run (การทอยไม่เคยฆ่ายูนิต — 2026-11-02)
 
 ### RunResources — ทรัพยากรของ run
 
@@ -196,15 +197,15 @@ stateDiagram-v2
 
 | Tier | เงื่อนไข | ผล (`GatherDispatchController.ApplyOutcome`) |
 |---|---|---|
-| Fumble | SV < 50: ทอย 96–100 · SV ≥ 50: ทอย 100 | ไม่ได้ของ; ถ้า Hard → สุ่ม 1 คน **Missing**; trait เสีย 100% |
-| Hard Success | ทอย ≤ ⌊SV/2⌋ | main loot เต็ม + bonus 1 อย่าง; trait ดี 50%; ความคืบหน้า Core Item |
+| Fumble | SV < 50: ทอย 96–100 · SV ≥ 50: ทอย 100 | ไม่ได้ของ; **ยูนิตทุกคนที่ไป Hurt + ได้ trait เสียคนละ 1** (ไม่มีใครตายจากการทอย) |
+| Hard Success | ทอย ≤ ⌊SV/3⌋ | main loot เต็ม + bonus 1 อย่าง; trait ดี 50%; ความคืบหน้า Core Item |
 | Regular | ทอย ≤ SV | main loot เต็ม |
 | Failure | ทอย > SV | main loot ครึ่ง (ปัดลง — Normal ได้ 0); สุ่ม 1 คน **Hurt**; trait เสีย 50% |
 
 `TraitLibrary.CreateRandom` เลือกชื่อ trait ที่ยูนิตยังไม่มีก่อน ชื่อเป็น flavor ล้วน ผลจริงคือ ±10 ตาม polarity
 
 ### GatherDispatchController — ส่งสำรวจ
-`CanDispatch(zone, units, out reason)` ตรวจ 1–2 คน, `CanBeSentGathering`, AP พอ → `Dispatch()` หัก AP **เต็มจำนวนต่อคน** (ไปคู่ไม่หาร), mark `HasGatheredToday`, ตั้ง `Away` → ทอย → ใช้ผล → คนที่ยัง `Away` กลับเป็น `Idle`/`Resting` → ยิง `OnGatherResolved` และคืน `GatherDispatchResult`
+`CanDispatch(zone, units, out reason)` ตรวจ 1–2 คน, `CanBeSentGathering`, AP พอ และ **Sword พอ** (1 ต่อคน) → `Dispatch()` หัก AP **เต็มจำนวนต่อคน** (ไปคู่ไม่หาร), `TrySpendSword()` ต่อคน, ตั้ง `Away` → ทอย → ใช้ผล → คนที่ยัง `Away` กลับเป็น `Idle`/`Resting` → ยิง `OnGatherResolved` และคืน `GatherDispatchResult`
 
 ### GatherMapController — แมปและการเลือกถ้ำ
 ชั้นภาพที่ครอบ `GatherDispatchController` ไว้: สร้าง `MapNodeData` 2 จุดต่อระดับ (รวม 6) วางแบบ best-candidate sampling รอบฐานที่กลาง `MapPanel` (เว้นขอบ margin L150/R360/T150/B420 + รัศมีฐาน 180 เพื่อไม่ให้ถ้ำไปอยู่ใต้ panel) เลือกจุดผ่าน static event `MapNodeView.OnAnyNodeClicked` — **คลิกซ้ำที่ถ้ำเดิมเพื่อยกเลิกการเลือกได้** (เหมือน toggle) และยิง `OnSelectionChanged` ทุกครั้งที่เปลี่ยน จากนั้น `ConfirmTrip()` เรียก `Dispatch()` แล้วยิง `OnTripResolved` **ในเฟรมเดียวกัน** — ไม่มีการเดินทาง ไม่มี `TripInProgress`
@@ -213,7 +214,7 @@ stateDiagram-v2
 
 | งาน | ต้นทุนต่อรอบ | ผลต่อรอบ | หมายเหตุ |
 |---|---|---|---|
-| Cooking | 1 AP + 1 Cooking Material | +1 Food (+2 ถ้ามี aptitude Cooking) | เลือกจำนวนรอบได้, หยุดเองเมื่อ AP/วัตถุดิบหมด |
+| Cooking | 1 AP + 1 Cooking Material | +1 Food (**+2** ถ้ามี talent Cooking) | เลือกจำนวนรอบได้, หยุดเองเมื่อ AP/วัตถุดิบหมด |
 | Healing | 1 AP + 1 Medicine **หรือ** 2 AP ถ้าไม่มียา | ผู้ป่วย `Hurt → Idle` | ใช้ยาอัตโนมัติถ้ามี, รักษาตัวเองไม่ได้ |
 | Workshop | 1 AP + 2 Materials | +1 Medicine | เลือกจำนวนรอบได้ |
 
@@ -242,6 +243,54 @@ stateDiagram-v2
 | `WarningView` | event (เรียกจาก `GatherDispatchPanel` / `SkillFlowController`) | แบนเนอร์เตือนในเกม: คิวข้อความ, ตัวอักษรขาวคงที่, outline (TMP material) เปลี่ยนสีตามระดับ — Warning เหลือง / Error แดง / Info ฟ้า, fade in → hold 2.5s → fade out + แผงหลังดำ (`WarningBackdrop`) |
 | `ButtonVisual` | — | เตรียมปุ่มให้สลับระหว่างข้อความกับ sprite icon (`mode` = Label/Icon) |
 | `MapNodeView` | — | วงกลมสีตาม zone + `ZoneLabel` (TMP, สร้างตอน runtime) แสดงชื่อโซน/AP กลางวง, ยิง `OnAnyNodeClicked` (คลิกซ้ำ = ยกเลิกการเลือก) |
+| `AudioDirector` | `Awake` (สร้างเองครั้งเดียว) | ทางออกเสียงเดียวของเกม: `AudioSource` 2 ตัว (Music loop / SFX `PlayOneShot`) route เข้า `GameMixer`, `DontDestroyOnLoad` เพื่อให้เพลงรันต่อข้ามฉาก |
+| `GameAudioLibrary` | — | `ScriptableObject` รวมคลิปทั้งหมด (Title / BGM 1–5 / Success / Fail / Win ×2 / Game Over / Click 2 แบบ) + mixer — อยู่ใน `Assets/V2/Resources/` เพราะ `AudioDirector` สร้างตัวเองในโค้ด ไม่มีอะไรมา serialize อ้างอิง |
+| `UiClickSound` + `UiClickKind` | `onClick` | ติดเสียงคลิกให้ปุ่ม: `UiFactory.CreateButton` ติด `Plain` อัตโนมัติ, ปุ่มที่ทำงานจริงเรียก `MarkPlayable()`; ปุ่มที่สร้างมือ (HudTopBar, DiceRollView) ติดเอง — `UiClickSound.Play()` ใช้กับการ์ดยูนิตและสไลเดอร์ (throttle 0.1s) |
+| `OptionsPanelView` | — | หน้าตั้งค่า: resolution, window mode, **สไลเดอร์ 3 แถว Master / Music / Sfx** เขียนลง PlayerPrefs แล้วเรียก `AudioDirector.ApplyVolumes()` |
+
+### Audio (2026-11-02)
+
+```mermaid
+flowchart LR
+    T[MainMenuController.Awake] -->|PlayTitleMusic| AD[AudioDirector]
+    SF[SceneFlow.NewGame] -->|RollRunTrack + BeginRun| AD
+    SF -->|ToMainMenu| AD
+    RB[RunBootstrap.Awake] -->|BeginRun save.musicTrack| AD
+    DRV[DiceRollView reveal] -->|Regular / HardSuccess| AD
+    DRV -->|Failure / Fumble| AD
+    BWC[BaseWorkController.Emit] -->|produce อะไรสักอย่าง| AD
+    RR[RunResources.ObtainCoreItem] --> AD
+    RRV[RunResultView.HandleRunEnded] -->|Win = PlayWin, Lose = GameOver| AD
+    AD --> M[(Music AudioSource)] --> MG[Music group]
+    AD --> S[(SFX AudioSource)] --> SG[SFX group]
+    MG --> MA[Master group]
+    SG --> MA
+```
+
+| เหตุการณ์ | คลิป | หมายเหตุ |
+|---|---|---|
+| หน้าเมนู | `Title_Screen` | Music group |
+| เริ่มรันใหม่ (New Game / Try Again) | สุ่ม 1 ใน `BGM_1..5` | สุ่ม **ครั้งเดียวตอนเริ่มรัน** เก็บ index ลงเซฟ |
+| เข้า Core ต่อจากเซฟ | BGM ตัวเดิม | `BeginRun` ไม่ restart ถ้าเป็นคลิปเดิมที่เล่นอยู่ |
+| ทอยได้ Regular / Hard Success | `Success` | |
+| ทอยได้ Failure / Fumble | `Fail` | |
+| ได้ของ: cook / heal / craft, Core Item | `Success` | `AddItem`/`AddFood` เงียบเอง เพื่อไม่ให้ทับเสียงทอย |
+| Lose condition ใดก็ตาม | `Game Over` | หยุดเพลงก่อน |
+| Win | สุ่ม 1 ใน `Win ×2` (`Win_1`, `Win_2`) | หยุดเพลง + ตัด SFX ที่ค้างก่อน; ทั้งคู่เป็น **mono WAV** (ไฟล์ mp3 ต้นฉบับเป็น stereo ที่ช่องซ้าย/ขวาเป็นคนละเพลง — ดูหมายเหตุ) |
+| ปุ่ม chrome: menu / options / help / close / mode toggle / CONTINUE | `Click` | `Click.wav` 0.20s |
+| เลือกของ: การ์ดยูนิต / การ์ดดันเจี้ยน / ปุ่มยืนยัน | `Select` | `Select.mp3` 1.07s |
+| ปุ่ม COOK | `Cook` | `Food Ready.wav` 1.59s |
+| ปุ่ม HEAL | `Heal` | `Heal.mp3` 8.04s (CompressedInMemory) |
+| ปุ่ม CRAFT | `Craft` | `Craft.mp3` 1.70s |
+| เปิดหน้า OPTIONS / HELP | `Popup` | `UI Popup.wav` 0.18s (เล่นเพิ่มจากคลิกของปุ่ม) |
+| กดแล้วขึ้น warning ไม่ได้ทำอะไร | `Error` | `Error.wav` 0.76s — **แทนที่**เสียงคลิกของปุ่มนั้น ไม่ดังซ้อน |
+| สไลเดอร์ Master / Music / Sfx | `Click` | throttle 0.1s กันเสียงรัวตอนลาก; ไม่เล่นตอน `suppressVolumeCallback` |
+
+**ที่มาของคลิป:** ทั้ง 6 มาจาก `Assets/V2/Sounds/SFX sample/` ตามที่ผู้ใช้เลือก หลังวัดเทียบกับแพ็ก `fantasy-ui-sfx-free` แล้วพบว่า `Click` / `UI Popup` ไม่มีตัวที่สั้นพอ (แพ็กสั้นสุด 0.11s) และ `Heal` แพ็กโทนสว่างเกิน — ส่วน `GUI_Sound_Effects_by_Lokif` ใช้ไม่ได้เลย (`click.wav` peak 0.08 / RMS 0.002)
+
+**Import setting ที่ต่างกันโดยตั้งใจ:** BGM + `Title_Screen` เป็น **Streaming** (quality 0.7) เพราะไฟล์ยาว ~1.4 MB; `Success` / `Fail` / `Win ×2` / `Game_Over` / คลิก 5 ตัว เป็น **DecompressOnLoad + preload + mono** เพื่อให้ one-shot แรกไม่มี disk hitch; `Heal` (8.04s) เป็น **CompressedInMemory** เพราะหาง reverb ยาว
+
+**ระดับเสียง:** `MasterVolume` / `MusicVolume` / `SfxVolume` เป็น exposed parameter ของ `GameMixer`; linear 0–1 แปลงเป็น dB (`20·log10(v)`, 0 → −80 dB) โดย `AudioDirector.ApplyVolumes()` — ตั้งได้จากหน้า Options ทั้งในเมนูและในเกม
 
 ## 4. Data Flow
 
@@ -334,10 +383,10 @@ sequenceDiagram
     alt RR.HasBothCoreItems
         DM-->>DM: DeclareOutcome(Win)
     else
-        loop ทุกยูนิตตามลำดับ roster (ข้าม Away/Missing)
+        loop ทุกยูนิตตามลำดับ roster (ข้าม Away/Death)
             DM->>RR: TryConsumeFood()
             alt อาหารหมด
-                DM->>U: ApplyStarvationStack() (ครบ 3 → Missing)
+                DM->>U: ApplyStarvationStack() (ครบ 3 → Death)
             end
         end
         DM->>DM: currentDay++
@@ -346,7 +395,7 @@ sequenceDiagram
         else currentDay > 7 และไม่มี Core Item
             DM-->>DM: DeclareOutcome(LoseDeadline)
         else
-            loop ยูนิตที่ไม่ใช่ Away/Missing
+            loop ยูนิตที่ไม่ใช่ Away/Death
                 DM->>U: RefreshForNewDay() (AP เต็ม, Resting→Idle, reset flag รายวัน)
             end
             DM-->>P: OnDayStarted(day) → Panel ต่างๆ refresh
@@ -377,7 +426,7 @@ sequenceDiagram
 - **สถานะ `Away` เป็นของยุคเก่า** — `Dispatch()` resolve ทันที ยูนิตไม่เคยค้างเป็น `Away` ข้ามเฟรม; เงื่อนไข "ข้าม Away" ใน `DayManager`/`StatusBarView` จึงยังไม่ทำงานจริง
 - **Build Settings ไม่มี `Core.unity`** และยังอ้าง `Setup.unity` ที่ไม่มีไฟล์แล้ว
 - `GatherUI` (เดิมชื่อ `TestDispatch`) เป็นที่อยู่ของ `GatherDispatchPanel` — ชื่อ object ยังเป็น legacy footprint
-- `DiceRollView` เป็น class ว่าง — ยังไม่มี animation ทอยเต๋า ผลแสดงเป็นข้อความใน log
+- `DiceRollView` ต่อเข้า flow แล้ว (รอบ 5): สร้างเองผ่าน `EnsureExists()` มี canvas ของตัวเอง (`sortingOrder = 500`) และแสดงผลหลัง `ConfirmTrip` — ดู §8.9 ของ [UI layout](07-unity-v2-ui-layout-redesign.md)
 - `SkillTriggerPanel` มี `Count` บนปุ่ม Heal ที่ไม่ถูกใช้ (โครงสร้างมาจาก prefab ร่วม) — ลบได้ถ้าต้องการ
 - Aptitude `Speed/Endurance/Gathering/Combat` ยังไม่มีผลต่อกลไกใด
 - ไม่มี save/load — state ทั้งหมดอยู่ใน memory ของ scene เดียว

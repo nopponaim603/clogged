@@ -103,6 +103,10 @@ public static class UiFactory
 
         if (onClick != null) button.onClick.AddListener(() => onClick());
 
+        // Chrome click by default; the few buttons that do real work upgrade to
+        // the action clip with UiClickSound.MarkPlayable.
+        UiClickSound.Attach(button, UiClickKind.Plain);
+
         var text = CreateText("Label", rect, label, fontSize, TextColor);
         text.rectTransform.anchorMin = Vector2.zero;
         text.rectTransform.anchorMax = Vector2.one;
