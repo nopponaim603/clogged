@@ -61,11 +61,11 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// NEW GAME starts the run. The goal card is not shown here: it is raised
-    /// over the map the moment the game scene has loaded, so the goal lands on
-    /// the board it is talking about.
+    /// NEW GAME starts the run and states the goal. The card itself is raised by
+    /// the game scene once the map is ready, so the goal lands on the board it is
+    /// talking about.
     /// </summary>
-    private void HandleStart() => SceneFlow.NewGame();
+    private void HandleStart() => SceneFlow.NewGameFromMenu();
 
     private void HandleContinue() => SceneFlow.Continue();
 

@@ -57,6 +57,7 @@ public static class TestTutorial
         bool cardAfterDice = false;
         float aptitudeHole = 0f;
         int aptitudeRings = -1;
+        float aptitudeBox = 0f;
 
         while (director.StepIndex < director.StepCount && guard++ < 120)
         {
@@ -78,10 +79,11 @@ public static class TestTutorial
 
             if (before == 4)
             {
-                // The aptitude card opens the whole hand (so the agents can be
-                // compared) and rings only the letter badge.
+                // The aptitude card opens the guide's own card and boxes the two
+                // badges inside it as one ring.
                 aptitudeHole = overlay.Hole.width;
                 aptitudeRings = EnabledFocusRings(overlay);
+                aptitudeBox = FocusRingHeight(overlay);
             }
 
             // Aim the dice: the dispatch step installs the scripted roll.
@@ -124,8 +126,11 @@ public static class TestTutorial
         Check("the dice popup was on screen for its step", sawDice, $"at step 12 dice={sawDice}");
         Check("the card waited while the dice tumbled", cardHeldForDice, $"held={cardHeldForDice}");
         Check("the dice card arrives once the roll lands", cardAfterDice, $"shown={cardAfterDice}");
-        Check("the aptitude card opens the whole hand", aptitudeHole > 900f, $"hole width {aptitudeHole:0}");
-        Check("the aptitude card rings the badge only", aptitudeRings == 4, $"{aptitudeRings} ring bars");
+        Check("the aptitude card opens the guide's own card", aptitudeHole > 20f && aptitudeHole < 400f,
+            $"hole width {aptitudeHole:0}");
+        Check("the aptitude card draws one ring", aptitudeRings == 4, $"{aptitudeRings} ring bars");
+        Check("that ring covers aptitude and talent together", aptitudeBox > 60f,
+            $"ring height {aptitudeBox:0}px");
         Check("the tour ran out of steps", sawFinaleGuard, "end reached");
 
         Section("3. the closing card");
@@ -181,6 +186,18 @@ public static class TestTutorial
             Check("it can be dismissed", !prompt.gameObject.activeSelf, "closed");
         }
 
+        Section("7. the goal card belongs to the menu only");
+        SceneFlow.PendingGoalPrompt = false;
+        Check("a tour return does not queue the goal card", !SceneFlow.ConsumeGoalPrompt(),
+            "queued");
+
+        SceneFlow.PendingGoalPrompt = true;
+        Check("NEW GAME queues the goal card", SceneFlow.ConsumeGoalPrompt(), "queued");
+        Check("the goal card is a one-shot", !SceneFlow.ConsumeGoalPrompt(), "second read");
+
+        var depart = typeof(TutorialDirector).GetMethod("Depart", Any);
+        Check("the tour still has a way out", depart != null, depart != null ? "Depart" : "missing");
+
         Sb.AppendLine();
         Sb.AppendLine($"passed {passed}, failed {failed}");
         return Sb.ToString();
@@ -199,6 +216,19 @@ public static class TestTutorial
             if (ring != null && ring.enabled) on++;
         }
         return on;
+    }
+
+    /// <summary>Height of the first focus ring, so a check can see it covers two badges.</summary>
+    static float FocusRingHeight(TutorialOverlay overlay)
+    {
+        var field = overlay.GetType().GetField("focusRings", Any);
+        var rings = field?.GetValue(overlay) as List<Image>;
+        if (rings == null) return 0f;
+
+        // Bars come in fours: top, bottom, left, right. The left bar's height is
+        // the box height.
+        if (rings.Count < 4 || rings[2] == null) return 0f;
+        return rings[2].rectTransform.sizeDelta.y;
     }
 
     /// <summary>

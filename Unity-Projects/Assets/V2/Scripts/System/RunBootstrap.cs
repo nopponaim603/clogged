@@ -49,14 +49,13 @@ public class RunBootstrap : MonoBehaviour
     }
 
     /// <summary>
-    /// States the goal over the board the run just started on. Only the first
-    /// time - a resumed run already knows what it is doing, and the tour teaches
-    /// the goal one card at a time, so it clears the flag itself.
+    /// States the goal over the board the run just started on - but only for a
+    /// run that came from the title screen's NEW GAME. Coming back from the tour
+    /// or retrying after a loss lands straight on the board.
     /// </summary>
     private static void ShowGoalCard()
     {
-        if (!SceneFlow.PendingGoalPrompt) return;
-        SceneFlow.PendingGoalPrompt = false;
+        if (!SceneFlow.ConsumeGoalPrompt()) return;
 
         NewGamePromptView.Show(
             onStart: null,

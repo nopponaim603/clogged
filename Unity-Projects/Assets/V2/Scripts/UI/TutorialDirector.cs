@@ -206,7 +206,9 @@ public class TutorialDirector : MonoBehaviour
     {
         SaveSystem.Suspended = false;
 
-        // The tour left the board in a half-played state; a real run starts clean.
+        // The tour left the board in a half-played state; a real run starts
+        // clean. Straight into the game - the player has just been taught the
+        // goal, so the goal card would be talking to itself.
         SceneFlow.NewGame();
     }
 
@@ -234,7 +236,7 @@ public class TutorialDirector : MonoBehaviour
             HandRow, null);
 
         Add("Each agent has their own aptitude. Using the wrong person for the wrong job carries a penalty.",
-            HandRow, null, null, TapPrompt, GuideAptitude);
+            GuideCard, null, null, TapPrompt, GuideAptitude);
 
         Add($"Choose {guideName}.", GuideCard, GuidePicked, null, ActPrompt);
 
@@ -365,8 +367,14 @@ public class TutorialDirector : MonoBehaviour
     /// </summary>
     private RectTransform[] GuideAptitude()
     {
-        var badge = Child(GuideCard(), "AptitudeBadge");
-        return badge != null ? new[] { badge } : null;
+        // One ring around the pair: the green aptitude letter and the talent
+        // glyph below it read as a single block of "who this agent is", so they
+        // are boxed together instead of as two separate hotspots.
+        var lift = GuideCard();
+        if (lift == null) return null;
+
+        var box = Union(Child(lift, "AptitudeBadge"), Child(lift, "TalentIcon"));
+        return box != null ? new[] { box } : null;
     }
 
     private RectTransform GuideAp()
