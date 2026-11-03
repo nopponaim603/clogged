@@ -1685,8 +1685,8 @@ label != null    → มีข้อความ  : icon anchor (0,0.5), pos (gu
 |---|---|---|
 | 1 | กด NEW GAME แล้วให้มีป๊อปอัปเด้งตั้งแต่เริ่ม เขียนว่า "Find the crystal and win the game!!" พร้อมปุ่ม view the tutorial | `NewGamePromptView` (โมดัลบนหน้าเมนู) — พาดหัว `FIND THE CRYSTAL AND WIN THE GAME!!`, เนื้อความ 2 บรรทัด, ปุ่ม **START THE RUN** และ **VIEW THE TUTORIAL?**, คลิกฉากหลังเพื่อปิด · `MainMenuController.HandleStart()` เปลี่ยนจากเริ่มเกมตรง ๆ เป็นเปิดป๊อปอัป และป้ายปุ่มหลักเปลี่ยน START → **NEW GAME** |
 | 2 | คลิก tutorial แล้วเริ่มเกมในซีน `Tutorial` แยกจากเกมปกติ | `SceneFlow` แยก `BeginRun()` (รีเซ็ต stat + ลบเซฟ + สุ่มเพลง) ออกมาใช้ร่วมกัน แล้วเพิ่ม `TutorialScene = "Tutorial"` + `NewTutorial()` · สร้าง `Assets/V2/Scenes/Tutorial.unity` โดยคัดลอก `Core.unity` แล้วเติมออบเจกต์ `TutorialDirector` และเพิ่มใน EditorBuildSettings |
-| 3 | สคริปต์สอนแบบ click to continue 26 จังหวะตามข้อความที่กำหนด | `TutorialDirector` ถือสคริปต์ `List<Step>` 26 รายการ (`text`, `prompt`, `target`, `done`, `enter`, `catchTap`, `focus`) — ทุกก้าวเดินหน้าด้วยการคลิก และบางก้าวมี **gate** ที่ต้องทำสิ่งที่สอนก่อน (เลือก Ann, เลือก Easy, เปิด/ปิดเต๋า, คิว Cook, ยืนยัน Cook, จบวัน) · ลำดับ: เป้าหมายเกม → พื้นที่ดันเจี้ยน → กรอบ GOAL → การ์ดตัวละคร → ความถนัดหลัก/รอง (โฟกัสสองจุด) → เลือก Ann → เลือก Easy → AP → ดาบ/readiness → SV → drop → DISPATCH → ลูกเต๋า → แท่ง SV → CONTINUE → Risk → ทรัพยากร → สกิล → เลือก Ann → Cook → เลขคิว → Cook อีกครั้ง → คิวซ้ำได้ → ยืนยัน Cook → จบวัน → ปุ่ม help |
-| 4 | ไฮไลต์พื้นที่เป้าหมายแบบเจาะเป็นรู | `TutorialOverlay` (แคนวาสของตัวเอง `sortingOrder = 600` เหนือ `DiceRollView` 500) วาดแถบมืด 4 แถบ + กรอบเรืองแสง 4 เส้นรอบ "รู" — ไม่ใช้ shader/mask · รองรับหลายเป้าหมายพร้อมกัน (`focusRings` pool) สำหรับก้าวที่ไฮไลต์ความถนัดหลักและรองพร้อมกัน |
+| 3 | สคริปต์สอนแบบ click to continue ตามข้อความที่กำหนด | `TutorialDirector` ถือสคริปต์ `List<Step>` (**27 รายการ** หลังเพิ่มก้าว right click) (`text`, `prompt`, `target`, `done`, `enter`, `catchTap`, `focus`, `wait`) — ทุกก้าวเดินหน้าด้วยการคลิก และบางก้าวมี **gate** ที่ต้องทำสิ่งที่สอนก่อน (เลือก Ann, เลือก Easy, เปิด/ปิดเต๋า, คิว Cook, คลิกขวายกเลิก, จบวัน) · ลำดับ: เป้าหมายเกม → พื้นที่ดันเจี้ยน → กรอบ GOAL → การ์ดตัวละคร → ความถนัด (วงเดียวรอบ aptitude+talent) → เลือก Ann → เลือก Easy → AP → ดาบ/readiness → SV → drop → DISPATCH → ลูกเต๋า → แท่ง SV → CONTINUE → Risk → ทรัพยากร → สกิล → เลือก Ann → Cook → เลขคิว → Cook อีกครั้ง → คิวซ้ำได้ → **right click เพื่อยกเลิก** → **right click ยกเลิกทุกอย่าง (คำอธิบาย)** → จบวัน → ปุ่ม help |
+| 4 | ไฮไลต์พื้นที่เป้าหมายแบบเจาะเป็นรู | `TutorialOverlay` (แคนวาสของตัวเอง `sortingOrder = 600` เหนือ `DiceRollView` 500) วาดแถบมืด 4 แถบ + กรอบเรืองแสง 4 เส้นรอบ "รู" — ไม่ใช้ shader/mask · มี `focusRings` pool ไว้สำหรับก้าวที่ต้องรัดหลายจุดซ้อนในรูเดียว (ปัจจุบันยังไม่มีก้าวไหนใช้) |
 | 5 | ทอยเต๋าให้ออก 10 (SV 55 = Hard Success) | `GatherResolver.ForcedRoll` — ถ้าตั้งไว้ `Roll()` จะคืนค่านั้นหนึ่งครั้งแล้วเคลียร์ตัวเองเป็น −1 · `HardSuccessThreshold` ถูก clamp ที่ 100 · ก้าว DISPATCH ตั้ง `ForcedRoll = TutorialDirector.ScriptedRoll` (10) |
 | 6 | จบแล้วขึ้นป๊อปอัป RETURN TO GAME กลับหน้าเกมหลัก | `TutorialOverlay.ShowFinale()` การ์ดปิดท้าย "THAT IS EVERYTHING YOU NEED TO SURVIVE OUT HERE. GOOD LUCK!" + ปุ่ม **RETURN TO GAME** → `TutorialDirector.Depart()` → `SceneFlow.NewGame()` (เริ่มรันใหม่ที่ Core) |
 
@@ -1717,7 +1717,7 @@ label != null    → มีข้อความ  : icon anchor (0,0.5), pos (gu
 | `AgentScripts/TestPolish.cs` (Core scene) | **69/69 ผ่าน** |
 | `AgentScripts/TestUiRedesign.cs` (Core scene) | **ALL PASS (216 checks)** |
 
-**ตรวจด้วยตา (game_view):** ป๊อปอัป NEW GAME บนหน้าเมนู, ก้าว 0–4, 6, 9, 10, 12 (เต๋าออก 10 = HARD SUCCESS ที่ SV 55), 13 (แท่ง SV), 14 (CONTINUE), 15 (Risk), 16 (ทรัพยากร), 17 (สกิล), 19 (Cook), 21–22 (เลขคิว 1 → 2 ทางซ้ายของปุ่ม), 23 (ยืนยัน Cook), 24 (จบวัน), การ์ด RETURN TO GAME และการกลับเข้า Core ด้วยรันใหม่ — การ์ดโค้ชไม่ทับคอนโทรลที่ไฮไลต์ในทุกก้าว
+**ตรวจด้วยตา (game_view):** ป๊อปอัป NEW GAME บนหน้าเมนู, ก้าว 0–4, 6, 9, 10, 12 (เต๋าออก 10 = HARD SUCCESS ที่ SV 55), 13 (แท่ง SV), 14 (CONTINUE), 15 (Risk), 16 (ทรัพยากร), 17 (สกิล), 19 (Cook), 21–22 (เลขคิว 1 → 2 ทางซ้ายของปุ่ม), 23 (right click เพื่อยกเลิก), 24 (right click ยกเลิกทุกอย่าง), 25 (จบวัน), การ์ด RETURN TO GAME และการกลับเข้า Core ด้วยรันใหม่ — การ์ดโค้ชไม่ทับคอนโทรลที่ไฮไลต์ในทุกก้าว
 
 > **หมายเหตุ:** `Tutorial.unity` เป็นสำเนาของ `Core.unity` ถ้าแก้ซีนหลักในอนาคตต้องแก้ทั้งสองที่ · ก้าวที่บังคับทอย 10 ตั้งอยู่บนสมมติฐาน Risk 80 (Easy SV 55) ถ้าเริ่มเกมด้วย Risk อื่นหรือแก้ base SV ต้องปรับ `TutorialDirector.ScriptedRoll` หรือข้อความในสคริปต์ตาม
 
@@ -1728,7 +1728,7 @@ label != null    → มีข้อความ  : icon anchor (0,0.5), pos (gu
 | # | สิ่งที่ขอ | สิ่งที่ทำ |
 |---|---|---|
 | 1 | ป๊อปอัปบอก goal ให้เด้งตอนโหลดซีน Core เสร็จ | **ย้ายจากหน้าเมนูมาเป็นในเกม** — `MainMenuController.HandleStart()` เรียก `SceneFlow.NewGameFromMenu()` (ไม่มี prompt บนเมนูแล้ว) · `NewGameFromMenu()` ตั้ง `PendingGoalPrompt = true` แล้ว `RunBootstrap.Awake()` (ฝั่ง fresh run) เรียก `SceneFlow.ConsumeGoalPrompt()` แล้วยกการ์ดขึ้นมาทับแผนที่ที่โหลดเสร็จแล้ว · **`SceneFlow.NewGame()` (เส้นทางปกติ) ไม่ตั้งธงเลย** ดังนั้นการกลับจาก tutorial (`Depart()`) และการกด Try Again หลังแพ้ จะเข้า Core ตรง ๆ ไม่มีการ์ด · `NewGamePromptView` ย้ายไปสร้างบน **แคนวาสของตัวเอง `sortingOrder = 700`** (เหนือ tutorial 600 และ dice 500) จึงไม่แพ้ draw order ให้แคนวาสแผนที่ · API ใหม่ `NewGamePromptView.Show(onStart, onTutorial, onClose)` + `Close()`/`TakeDown()` (ปิดแล้ว `SetActive(false)` ก่อน `Destroy` เพื่อไม่ให้คลิกเดียวกันตกใส่การ์ดอีกรอบ) |
-| 2 | ไฮไลต์ความถนัดให้เป็นแบบเจาะที่ป้ายตัวอักษร | ก้าว "Each agent has their own aptitude" เจาะรูที่ **การ์ดของ Ann ใบเดียว** (`GuideCard`) แล้ววาด **วงเดียว** ล้อมทั้ง `AptitudeBadge` (ตัวอักษร E) และ `TalentIcon` (สัญลักษณ์ talent ใต้ป้าย) เข้าด้วยกันผ่าน `Union(...)` ใน `GuideAptitude()` — ไม่ใช่สองวงแยก และไม่ใช่เจาะทั้งมือ |
+| 2 | ไฮไลต์ความถนัดให้เป็นแบบเจาะที่ป้ายตัวอักษร | ก้าว "Each agent has their own aptitude" เจาะรู **เฉพาะกล่องของ `AptitudeBadge` + `TalentIcon`** (`GuideAptitudeBox()` = `Union` ของสองป้าย) แล้ววาดวงเดียวรอบกล่องนั้น — **ไม่เจาะการ์ด Ann ทั้งใบ** และไม่มีวงซ้อน (การ์ดที่เหลือมืดตามปกติเหมือนใน ref) |
 | 3 | ข้อความในกล่อง tutorial ให้จัดกึ่งกลาง | `TutorialOverlay` เปลี่ยน `message.alignment` จาก `TopLeft` เป็น `Top` (กึ่งกลางบน) — prompt ยังกึ่งกลางเหมือนเดิม |
 | 4 | ไอคอน item ในช่อง possible drop ให้ตรงกับ status bar | `StatusBarView.IconFor(InventoryItemType)` คืนสไปรท์ที่ HUD ใช้จริง (wheat / flip_half / planks) · `MapNodeView.SpriteForItem()` ถาม HUD ก่อนเสมอแล้วค่อยตกไปที่ field เดิม/placeholder · `MapNodeView.Config` + `DropIcons` เปิดให้เทสต์ตรวจได้ · กล่อง/กุญแจ (`CorePiece`) ไม่แตะ |
 | 5 | ให้ทอยเต๋าเล่นอนิเมชันจบก่อน แล้วค่อยโชว์ tutorial | `DiceRollView.Settled` (false ตอน `Show`, true ตอน `ApplyFinalState`) · `TutorialDirector.Step.wait` — ก้าวที่ไม่ต้องแสดงจนกว่าเงื่อนไขจะเป็นจริง: `Advance()` จะเรียก `overlay.HideStep()` แล้วปล่อยให้ `Pump()` แสดงการ์ดเองเมื่อ `wait` ผ่าน · ก้าว "Roll a die…" ผูกกับ `DiceSettled` |
@@ -1737,8 +1737,28 @@ label != null    → มีข้อความ  : icon anchor (0,0.5), pos (gu
 
 | ชุดทดสอบ | ผล |
 |---|---|
-| `AgentScripts/TestTutorial.cs` — เพิ่มเช็ก "การ์ดถูกพักไว้ระหว่างเต๋าหมุน", "การ์ดโผล่หลังเต๋าหยุด", "ก้าวความถนัดเจาะการ์ดใบเดียว", "ก้าวความถนัดวงเดียว (4 แท่ง) ล้อมสองป้าย (สูง 68px)", §6 การ์ดเป้าหมาย (สร้าง/พาดหัว/ปุ่ม/แคนวาส>600/ปิดได้), §7 การ์ดเป้าหมายเป็นของเมนูเท่านั้น (one-shot, กลับจาก tour ไม่ตั้งธง) | **34/34 ผ่าน** |
+| `AgentScripts/TestTutorial.cs` — เพิ่มเช็ก "การ์ดถูกพักไว้ระหว่างเต๋าหมุน", "การ์ดโผล่หลังเต๋าหยุด", "ก้าวความถนัดเจาะเฉพาะสองป้าย (กว้าง 46 / สูง 76)", "ไม่มีการ์ดถูกล้อมเพิ่ม", "ก้าวบังคับคลิกกลืนคลิกนอกวง", "ก้าว click-to-continue ยังคลิกได้ทั้งจอ", §6 การ์ดเป้าหมาย (สร้าง/พาดหัว/ปุ่ม/แคนวาส>600/ปิดได้), §7 การ์ดเป้าหมายเป็นของเมนูเท่านั้น (one-shot, กลับจาก tour ไม่ตั้งธง) | **36/36 ผ่าน** |
 | `AgentScripts/TestPolish.cs` — เพิ่มเช็ก "แถว loot ใช้ไอคอนเดียวกับ HUD" (เทียบสไปรท์ทีละช่องกับ `StatusBarView.IconFor`) | **70/70 ผ่าน** |
 | `AgentScripts/TestUiRedesign.cs` | **ALL PASS (216 checks)** |
 
 **ตรวจด้วยตา (game_view):** ก้าวความถนัด (วงเดียวรอบป้าย E, ทั้งมือสว่าง, ข้อความกึ่งกลาง), ก้าวเต๋า (การ์ดมาหลังผลออก 10 = HARD SUCCESS), และ flow จริงจากเมนู: NEW GAME → Core โหลดเสร็จ → การ์ด FIND THE CRYSTAL ลอยเหนือแผนที่ → กด VIEW THE TUTORIAL? → เข้า `Tutorial` ที่ก้าว 0 ทันที
+
+---
+
+### 8.23 Addendum รอบ 21 (2026-11-04) — วงความถนัดเฉพาะสองป้าย, บล็อกคลิกนอกวง, สอน right click แทนการยืนยัน Cook
+
+| # | สิ่งที่ขอ | สิ่งที่ทำ |
+|---|---|---|
+| 1 | วงเดียวรอบ aptitude + talent เท่านั้น ไม่ต้องวง Ann ด้วย | ก้าวความถนัดใช้ `GuideAptitudeBox()` เป็น **target โดยตรง** (ไม่ใช่ focus ring ซ้อนในรู) — รูจึงมีขนาดเท่ากล่องของ `AptitudeBadge` + `TalentIcon` (วัดได้ 46×76 px) การ์ด Ann ที่เหลือมืดตามปกติ และถอด `GuideStats()` / `GuideAptitude()` แบบ array ที่ไม่ใช้แล้วออก |
+| 2 | ต้องคลิกได้เฉพาะพื้นที่ที่วงไว้ ไม่ให้คลิกที่อื่น | `TutorialOverlay` เดิมแถบมืดทั้งสี่เป็น `raycastTarget = false` มาตลอด ทำให้ก้าวที่บังคับให้กดคอนโทรลยังคลิกการ์ด/ถ้ำ/ปุ่มอื่นได้ · เพิ่ม `blockOutside = !catchTap` ใน `ShowStep()` + `ApplyBlock()` ที่เปิด `raycastTarget` ให้แถบมืดทั้งสี่ (แถบครอบทุกพื้นที่ **นอก** รู ดังนั้นคลิกในรูยังทะลุไปถึงคอนโทรลจริง) · `HideStep()` และกรณีไม่มีรู (`SetHole(..., false)`) เคลียร์ธงทิ้งทุกครั้ง เพื่อไม่ให้ค้างไปบล็อกก้าวถัดไป · ก้าว click-to-continue ยังใช้ `Catcher` เต็มจอเหมือนเดิม |
+| 3 | เปลี่ยนก้าว "Click Cook to confirm" เป็นสอน right click | แทนที่ด้วยสองก้าว: **"Right click anywhere to cancel."** (gate = มี right click ใหม่จริง, prompt "RIGHT CLICK ANYWHERE ON SCREEN", ไฮไลต์เลขคิวที่กำลังจะถูกยกเลิก) แล้วต่อด้วย **"Use right click to unselect everything you've selected."** (click to continue) · `RightClickCancel.Press()` แยกออกมาจาก `Update()` เพื่อให้เทสต์ยิง gesture ได้โดยไม่ต้องสังเคราะห์เมาส์ · `TutorialDirector` เก็บ `rightClickBaseline` ตอนเปิดก้าว แล้ว gate เทียบ `RightClicksSeen` · สคริปต์รวมเป็น **27 ก้าว** และ `SkillResolved()` ที่ไม่ใช้แล้วถูกลบ |
+
+**ตรวจสอบแล้ว (play mode)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestTutorial.cs` — เพิ่มเช็ก "ก้าวความถนัดวงเดียวรอบสองป้าย (กว้าง 46 / สูง 76, ไม่มีวงซ้อน)", "ก้าวบังคับคลิกกลืนคลิกนอกวง", "ก้าว click-to-continue ยังคลิกได้ทั้งจอ" และปรับจำนวนก้าวเป็น 27 | **36/36 ผ่าน** |
+| `AgentScripts/TestPolish.cs` | **70/70 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` | **ALL PASS (216 checks)** |
+
+**ตรวจด้วยตา (game_view):** ก้าวความถนัด (วงทองรอบ E + `+` วงเดียว การ์ด Ann มืด), ก้าว 23 "RIGHT CLICK ANYWHERE TO CANCEL." (ไฮไลต์เลขคิว 2), ก้าว 24 หลัง right click (คิวหาย, Ann ถูกเลิกเลือก, DISPATCH หายไป) — และยิง `GraphicRaycaster` ตรวจตรง ๆ: ที่ก้าวบังคับคลิก จุดนอกวงโดน `DimBottom` (บล็อก) จุดในวงทะลุถึงคอนโทรลจริง; ที่ก้าว click-to-continue จุดใด ๆ โดน `Catcher` (ตั้งใจให้คลิกต่อได้)

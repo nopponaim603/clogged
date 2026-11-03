@@ -64,6 +64,10 @@ public class TutorialDirector : MonoBehaviour
     private SkillFlowController flow;
     private DispatchActionPanel action;
     private DayManager days;
+    private RightClickCancel rightClick;
+
+    /// <summary>Right-click count when the cancel step started, so the gate waits for a new press.</summary>
+    private int rightClickBaseline;
 
     /// <summary>Step currently on screen, for tests (-1 before the first one).</summary>
     public int StepIndex => index;
@@ -130,6 +134,7 @@ public class TutorialDirector : MonoBehaviour
         flow = SkillFlowController.Instance;
         action = FindAnyObjectByType<DispatchActionPanel>(FindObjectsInactive.Include);
         days = DayManager.Instance;
+        rightClick = FindAnyObjectByType<RightClickCancel>();
 
         overlay = TutorialOverlay.Create();
         if (overlay == null)
@@ -236,7 +241,7 @@ public class TutorialDirector : MonoBehaviour
             HandRow, null);
 
         Add("Each agent has their own aptitude. Using the wrong person for the wrong job carries a penalty.",
-            GuideCard, null, null, TapPrompt, GuideAptitude);
+            GuideAptitudeBox, null);
 
         Add($"Choose {guideName}.", GuideCard, GuidePicked, null, ActPrompt);
 
@@ -288,7 +293,14 @@ public class TutorialDirector : MonoBehaviour
 
         Add("You can queue as many rounds as your AP and materials allow.", CookQueue, null);
 
-        Add("Click Cook to confirm.", DispatchButton, SkillResolved, null, ActPrompt);
+        // Right click is the one gesture that drops everything - the queued
+        // rounds, the cave and the cards - so the tour stops and makes the
+        // player use it rather than only describing it.
+        Add("Right click anywhere to cancel.", CookQueue, RightClickUsed,
+            () => rightClickBaseline = rightClick != null ? rightClick.RightClicksSeen : 0,
+            "RIGHT CLICK ANYWHERE ON SCREEN");
+
+        Add("Use right click to unselect everything you've selected.", null, null);
 
         Add("Click here to end the day.", DayFrame, DayEnded, null, ActPrompt);
 
@@ -361,20 +373,16 @@ public class TutorialDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// The letter badge that carries the agent's main aptitude - the one thing
-    /// the "wrong person for the wrong job" card is pointing at. A single snug
-    /// ring reads better than ringing the whole card.
+    /// The box that hugs the aptitude letter and the talent glyph - the whole
+    /// point of the aptitude card. Nothing else is opened up: the ring is meant
+    /// to sit on those two badges, not around the agent's whole card.
     /// </summary>
-    private RectTransform[] GuideAptitude()
+    private RectTransform GuideAptitudeBox()
     {
-        // One ring around the pair: the green aptitude letter and the talent
-        // glyph below it read as a single block of "who this agent is", so they
-        // are boxed together instead of as two separate hotspots.
         var lift = GuideCard();
         if (lift == null) return null;
 
-        var box = Union(Child(lift, "AptitudeBadge"), Child(lift, "TalentIcon"));
-        return box != null ? new[] { box } : null;
+        return Union(Child(lift, "AptitudeBadge"), Child(lift, "TalentIcon"));
     }
 
     private RectTransform GuideAp()
@@ -543,11 +551,12 @@ public class TutorialDirector : MonoBehaviour
     /// <summary>The dice have stopped tumbling and the result is on screen.</summary>
     private bool DiceSettled() => DiceRollView.Instance != null && DiceRollView.Instance.Settled;
 
+    /// <summary>A new right click landed since the cancel step started.</summary>
+    private bool RightClickUsed() => rightClick != null && rightClick.RightClicksSeen > rightClickBaseline;
+
     private bool CookArmed() => flow != null && flow.Armed == SkillKind.Cook;
 
     /// <summary>The confirm click resolved the queued cook and handed the button back.</summary>
-    private bool SkillResolved() => flow != null && !flow.IsSkillActive;
-
     private bool DayEnded()
     {
         if (days == null) return true;

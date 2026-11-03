@@ -34,6 +34,15 @@ public class RightClickCancel : MonoBehaviour
         var mouse = Mouse.current;
         if (mouse == null || !mouse.rightButton.wasPressedThisFrame) return;
 
+        Press();
+    }
+
+    /// <summary>
+    /// Fires the gesture. Called by the mouse read above, and by anything that
+    /// needs to cancel from code (the tutorial teaching it, a test driving it).
+    /// </summary>
+    public void Press()
+    {
         RightClicksSeen++;
         CancelPending();
     }

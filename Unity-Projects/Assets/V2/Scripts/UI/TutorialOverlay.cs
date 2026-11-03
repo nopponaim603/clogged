@@ -34,6 +34,13 @@ public class TutorialOverlay : MonoBehaviour
     /// <summary>True while the overlay is showing a step.</summary>
     public bool IsShowing { get; private set; }
 
+    /// <summary>
+    /// True while clicks outside the hole are swallowed - the state a step that
+    /// asks for a real control runs in. A "tap to continue" step leaves the
+    /// screen clickable because the tap itself is the answer.
+    /// </summary>
+    public bool BlocksOutside => blockOutside;
+
     /// <summary>Counts taps caught by the overlay - a test can read it to prove the catcher works.</summary>
     public int TapsSeen { get; private set; }
 
@@ -56,6 +63,8 @@ public class TutorialOverlay : MonoBehaviour
     private RectTransform[] focusTargets;
     /// <summary>Earliest time a real click may advance the step; stops the click that opened the tour leaking in.</summary>
     private float tapArmedAt;
+    /// <summary>True while the dim bands are swallowing clicks outside the hole.</summary>
+    private bool blockOutside;
 
     private Action onTap;
     private Action finaleAction;
@@ -209,6 +218,12 @@ public class TutorialOverlay : MonoBehaviour
         onTap = catchTap ? onTapped : null;
         focusTargets = focus;
 
+        // A step that asks the player to press a real control lets that control -
+        // and only that control - receive the click. The dim bands swallow every
+        // click outside the hole, so a mis-click cannot arm the wrong skill or
+        // pick the wrong cave instead of doing what the card asked.
+        blockOutside = !catchTap;
+
         // The press that opened the tutorial (or the previous card) can still be
         // in flight; a short grace keeps it from skipping the first step.
         tapArmedAt = Time.unscaledTime + 0.2f;
@@ -245,12 +260,15 @@ public class TutorialOverlay : MonoBehaviour
     {
         IsShowing = false;
         onTap = null;
+        blockOutside = false;
         catcher.raycastTarget = false;
         card.gameObject.SetActive(false);
 
         foreach (var band in new[] { dimTop, dimBottom, dimLeft, dimRight, ringTop, ringBottom, ringLeft, ringRight })
         {
-            if (band != null) band.enabled = false;
+            if (band == null) continue;
+            band.raycastTarget = false;
+            band.enabled = false;
         }
 
         foreach (var ring in focusRings) ring.enabled = false;
@@ -367,6 +385,12 @@ public class TutorialOverlay : MonoBehaviour
         {
             if (band != null) band.enabled = visible;
         }
+
+        // Only the four flat bands take clicks (the ring bars never do), and only
+        // while the step is asking for a real control. Cleared whenever the hole
+        // goes away, so a stale flag can never block the next step.
+        ApplyBlock(visible && blockOutside);
+
         if (!visible) return;
 
         Rect area = canvasRect.rect;
@@ -391,6 +415,15 @@ public class TutorialOverlay : MonoBehaviour
         PlaceRect(ringRight, right, bottom, right + RingThickness, top);
 
         DrawFocusRings();
+    }
+
+    /// <summary>Turns the dim bands into a click shield, or back into plain paint.</summary>
+    private void ApplyBlock(bool on)
+    {
+        if (dimTop != null) dimTop.raycastTarget = on;
+        if (dimBottom != null) dimBottom.raycastTarget = on;
+        if (dimLeft != null) dimLeft.raycastTarget = on;
+        if (dimRight != null) dimRight.raycastTarget = on;
     }
 
     /// <summary>

@@ -41,7 +41,7 @@ public static class TestTutorial
 
         Section("1. script");
         Check("the tour opens on the first step", director.StepIndex == 0, $"step={director.StepIndex}");
-        Check("the script has every coach mark", director.StepCount == 26, $"{director.StepCount} steps");
+        Check("the script has every coach mark", director.StepCount == 27, $"{director.StepCount} steps");
         Check("the first card quotes the goal",
             director.CurrentText.ToLowerInvariant().Contains("crystal"), director.CurrentText);
         Check("the overlay is drawing", overlay.IsShowing, $"showing={overlay.IsShowing}");
@@ -56,8 +56,10 @@ public static class TestTutorial
         bool cardHeldForDice = false;
         bool cardAfterDice = false;
         float aptitudeHole = 0f;
+        float aptitudeHoleHeight = 0f;
         int aptitudeRings = -1;
-        float aptitudeBox = 0f;
+        bool blockedOnActStep = false;
+        bool blockedOnTapStep = false;
 
         while (director.StepIndex < director.StepCount && guard++ < 120)
         {
@@ -79,12 +81,17 @@ public static class TestTutorial
 
             if (before == 4)
             {
-                // The aptitude card opens the guide's own card and boxes the two
-                // badges inside it as one ring.
+                // The aptitude card rings the two badges only - the agent's card
+                // is NOT opened up, so the hole is their combined box.
                 aptitudeHole = overlay.Hole.width;
+                aptitudeHoleHeight = overlay.Hole.height;
                 aptitudeRings = EnabledFocusRings(overlay);
-                aptitudeBox = FocusRingHeight(overlay);
             }
+
+            // A step that asks for a control must swallow clicks elsewhere; a
+            // "click to continue" step must leave the whole screen clickable.
+            if (director.CurrentIsTapStep) blockedOnTapStep |= DimsTakeClicks(overlay);
+            else blockedOnActStep |= DimsTakeClicks(overlay);
 
             // Aim the dice: the dispatch step installs the scripted roll.
             if (before == 11)
@@ -126,11 +133,13 @@ public static class TestTutorial
         Check("the dice popup was on screen for its step", sawDice, $"at step 12 dice={sawDice}");
         Check("the card waited while the dice tumbled", cardHeldForDice, $"held={cardHeldForDice}");
         Check("the dice card arrives once the roll lands", cardAfterDice, $"shown={cardAfterDice}");
-        Check("the aptitude card opens the guide's own card", aptitudeHole > 20f && aptitudeHole < 400f,
-            $"hole width {aptitudeHole:0}");
-        Check("the aptitude card draws one ring", aptitudeRings == 4, $"{aptitudeRings} ring bars");
-        Check("that ring covers aptitude and talent together", aptitudeBox > 60f,
-            $"ring height {aptitudeBox:0}px");
+        Check("the aptitude ring hugs the two badges only",
+            aptitudeHole > 20f && aptitudeHole < 140f, $"hole width {aptitudeHole:0}");
+        Check("that ring covers aptitude and talent together", aptitudeHoleHeight > 60f,
+            $"hole height {aptitudeHoleHeight:0}px");
+        Check("the card around them is not ringed too", aptitudeRings == 0, $"{aptitudeRings} inner rings");
+        Check("a control step swallows clicks elsewhere", blockedOnActStep, $"blocked={blockedOnActStep}");
+        Check("a continue step leaves the screen clickable", !blockedOnTapStep, $"blocked={blockedOnTapStep}");
         Check("the tour ran out of steps", sawFinaleGuard, "end reached");
 
         Section("3. the closing card");
@@ -218,17 +227,12 @@ public static class TestTutorial
         return on;
     }
 
-    /// <summary>Height of the first focus ring, so a check can see it covers two badges.</summary>
-    static float FocusRingHeight(TutorialOverlay overlay)
+    /// <summary>Whether the flat dim bands are taking clicks, i.e. blocking the rest of the screen.</summary>
+    static bool DimsTakeClicks(TutorialOverlay overlay)
     {
-        var field = overlay.GetType().GetField("focusRings", Any);
-        var rings = field?.GetValue(overlay) as List<Image>;
-        if (rings == null) return 0f;
-
-        // Bars come in fours: top, bottom, left, right. The left bar's height is
-        // the box height.
-        if (rings.Count < 4 || rings[2] == null) return 0f;
-        return rings[2].rectTransform.sizeDelta.y;
+        var field = overlay.GetType().GetField("dimTop", Any);
+        var band = field?.GetValue(overlay) as Image;
+        return band != null && band.raycastTarget;
     }
 
     /// <summary>
@@ -266,10 +270,10 @@ public static class TestTutorial
                 break;
 
             case 23:
-                ClickAction(action);
+                RightClick();
                 break;
 
-            case 24:
+            case 25:
                 EndDay();
                 break;
 
@@ -343,6 +347,13 @@ public static class TestTutorial
     {
         var days = DayManager.Instance;
         if (days != null) days.EndDay();
+    }
+
+    /// <summary>Fires the right-click gesture the way the mouse would.</summary>
+    static void RightClick()
+    {
+        var cancel = UnityEngine.Object.FindAnyObjectByType<RightClickCancel>();
+        if (cancel != null) cancel.Press();
     }
 
     static void Section(string title)
