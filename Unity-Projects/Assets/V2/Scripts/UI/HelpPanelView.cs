@@ -479,16 +479,16 @@ public class HelpPanelView : MonoBehaviour
             "CLICK ONE OF THE THREE CAVE CARDS. ITS SUCCESS VALUE POPS BIGGER AND THE SELECTION MARKER APPEARS ABOVE IT.")
             .WithIcon(caveIcon));
         basics.entries.Add(new Entry("SEND THE CREW",
-            "TWO UNITS MAXIMUM PER TRIP. EACH UNIT PAYS THE ZONE'S AP COST AND SPENDS 1 SWORD. A UNIT WITH NO SWORD CANNOT GO.")
+            "TWO UNITS MAXIMUM PER TRIP. EACH UNIT PAYS THE ZONE'S AP COST AND SPENDS 1 READINESS. A UNIT WITH NO READINESS CANNOT GO.")
             .WithIcon(swordIcon));
         basics.entries.Add(new Entry("USE A SKILL",
             "ONE UNIT AT A TIME. COOK AND CRAFT QUEUE ROUNDS (CLICK AGAIN, RIGHT CLICK TO CLEAR); HEAL WAITS FOR A HURT PATIENT.")
             .WithIcon(cookIcon));
         basics.entries.Add(new Entry("CONFIRM",
-            "ONE BUTTON IN THE BOTTOM RIGHT DOES EVERYTHING. IT SHOWS THE LABEL AND WHAT IT WILL SPEND: AP FOR A SKILL, AP PLUS ONE SWORD PER UNIT FOR A TRIP.")
+            "ONE BUTTON IN THE BOTTOM RIGHT DOES EVERYTHING. IT SHOWS THE LABEL AND WHAT IT WILL SPEND: AP FOR A SKILL, AP PLUS ONE READINESS PER UNIT FOR A TRIP.")
             .WithGlyph(">"));
         basics.entries.Add(new Entry("END THE DAY",
-            $"CLICK THE DAY FRAME, TOP RIGHT. FOOD IS PAID FOR EVERYONE THEN AP AND SWORDS REFRESH. YOU HAVE {Deadline()} DAYS.")
+            $"CLICK THE DAY FRAME, TOP RIGHT. FOOD IS PAID FOR EVERYONE THEN AP AND READINESS REFRESH. YOU HAVE {Deadline()} DAYS.")
             .WithGlyph("D7"));
         basics.entries.Add(new Entry("WIN THE RUN",
             "FIND THE BOX AND THE KEY, THEN THE RUN ENDS IN A WIN IMMEDIATELY - NO NEED TO SURVIVE TO THE LAST DAY.",
@@ -503,7 +503,7 @@ public class HelpPanelView : MonoBehaviour
             "1 PER UNIT PER DAY, PAID WHEN YOU END THE DAY IN ROSTER ORDER. UNITS OUT ON A TRIP DO NOT EAT. RUNNING OUT ADDS A STARVATION STACK.")
             .WithIcon(foodIcon));
         res.entries.Add(new Entry($"MEDKIT  (STOCK {Stock(resources, r => r.Medicine)})",
-            "SPENT BY HEAL: 1 MEDKIT TURNS A HURT UNIT BACK TO READY.")
+            "SPENT BY HEAL: 1 MEDKIT TURNS A HURT UNIT BACK TO READINESS.")
             .WithIcon(medkitIcon));
         res.entries.Add(new Entry($"COOKING MATERIAL  (STOCK {Stock(resources, r => r.CookingMaterial)})",
             "SPENT BY COOK. THE EASY CAVE IS THE CHEAPEST PLACE TO FARM IT.")
@@ -514,8 +514,8 @@ public class HelpPanelView : MonoBehaviour
         res.entries.Add(new Entry("ACTION POINTS  (AP)",
             "EVERY UNIT HAS 3 PER DAY. DUNGEONS AND SKILLS BOTH COST AP, AND STARVATION ADDS TO THAT COST.")
             .WithIcon(apIcon));
-        res.entries.Add(new Entry("SWORD  (1 PER UNIT, PER DAY)",
-            "THE DISPATCH TICKET. ENTERING A CAVE SPENDS THE UNIT'S SWORD ON TOP OF THE AP, AND A UNIT WITH NO SWORD CANNOT BE SENT. " +
+        res.entries.Add(new Entry("READINESS  (1 PER UNIT, PER DAY)",
+            "THE DISPATCH TICKET. ENTERING A CAVE SPENDS THE UNIT'S READINESS ON TOP OF THE AP, AND A UNIT WITH NO READINESS CANNOT BE SENT. " +
             "IT WORKS LIKE AP: ONE PER UNIT, REFRESHED EVERY DAY, AND BASE WORK DOES NOT USE IT.")
             .WithIcon(swordIcon));
 
@@ -536,14 +536,14 @@ public class HelpPanelView : MonoBehaviour
             $"A UNIT SENT ONE TIER AWAY COSTS {GatherResolver.AptitudeMismatchPerTier} SUCCESS VALUE, TWO TIERS COST {GatherResolver.AptitudeMismatchPerTier * 2}. IT IS NOT A BAN - JUST A TAX.")
             .WithGlyph("N"));
         units.entries.Add(new Entry("READING A CARD",
-            "TOP LEFT: SWORD OR STATE LETTER. TOP RIGHT: APTITUDE LETTER, TALENT ICON UNDER IT. BOTTOM LEFT: NAME AND AP PIPS. BOTTOM RIGHT: SIX BUFF LAMPS. HOVER ANY OF THEM FOR ITS OWN EXPLANATION.")
+            "TOP LEFT: READINESS OR STATE LETTER. TOP RIGHT: APTITUDE LETTER, TALENT ICON UNDER IT. BOTTOM LEFT: NAME AND AP PIPS. BOTTOM RIGHT: SIX BUFF LAMPS. HOVER ANY OF THEM FOR ITS OWN EXPLANATION.")
             .WithIcon(swordIcon));
 
         // 4 ------------------------------------------------------------- states
         var states = new Section { label = "4  STATES" };
-        states.entries.Add(new Entry("READY", "HOLDS ITS SWORD, SO IT CAN GO ON A TRIP. BASE WORK IS ALLOWED TOO.", UiFactory.Success)
+        states.entries.Add(new Entry("READINESS", "HAS ITS READINESS, SO IT CAN GO ON A TRIP. BASE WORK IS ALLOWED TOO.", UiFactory.Success)
             .WithIcon(swordIcon));
-        states.entries.Add(new Entry("SWORD SPENT", "THE SWORD BADGE GOES DIM FOR THE REST OF THE DAY, SO NO SECOND TRIP. BASE WORK IS STILL FINE.", UiFactory.DimText)
+        states.entries.Add(new Entry("READINESS SPENT", "THE READINESS BADGE GOES DIM FOR THE REST OF THE DAY, SO NO SECOND TRIP. BASE WORK IS STILL FINE.", UiFactory.DimText)
             .WithGlyph("0"));
         states.entries.Add(new Entry("RESTING", "OUT OF AP. COMES BACK AT THE NEXT DAY.", UiFactory.DimText)
             .WithGlyph("R"));
@@ -594,7 +594,7 @@ public class HelpPanelView : MonoBehaviour
             "MAKES 1 FOOD PER ROUND. QUEUE AS MANY ROUNDS AS AP AND MATERIAL ALLOW. CIA MAKES 2.")
             .WithIcon(cookIcon));
         skills.entries.Add(new Entry($"HEAL  MED  ({healMed} AP + 1 MEDKIT)",
-            "TURNS ONE HURT UNIT BACK TO READY. THE CHEAPEST MODE WHILE MEDKITS LAST.")
+            "TURNS ONE HURT UNIT BACK TO READINESS. THE CHEAPEST MODE WHILE MEDKITS LAST.")
             .WithIcon(healIcon));
         skills.entries.Add(new Entry($"HEAL  AP ONLY  ({healAp} AP)",
             "SAME RESULT WITH NO MEDKIT. THE MODE BUTTON FLIPS BETWEEN THE TWO AND IS DEAD WHEN THE SHELF IS EMPTY.")
@@ -606,7 +606,7 @@ public class HelpPanelView : MonoBehaviour
             $"ADDS +{potionBonus} SUCCESS VALUE TO EVERY FUTURE TRIP FOR THE REST OF THE RUN. STACKS, SO IT IS THE LONG GAME.")
             .WithIcon(craftIcon));
         skills.entries.Add(new Entry("NO DAILY LIMIT",
-            "BASE WORK IS NOT ONCE-A-DAY. THE SAME UNIT CAN COOK AND STILL BE SENT OUT, AS LONG AS IT HAS AP AND ITS SWORD LEFT.")
+            "BASE WORK IS NOT ONCE-A-DAY. THE SAME UNIT CAN COOK AND STILL BE SENT OUT, AS LONG AS IT HAS AP AND ITS READINESS LEFT.")
             .WithGlyph("+"));
 
         // 7 ----------------------------------------------------- success value

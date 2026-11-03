@@ -255,9 +255,9 @@ public class GatherDispatchPanel : MonoBehaviour
             if (config != null)
             {
                 apCost = config.apCost;
-                string sword = picked == 1 ? "1 SWORD" : $"{picked} SWORDS";
+                string sword = picked == 1 ? "1 READINESS" : $"{picked} READINESS";
                 costText = $"{apCost} AP + {sword}";
-                tooltip = $"Send {picked} unit(s) to {node.Data.zone}. Each unit pays {apCost} AP and 1 sword.";
+                tooltip = $"Send {picked} unit(s) to {node.Data.zone}. Each unit pays {apCost} AP and 1 readiness.";
             }
         }
 

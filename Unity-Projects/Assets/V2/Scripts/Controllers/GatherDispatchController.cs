@@ -104,7 +104,7 @@ public class GatherDispatchController : MonoBehaviour
             if (!unit.CanBeSentGathering)
             {
                 reasonIfNot = unit.state == UnitState.Idle
-                    ? $"{unit.unitName} has no sword left today."
+                    ? $"{unit.unitName} has no readiness left today."
                     : $"{unit.unitName} is not available to gather.";
                 return false;
             }

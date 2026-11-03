@@ -248,15 +248,15 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
         if (unit.state == UnitState.Idle && unit.HasSword)
         {
-            return new HudTooltipContent("READY",
-                $"HOLDS {unit.currentSwords} SWORD: THAT IS THE DISPATCH TICKET INTO A CAVE. " +
+            return new HudTooltipContent("READINESS",
+                $"HOLDS {unit.currentSwords} READINESS: THAT IS THE DISPATCH TICKET INTO A CAVE. " +
                 "BASE WORK DOES NOT SPEND IT. ONE TRIP PER DAY, BASE WORK UNLIMITED.");
         }
 
         if (unit.state == UnitState.Idle && !unit.HasSword)
         {
-            return new HudTooltipContent("SWORD SPENT",
-                "THE DISPATCH SWORD IS USED UP FOR TODAY, SO NO SECOND TRIP. " +
+            return new HudTooltipContent("READINESS SPENT",
+                "THE DISPATCH READINESS IS USED UP FOR TODAY, SO NO SECOND TRIP. " +
                 "BASE WORK IS STILL ALLOWED. IT REFRESHES WITH AP AT THE NEXT DAY.");
         }
 
@@ -585,7 +585,7 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
             case UnitState.Hurt: return "INJURED. HEAL IT BEFORE IT CAN ACT.";
             case UnitState.Away: return "OUT ON A TRIP.";
             case UnitState.Death: return "DEAD FOR THE REST OF THE RUN.";
-            default: return "READY WHEN IT HOLDS A SWORD.";
+            default: return "READINESS IS WHAT A TRIP SPENDS.";
         }
     }
 

@@ -1762,3 +1762,24 @@ label != null    → มีข้อความ  : icon anchor (0,0.5), pos (gu
 | `AgentScripts/TestUiRedesign.cs` | **ALL PASS (216 checks)** |
 
 **ตรวจด้วยตา (game_view):** ก้าวความถนัด (วงทองรอบ E + `+` วงเดียว การ์ด Ann มืด), ก้าว 23 "RIGHT CLICK ANYWHERE TO CANCEL." (ไฮไลต์เลขคิว 2), ก้าว 24 หลัง right click (คิวหาย, Ann ถูกเลิกเลือก, DISPATCH หายไป) — และยิง `GraphicRaycaster` ตรวจตรง ๆ: ที่ก้าวบังคับคลิก จุดนอกวงโดน `DimBottom` (บล็อก) จุดในวงทะลุถึงคอนโทรลจริง; ที่ก้าว click-to-continue จุดใด ๆ โดน `Catcher` (ตั้งใจให้คลิกต่อได้)
+
+---
+
+### 8.24 Addendum รอบ 22 (2026-11-04) — เปลี่ยนชื่อที่ผู้เล่นเห็นเป็น READINESS
+
+| # | สิ่งที่ขอ | สิ่งที่ทำ |
+|---|---|---|
+| 1 | Ready → Readiness | ชื่อสถานะบน tooltip มุมซ้ายบนการ์ดเปลี่ยนจาก `READY` เป็น **`READINESS`** · สถานะที่ใช้ไปแล้วเปลี่ยนจาก `SWORD SPENT` เป็น **`READINESS SPENT`** · หน้า help §4 ใช้ชื่อเดียวกัน |
+| 2 | Sword → Readiness | ข้อความที่ผู้เล่นเห็นทั้งหมดเปลี่ยนเป็น readiness: tooltip การ์ด (`HOLDS 1 READINESS: …`), เหตุผลตอน dispatch (`X has no readiness left today.`), ทรัพยากรในหน้า help (`READINESS  (1 PER UNIT, PER DAY)`), คำอธิบายใน §1/§3/§5 · **บรรทัดต้นทุนใต้ปุ่ม DISPATCH** เปลี่ยนเป็น `1 AP + 1 READINESS` (วัดแล้ว 175 px ในกรอบ 214 px จึงไม่ล้น) |
+
+**ไม่แตะ:** ชื่อในโค้ด (`currentSwords`, `HasSword`, `TrySpendSword()`, `ReadySprite`) และ **ไอคอนยังเป็นรูปดาบเดิม** — เปลี่ยนเฉพาะข้อความ
+
+**ตรวจสอบแล้ว (play mode)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestPolish.cs` — เพิ่ม §11 "readiness wording" (tooltip READY→READINESS, READINESS SPENT, ไม่มีคำว่า SWORD ในเนื้อความ, help มี READINESS) ผ่าน reflection เรียก `StateTooltip()` และอ่าน `sections` ของ help โดยไม่ต้อง hover | **75/75 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` — ปรับข้อความที่ยืนยันต้นทุน (`1 AP + 1 READINESS`) และเหตุผลที่ปฏิเสธ dispatch (`why.Contains("readiness")`) | **ALL PASS (216 checks)** |
+| `AgentScripts/TestTutorial.cs` | **36/36 ผ่าน** |
+
+**ตรวจด้วยตา (game_view):** ปุ่ม DISPATCH อ่าน `1 AP + 1 READINESS` พอดีในกรอบ และ tooltip มุมซ้ายบนการ์ด Ann ขึ้นหัวว่า `READINESS` พร้อมเนื้อความใหม่

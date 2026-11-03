@@ -461,8 +461,7 @@ public static class TestPolish
                 frame != null ? $"x {frame.anchoredPosition.x:0}..{frame.anchoredPosition.x + frame.rect.width:0}" : "no frame");
         }
 
-        Section("10. card art + resource bar");
-        if (map != null && map.Nodes.Count >= 3)
+        Section("10. card art + resource bar");        if (map != null && map.Nodes.Count >= 3)
         {
             var arches = new Image[3];
             var badges = new Image[3];
@@ -526,6 +525,35 @@ public static class TestPolish
             Check("the loot row repeats the HUD's resource icons", dropsMatchHud, dropNames);
         }
 
+        Section("11. readiness wording");
+        var rosterView = UnityEngine.Object.FindAnyObjectByType<UnitRosterView>();
+        var guide = rosterView != null && rosterView.Cards.Count > 0 ? rosterView.Cards[0] : null;
+        if (guide != null && guide.Unit != null)
+        {
+            guide.Unit.state = UnitState.Idle;
+            guide.Unit.currentSwords = guide.Unit.maxSwords;
+            var ready = TooltipText(guide, "StateTooltip");
+            Check("the ready state is called READINESS",
+                ready != null && ready.title == "READINESS", ready != null ? ready.title : "no tooltip");
+            Check("its body talks about readiness, not swords",
+                ready != null && ready.body.ToUpperInvariant().Contains("READINESS") &&
+                !ready.body.ToUpperInvariant().Contains("SWORD"),
+                ready != null ? ready.body : "no tooltip");
+
+            guide.Unit.currentSwords = 0;
+            var spent = TooltipText(guide, "StateTooltip");
+            Check("a spent badge is called READINESS SPENT",
+                spent != null && spent.title == "READINESS SPENT", spent != null ? spent.title : "no tooltip");
+            guide.Unit.currentSwords = guide.Unit.maxSwords;
+        }
+
+        var help = UnityEngine.Object.FindAnyObjectByType<HelpPanelView>(FindObjectsInactive.Include);
+        var helpCopy = HelpCopy(help);
+        Check("no help entry still prices a trip in SWORD",
+            helpCopy.Length > 0 && !helpCopy.Contains("1 SWORD") && !helpCopy.Contains("SWORDS REFRESH"),
+            "help copy");
+        Check("the help page names READINESS", helpCopy.Contains("READINESS"), "help copy");
+
         var status = UnityEngine.Object.FindAnyObjectByType<StatusBarView>();
         var resourceRow = status != null ? status.transform.Find("TopBar/ResourceRow") as RectTransform : null;
         if (resourceRow != null)
@@ -561,6 +589,43 @@ public static class TestPolish
     }
 
     // --------------------------------------------------------------- helpers
+
+    /// <summary>Runs one of the card's private tooltip providers, so copy can be asserted without hovering.</summary>
+    static HudTooltipContent TooltipText(UnitIconView card, string methodName)
+    {
+        var method = typeof(UnitIconView).GetMethod(methodName, Any);
+        return method != null ? method.Invoke(card, null) as HudTooltipContent : null;
+    }
+
+    /// <summary>Every heading and body on the help page, concatenated.</summary>
+    static string HelpCopy(HelpPanelView help)
+    {
+        if (help == null) return "";
+
+        var sectionsField = typeof(HelpPanelView).GetField("sections", Any);
+        var sections = sectionsField?.GetValue(help) as System.Collections.IList;
+        if (sections == null) return "";
+
+        var text = new StringBuilder();
+        foreach (var section in sections)
+        {
+            if (section == null) continue;
+
+            var entriesField = section.GetType().GetField("entries", Any);
+            var entries = entriesField?.GetValue(section) as System.Collections.IList;
+            if (entries == null) continue;
+
+            foreach (var entry in entries)
+            {
+                if (entry == null) continue;
+
+                var type = entry.GetType();
+                text.AppendLine(type.GetField("title", Any)?.GetValue(entry) as string);
+                text.AppendLine(type.GetField("body", Any)?.GetValue(entry) as string);
+            }
+        }
+        return text.ToString().ToUpperInvariant();
+    }
 
     static float FogAlpha(RedFogOverlay fog)
     {

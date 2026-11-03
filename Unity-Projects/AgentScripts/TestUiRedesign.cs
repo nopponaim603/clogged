@@ -362,10 +362,10 @@ public static class TestUiRedesign
         // The cost line describes a whole trip, so the cave has to be picked too.
         if (node != null) ClickThroughRaycast((RectTransform)node.transform);
 
-        // The cost line must quote the sword, not just the AP: a trip spends both.
-        Check("the dispatch cost line quotes AP plus one sword",
-            action.CurrentCostText == "1 AP + 1 SWORD" || action.CurrentCostText == "2 AP + 1 SWORD"
-            || action.CurrentCostText == "3 AP + 1 SWORD",
+        // The cost line must quote the readiness, not just the AP: a trip spends both.
+        Check("the dispatch cost line quotes AP plus one readiness",
+            action.CurrentCostText == "1 AP + 1 READINESS" || action.CurrentCostText == "2 AP + 1 READINESS"
+            || action.CurrentCostText == "3 AP + 1 READINESS",
             action.CurrentCostText ?? "none");
 
         // The confirm button repeats the art: the sword while planning a trip,
@@ -2173,8 +2173,8 @@ public static class TestUiRedesign
         var dispatcher = GatherDispatchController.Instance;
         unit.currentSwords = 0;
         bool blocked = !dispatcher.CanDispatch(GatherZone.Easy, new List<UnitCharacter> { unit }, out string why);
-        Check("dispatch is refused when the unit has no sword",
-            blocked && !string.IsNullOrEmpty(why) && why.Contains("sword"), why ?? "no reason");
+        Check("dispatch is refused when the unit has no readiness",
+            blocked && !string.IsNullOrEmpty(why) && why.Contains("readiness"), why ?? "no reason");
 
         unit.RefreshForNewDay();
         roster.RefreshAvailability();
