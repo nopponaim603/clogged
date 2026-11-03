@@ -33,6 +33,9 @@ public class SkillFlowController : MonoBehaviour
     /// <summary>The unit the queued skill will spend AP from (null when nothing is armed).</summary>
     public UnitCharacter Worker => armed == SkillKind.None ? null : worker;
 
+    /// <summary>How many rounds are queued for the armed Cook/Craft (0 when nothing is queued).</summary>
+    public int PendingRounds => armed == SkillKind.None ? 0 : pendingRounds;
+
     /// <summary>
     /// Base AP the queued skill will spend on the worker - the number the cards
     /// paint as "about to be used". 0 when no skill is armed.
@@ -94,12 +97,9 @@ public class SkillFlowController : MonoBehaviour
         if (skillPanel != null)
         {
             skillPanel.CookClicked -= HandleCookClicked;
-            skillPanel.CookCleared -= HandleCookCleared;
             skillPanel.CraftClicked -= HandleCraftClicked;
-            skillPanel.CraftCleared -= HandleCraftCleared;
-        skillPanel.CraftModeToggled -= HandleCraftModeToggled;
+            skillPanel.CraftModeToggled -= HandleCraftModeToggled;
             skillPanel.HealClicked -= HandleHealClicked;
-            skillPanel.HealCancelled -= HandleHealCancelled;
             skillPanel.HealModeToggled -= HandleHealModeToggled;
         }
         if (actionPanel != null) actionPanel.Clicked -= HandleConfirm;
@@ -116,12 +116,9 @@ public class SkillFlowController : MonoBehaviour
         if (skillPanel != null)
         {
             skillPanel.CookClicked += HandleCookClicked;
-            skillPanel.CookCleared += HandleCookCleared;
             skillPanel.CraftClicked += HandleCraftClicked;
-            skillPanel.CraftCleared += HandleCraftCleared;
-        skillPanel.CraftModeToggled += HandleCraftModeToggled;
+            skillPanel.CraftModeToggled += HandleCraftModeToggled;
             skillPanel.HealClicked += HandleHealClicked;
-            skillPanel.HealCancelled += HandleHealCancelled;
             skillPanel.HealModeToggled += HandleHealModeToggled;
         }
         if (actionPanel != null) actionPanel.Clicked += HandleConfirm;
@@ -190,10 +187,7 @@ public class SkillFlowController : MonoBehaviour
 
     private void HandleCookClicked() => QueueRound(SkillKind.Cook);
     private void HandleCraftClicked() => QueueRound(SkillKind.Craft);
-    private void HandleCookCleared() => ClearQueue(SkillKind.Cook);
-    private void HandleCraftCleared() => ClearQueue(SkillKind.Craft);
     private void HandleHealClicked() => ArmHeal();
-    private void HandleHealCancelled() => Cancel();
 
     private void HandleHealModeToggled()
     {
@@ -288,15 +282,6 @@ public class SkillFlowController : MonoBehaviour
         RefreshConfirm();
     }
 
-    private void ClearQueue(SkillKind kind)
-    {
-        if (armed != kind) return;
-
-        // Right click only drops the queued rounds - the card stays selected.
-        pendingRounds = 0;
-        Disarm(clearSelection: false);
-    }
-
     private void ArmHeal()
     {
         var controller = BaseWorkController.Instance;
@@ -341,13 +326,18 @@ public class SkillFlowController : MonoBehaviour
     private void Cancel()
     {
         if (!IsSkillActive) return;
-        Disarm(clearSelection: true);
+        Disarm();
     }
 
     /// <summary>Tears the pending skill down and hands the confirm button back to the gather flow.</summary>
-    private void Reset() => Disarm(clearSelection: true);
+    private void Reset() => Disarm();
 
-    private void Disarm(bool clearSelection)
+    /// <summary>
+    /// Ends the skill plan outright: no queue, no worker, no patient, and no
+    /// cards left held. Cancelling is meant to be total, so there is no
+    /// "leave the card selected" variant to keep in sync.
+    /// </summary>
+    private void Disarm()
     {
         armed = SkillKind.None;
         pendingRounds = 0;
@@ -356,7 +346,7 @@ public class SkillFlowController : MonoBehaviour
 
         if (rosterView != null)
         {
-            if (clearSelection) rosterView.ClearSelection();
+            rosterView.ClearSelection();
             rosterView.SetMode(CharacterHandPanel.SelectionMode.Dispatch);
             rosterView.RefreshAvailability();
         }

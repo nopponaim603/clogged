@@ -33,6 +33,8 @@ public class RunBootstrap : MonoBehaviour
             // back to a roll of its own.
             if (AudioDirector.PendingRunTrack < 0) AudioDirector.PendingRunTrack = AudioDirector.RollRunTrack();
             director.BeginRun(AudioDirector.PendingRunTrack);
+
+            ShowGoalCard();
             return;
         }
 
@@ -44,6 +46,21 @@ public class RunBootstrap : MonoBehaviour
         // then on keeps that choice.
         AudioDirector.PendingRunTrack = data.musicTrack >= 0 ? data.musicTrack : AudioDirector.RollRunTrack();
         director.BeginRun(AudioDirector.PendingRunTrack);
+    }
+
+    /// <summary>
+    /// States the goal over the board the run just started on. Only the first
+    /// time - a resumed run already knows what it is doing, and the tour teaches
+    /// the goal one card at a time, so it clears the flag itself.
+    /// </summary>
+    private static void ShowGoalCard()
+    {
+        if (!SceneFlow.PendingGoalPrompt) return;
+        SceneFlow.PendingGoalPrompt = false;
+
+        NewGamePromptView.Show(
+            onStart: null,
+            onTutorial: () => SceneFlow.NewTutorial());
     }
 
     /// <summary>Restores a save onto the live scene. Public so tests and tools can replay one.</summary>
@@ -59,9 +76,6 @@ public class RunBootstrap : MonoBehaviour
 
         var units = UnitManager.Instance;
         if (units != null) units.RestoreUnits(data.units);
-
-        var gather = GatherDispatchController.Instance;
-        if (gather != null) gather.RestorePity(data.pityNormal, data.pityHard);
 
         RunStats.ApplySnapshot(data.stats);
     }

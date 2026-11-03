@@ -23,7 +23,7 @@ using UnityEngine.UI;
 /// [SerializeField] slots later and they take over.
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
-public class UnitIconView : MonoBehaviour, IPointerClickHandler
+public class UnitIconView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("Refs (from prefab)")]
     [SerializeField] private Image iconImage;
@@ -55,6 +55,12 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
     [Tooltip("Slow pulse so the eligible patients catch the eye even before the player looks at the hand.")]
     [SerializeField] private float targetablePulseSpeed = 3.2f;
     [SerializeField] private float targetablePulseMinAlpha = 0.55f;
+
+    [Header("Hover")]
+    [Tooltip("How much the card's panel lightens while the pointer is over a pickable card.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float hoverLift = 0.13f;
+    [SerializeField] private float hoverSpeed = 9f;
 
     [Header("AP Pips")]
     [Tooltip("One pip per action point. Available = still unspent, pending = the action about to be confirmed will eat it, spent = already gone.")]
@@ -101,6 +107,8 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
     private bool selectionEnabled = true;
     private bool chromeBuilt;
     private bool targetable;
+    private bool hovered;
+    private float hoverAmount;
     private float appliedThickness = -1f;
     private int pendingApCost;
     private bool apCostPayer;
@@ -152,6 +160,7 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
     private void Update()
     {
         AnimateLift();
+        AnimateHover();
 
         // Only the eligible targets animate, so idle cards cost nothing.
         if (!targetable || !chromeBuilt) return;
@@ -175,6 +184,30 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         pos.y = Mathf.MoveTowards(pos.y, target, liftSpeed * Time.unscaledDeltaTime);
         lift.anchoredPosition = pos;
     }
+
+    /// <summary>
+    /// Fades the panel lift in and out. The card is dimmed or framed by its own
+    /// state, so the hover answer is a brightness change rather than another
+    /// outline - a second outline would fight the aptitude colour.
+    /// </summary>
+    private void AnimateHover()
+    {
+        float wanted = hovered ? 1f : 0f;
+        if (Mathf.Approximately(hoverAmount, wanted)) return;
+
+        hoverAmount = Mathf.MoveTowards(hoverAmount, wanted, hoverSpeed * Time.unscaledDeltaTime);
+        RefreshBackground();
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (!CanBeSelected) return;
+
+        hovered = true;
+        AudioDirector.Instance?.PlayHover();
+    }
+
+    public void OnPointerExit(PointerEventData eventData) => hovered = false;
 
     private void Awake()
     {
@@ -276,7 +309,7 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
                     "FOOD THIS UNIT COOKS IS DOUBLED.");
             case UnitTalent.Exploring:
                 return new HudTooltipContent("TALENT - EXPLORING",
-                    "LOOT FROM A TRIP IS DOUBLED, CORE ITEMS EXCLUDED, AND THE CORE ITEM CHANCE IS +25%.");
+                    "LOOT FROM A TRIP IS DOUBLED, CORE ITEMS EXCLUDED.");
             default:
                 return new HudTooltipContent("TALENT", "THIS UNIT HAS NO SECONDARY SPECIALTY.");
         }
@@ -515,6 +548,11 @@ public class UnitIconView : MonoBehaviour, IPointerClickHandler
         if (background == null) return;
 
         Color color = BackgroundFor(unit);
+
+        // Hover lifts the panel off the hand row without touching the frame, so
+        // the aptitude colour the player is reading stays put.
+        if (hoverAmount > 0f) color = Color.Lerp(color, Color.white, hoverLift * hoverAmount);
+
         if (background.color != color) background.color = color;
     }
 

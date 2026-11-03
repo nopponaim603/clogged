@@ -138,9 +138,20 @@ public class RunLogNarrator : MonoBehaviour
         bool bad = result.tier == GatherResultTier.Failure || result.tier == GatherResultTier.Fumble;
         RunLog.Add(bad ? LogKind.Fail : LogKind.Success, sb.ToString());
 
+        if (result.riskReduced > 0)
+        {
+            int risk = RunResources.Instance != null ? RunResources.Instance.Risk : 0;
+            RunLog.Add(LogKind.System, $"The red fog thins — risk -{result.riskReduced} (now {risk}/{RunResources.MaxRisk}).");
+        }
+
         foreach (var hurt in result.hurtUnits)
         {
             RunLog.Add(LogKind.Fail, $"{hurt.unitName} was hurt.");
+        }
+
+        if (result.jackpot)
+        {
+            RunLog.Add(LogKind.Success, "JACKPOT — a natural 1 took everything the cave had.");
         }
 
         foreach (var kind in result.coreItemsObtained)

@@ -107,6 +107,10 @@ public static class UiFactory
         // the action clip with UiClickSound.MarkPlayable.
         UiClickSound.Attach(button, UiClickKind.Plain);
 
+        // Runtime pages (options, help, results) are built after the scene's
+        // hover pass has run, so every factory button carries its own.
+        HoverHighlight.Attach(go);
+
         var text = CreateText("Label", rect, label, fontSize, TextColor);
         text.rectTransform.anchorMin = Vector2.zero;
         text.rectTransform.anchorMax = Vector2.one;

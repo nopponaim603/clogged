@@ -33,13 +33,6 @@ public class GatherZoneConfig
     [Tooltip("On Hard Success, one of these is picked at random and added on top of the main loot.")]
     public List<LootAmount> hardSuccessBonusPool = new List<LootAmount>();
 
-    [Range(0, 100)]
-    [Tooltip("Chance (%) to find one Core Item when a trip ends in Hard Success. Rolled per missing piece; Regular/Failure/Fumble never drop one.")]
-    public int coreItemChancePercent;
-
-    [Tooltip("Pity: after this many Hard Success trips in a row without a Core Item, the next Hard Success is guaranteed to drop one. 0 disables pity.")]
-    public int coreItemPityTrips;
-
     /// <summary>Which unit specialty matches this zone (ZoneAptitude mirrors GatherZone 1:1).</summary>
     public ZoneAptitude RequiredAptitude => zone switch
     {

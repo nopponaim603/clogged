@@ -26,7 +26,11 @@ public class GatherMapController : MonoBehaviour
     [SerializeField] private float columnGap = 24f;
     [Tooltip("Keeps the row clear of the HUD: the log and hand sit at the bottom, the skill column on the right.")]
     [SerializeField] private float marginLeft = 32f;
-    [SerializeField] private float marginRight = 380f;
+    [SerializeField] private float marginRight = 300f;
+    [Tooltip("Width of the red-fog gauge, matched to the cards' height so the two read as one row.")]
+    [SerializeField] private float fogGaugeWidth = 66f;
+    [Tooltip("Gap between the fog gauge and the first dungeon card.")]
+    [SerializeField] private float fogGaugeGap = 26f;
     [Tooltip("Top of the usable band, measured down from the top of the panel.")]
     [SerializeField] private float marginTop = 110f;
     [Tooltip("Bottom of the usable band, measured up from the bottom of the panel. The log and hand row live here; " +
@@ -35,13 +39,28 @@ public class GatherMapController : MonoBehaviour
     [SerializeField] private float marginBottom = 330f;
     [Tooltip("Vertical nudge for the whole row, relative to the usable band.")]
     [SerializeField] private float verticalOffset = 0f;
-    [SerializeField] private float maxCardWidth = 480f;
+    [Tooltip("Upper bound on card width. Narrower than the free space so the row can shift right past the fog gauge.")]
+    [SerializeField] private float maxCardWidth = 450f;
     [SerializeField] private float maxCardHeight = 700f;
     [SerializeField] private float minCardHeight = 380f;
+
+    [Header("Card Art")]
+    [Tooltip("The cave arch every card wears. One picture, three badges.")]
+    [SerializeField] private Sprite caveArt;
+    [Tooltip("Badge stamped in the cave mouth: the shallows - a hut.")]
+    [SerializeField] private Sprite easyBadge;
+    [Tooltip("Badge for the middle cave - a tower.")]
+    [SerializeField] private Sprite normalBadge;
+    [Tooltip("Badge for the deepest cave - a skull.")]
+    [SerializeField] private Sprite hardBadge;
 
     private readonly List<MapNodeData> nodeData = new List<MapNodeData>();
     private readonly List<MapNodeView> nodeViews = new List<MapNodeView>();
     private MapNodeView selectedNode;
+    private FogGaugeView fogGauge;
+    private bool refreshingInteractable;
+    private int lastPickCount = -1;
+    private bool lastHadSword;
 
     /// <summary>Fired as soon as a confirmed trip resolves - the same frame the button was pressed.</summary>
     public event Action<GatherDispatchResult> OnTripResolved;
@@ -72,8 +91,9 @@ public class GatherMapController : MonoBehaviour
         RefreshReadouts();
 
         MapNodeView.OnAnyNodeClicked += HandleNodeClicked;
+        lastPickCount = rosterView != null ? rosterView.SelectedCount : 0;
+        lastHadSword = AnyPickedUnitHasSword();
     }
-
     private void OnDestroy()
     {
         MapNodeView.OnAnyNodeClicked -= HandleNodeClicked;
@@ -81,9 +101,26 @@ public class GatherMapController : MonoBehaviour
     }
 
     /// <summary>
+    /// Polls the one thing the events cannot report: a unit's sword can be spent
+    /// by a trip, a load or a debug call without the roster announcing a selection
+    /// change. A signature check is cheap and keeps the row honest.
+    /// </summary>
+    private void Update()
+    {
+        int picked = rosterView != null ? rosterView.SelectedCount : 0;
+        bool sword = AnyPickedUnitHasSword();
+
+        if (picked == lastPickCount && sword == lastHadSword) return;
+
+        lastPickCount = picked;
+        lastHadSword = sword;
+        RefreshInteractable();
+    }
+
+    /// <summary>
     /// One card per tier in reading order, sized to fill the free area between
-    /// the HUD panels: full width of the space left of the skill column and full
-    /// height between the status bar and the log/hand row.
+    /// the HUD panels: the width left of the skill column minus the fog tube,
+    /// and the full height between the status bar and the log/hand row.
     /// </summary>
     private void SpawnNodeViews()
     {
@@ -94,7 +131,14 @@ public class GatherMapController : MonoBehaviour
         float panelWidth = mapPanel != null ? mapPanel.rect.width : 1920f;
         float panelHeight = mapPanel != null ? mapPanel.rect.height : 1080f;
 
-        float usableWidth = panelWidth - marginLeft - marginRight;
+        // The tube takes the outermost slice of the left margin; the cards get
+        // what is left of it, so adding the gauge does not squeeze the HUD.
+        float bandLeft = -panelWidth * 0.5f + marginLeft;
+        float gaugeCenterX = bandLeft + fogGaugeWidth * 0.5f;
+        float cardsLeft = bandLeft + fogGaugeWidth + fogGaugeGap;
+        float bandRight = panelWidth * 0.5f - marginRight;
+        float usableWidth = Mathf.Max(0f, bandRight - cardsLeft);
+
         float usableHeight = panelHeight - marginTop - marginBottom;
 
         float cardWidth = Mathf.Clamp((usableWidth - columnGap * (count - 1)) / Mathf.Max(1, count), 200f, maxCardWidth);
@@ -102,11 +146,9 @@ public class GatherMapController : MonoBehaviour
 
         float totalWidth = count * cardWidth + (count - 1) * columnGap;
 
-        // Centre the row inside the usable band, not inside the whole panel, so
+        // Centre the row inside the cards' band, not inside the whole panel, so
         // the right-hand card can never slide under the Core Item column.
-        float bandLeft = -panelWidth * 0.5f + marginLeft;
-        float bandRight = panelWidth * 0.5f - marginRight;
-        float startX = bandLeft + cardWidth * 0.5f + Mathf.Max(0f, ((bandRight - bandLeft) - totalWidth) * 0.5f);
+        float startX = cardsLeft + cardWidth * 0.5f + Mathf.Max(0f, (usableWidth - totalWidth) * 0.5f);
 
         // Centre the row inside the usable band rather than in the whole panel.
         // marginTop is small on purpose so the cards can use the empty space
@@ -115,6 +157,8 @@ public class GatherMapController : MonoBehaviour
         float bandTop = panelHeight * 0.5f - marginTop;
         float bandBottom = -panelHeight * 0.5f + marginBottom;
         float centreY = (bandTop + bandBottom) * 0.5f + verticalOffset;
+
+        BuildFogGauge(new Vector2(gaugeCenterX, centreY), cardHeight);
 
         for (int i = 0; i < count; i++)
         {
@@ -125,10 +169,82 @@ public class GatherMapController : MonoBehaviour
                 ? Instantiate(nodeViewPrefab, mapPanel)
                 : MapNodeView.CreateOn(mapPanel);
 
+            view.SetArt(caveArt, BadgeFor(data.zone));
             view.SetCardSize(new Vector2(cardWidth, cardHeight));
             view.Initialize(data);
             nodeViews.Add(view);
         }
+
+        RefreshInteractable();
+    }
+
+    /// <summary>The tier badge that tells the three otherwise identical arches apart.</summary>
+    private Sprite BadgeFor(GatherZone zone)
+    {
+        switch (zone)
+        {
+            case GatherZone.Normal: return normalBadge;
+            case GatherZone.Hard: return hardBadge;
+            default: return easyBadge;
+        }
+    }
+
+    /// <summary>
+    /// Cards only invite a click when the trip could actually be paid for: one
+    /// unit picked, and that unit still holding the sword a trip costs. Until
+    /// then the whole row is grey, which answers "why can I not press this"
+    /// before the player has to ask.
+    /// </summary>
+    public void RefreshInteractable()
+    {
+        // A locked row also drops the picked cave, and dropping it tells the
+        // roster - which calls back in here. The guard breaks that loop.
+        if (refreshingInteractable) return;
+
+        refreshingInteractable = true;
+        try
+        {
+            bool hasSword = AnyPickedUnitHasSword();
+
+            if (!hasSword && selectedNode != null)
+            {
+                selectedNode.SetSelected(false);
+                selectedNode = null;
+                OnSelectionChanged?.Invoke(null);
+            }
+
+            foreach (var view in nodeViews) view.SetInteractable(hasSword);
+        }
+        finally
+        {
+            refreshingInteractable = false;
+        }
+    }
+
+    /// <summary>True when at least one picked unit still holds the sword a trip costs.</summary>
+    private bool AnyPickedUnitHasSword()
+    {
+        List<UnitCharacter> picked = rosterView != null ? rosterView.GetSelectedUnits() : null;
+        if (picked == null) return false;
+
+        foreach (var unit in picked)
+        {
+            if (unit != null && unit.HasSword) return true;
+        }
+        return false;
+    }
+    /// <summary>
+    /// The red-fog tube: exactly as tall as the cards, one column to their left.
+    /// It is parented above the fog layer itself (the overlay's own root), so the
+    /// reading is never seen through the mist it is measuring.
+    /// </summary>
+    private void BuildFogGauge(Vector2 position, float height)
+    {
+        Transform parent = RedFogOverlay.Instance != null ? RedFogOverlay.Instance.OverlayRoot : mapPanel;
+        if (parent == null) return;
+
+        if (fogGauge == null) fogGauge = FogGaugeView.Create(parent);
+        fogGauge.SetGeometry(position, new Vector2(fogGaugeWidth, height));
     }
  
 
@@ -204,18 +320,30 @@ public class GatherMapController : MonoBehaviour
                 : null;
             if (config == null) continue;
 
-            int chance = config.baseSuccessValue;
-            if (hasTeam && view == selectedNode)
-            {
-                chance = GatherResolver.ComputeSuccessValue(config, selectedUnits);
-            }
+            // The live team value already has this cave's share of the Risk
+            // subtracted, so the card shows the number the roll will actually
+            // use - and whether that reaches the Jackpot line.
+            int chance = hasTeam && view == selectedNode
+                ? GatherResolver.ComputeSuccessValue(config, selectedUnits)
+                : config.baseSuccessValue - RiskPenalty(view.Data.zone);
 
-            int pity = GatherDispatchController.Instance != null
-                ? GatherDispatchController.Instance.PityCounter(view.Data.zone)
-                : 0;
-
-            view.RefreshReadout(chance, pity, config.coreItemPityTrips, config);
+            view.RefreshReadout(chance, config);
         }
+
+        // Grey-out rides along with every readout refresh: picking a unit, spending
+        // the last sword and starting a day all land here.
+        RefreshInteractable();
+    }
+
+    /// <summary>
+    /// Risk each cave pays: the run's Risk minus that cave's Handicap, floored at
+    /// 0 - so a shallow cave stops being penalised before a deep one does.
+    /// </summary>
+    private static int RiskPenalty(GatherZone zone)
+    {
+        return RunResources.Instance != null
+            ? GatherResolver.RiskPenalty(zone, RunResources.Instance.Risk)
+            : 0;
     }
 
     /// <summary>

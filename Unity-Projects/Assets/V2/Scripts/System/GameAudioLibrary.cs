@@ -53,6 +53,9 @@ public class GameAudioLibrary : ScriptableObject
     [Tooltip("A page opening: options or help.")]
     [SerializeField] private AudioClip popup;
 
+    [Tooltip("Hover tick. Falls back to the plain click when empty, played much quieter.")]
+    [SerializeField] private AudioClip hover;
+
     public AudioMixer Mixer => mixer;
     public AudioClip TitleMusic => titleMusic;
     public AudioClip Success => success;
@@ -65,6 +68,9 @@ public class GameAudioLibrary : ScriptableObject
     public AudioClip Heal => heal;
     public AudioClip Craft => craft;
     public AudioClip Popup => popup;
+
+    /// <summary>The hover tick, falling back to the chrome click so the cue exists with no extra asset.</summary>
+    public AudioClip Hover => hover != null ? hover : click;
     public int RunTrackCount => runMusic != null ? runMusic.Length : 0;
     public int WinClipCount => win != null ? win.Length : 0;
 

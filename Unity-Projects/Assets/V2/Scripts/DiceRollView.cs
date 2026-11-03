@@ -81,6 +81,12 @@ public class DiceRollView : MonoBehaviour
     public bool IsShowing => overlayGroup != null && overlayGroup.alpha > 0.5f;
 
     /// <summary>
+    /// True once the dice have stopped and the result is on screen. The tutorial
+    /// uses it to hold its card back until the roll has actually played out.
+    /// </summary>
+    public bool Settled { get; private set; }
+
+    /// <summary>
     /// Success value the bar is currently drawn for - the number its bands and
     /// legend are built from, so a test can compare them against the resolver.
     /// </summary>
@@ -152,6 +158,7 @@ public class DiceRollView : MonoBehaviour
         StopAllCoroutines();
         onClosed = closedCallback;
         current = result;
+        Settled = false;
 
         transform.SetAsLastSibling();
         SetVisible(true);
@@ -314,6 +321,7 @@ public class DiceRollView : MonoBehaviour
 
         continueButton.gameObject.SetActive(true);
         animating = false;
+        Settled = true;
 
         // The roll is the game's one suspense beat, so the dice get their own
         // sting the moment they land: a good tier chirps, a bad one thuds.
@@ -381,6 +389,7 @@ public class DiceRollView : MonoBehaviour
 
         SetVisible(false);
         current = null;
+        Settled = false;
         var callback = onClosed;
         onClosed = null;
         callback?.Invoke();
@@ -447,6 +456,12 @@ public class DiceRollView : MonoBehaviour
             {
                 lines.Add(kind == CoreItemKind.A ? "Found the sealed box!" : "Found the key!");
             }
+        }
+
+        if (r.riskReduced > 0)
+        {
+            int risk = RunResources.Instance != null ? RunResources.Instance.Risk : 0;
+            lines.Add($"The red fog thins: risk -{r.riskReduced} (now {risk}/{RunResources.MaxRisk})");
         }
 
         return string.Join("\n", lines);
@@ -587,6 +602,7 @@ public class DiceRollView : MonoBehaviour
         continueButton.targetGraphic = buttonImage;
         continueButton.onClick.AddListener(OnContinueClicked);
         UiClickSound.Attach(continueButton, UiClickKind.Plain);
+        HoverHighlight.Attach(buttonRect.gameObject);
         var label = NewText("Label", buttonRect, 24, Vector2.zero, new Vector2(220f, 48f));
         label.text = "CONTINUE";
     }

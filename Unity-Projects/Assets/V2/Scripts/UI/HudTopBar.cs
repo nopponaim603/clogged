@@ -234,6 +234,7 @@ public class HudTopBar : MonoBehaviour
         // Built here rather than through UiFactory, so the chrome click has to be
         // attached explicitly or the top bar would be the one silent corner.
         UiClickSound.Attach(button, UiClickKind.Plain);
+        HoverHighlight.Attach(go);
 
         text = null;
         bool hasLabel = !string.IsNullOrEmpty(label);

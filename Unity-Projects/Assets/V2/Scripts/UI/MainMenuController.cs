@@ -60,6 +60,11 @@ public class MainMenuController : MonoBehaviour
             : "SAVED RUN FOUND";
     }
 
+    /// <summary>
+    /// NEW GAME starts the run. The goal card is not shown here: it is raised
+    /// over the map the moment the game scene has loaded, so the goal lands on
+    /// the board it is talking about.
+    /// </summary>
     private void HandleStart() => SceneFlow.NewGame();
 
     private void HandleContinue() => SceneFlow.Continue();
@@ -96,7 +101,7 @@ public class MainMenuController : MonoBehaviour
         var subtitleLabel = UiFactory.CreateText("Subtitle", root, subtitle, 22f, UiFactory.DimText);
         UiFactory.Center(subtitleLabel.rectTransform, new Vector2(0f, 230f), new Vector2(1000f, 40f));
 
-        var start = UiFactory.CreateButton(root, "StartButton", "START", new Vector2(360f, 66f), HandleStart);
+        var start = UiFactory.CreateButton(root, "StartButton", "NEW GAME", new Vector2(360f, 66f), HandleStart);
         UiFactory.Center((RectTransform)start.transform, new Vector2(0f, 96f), new Vector2(360f, 66f));
 
         continueButton = UiFactory.CreateButton(root, "ContinueButton", "CONTINUE", new Vector2(360f, 66f), HandleContinue);

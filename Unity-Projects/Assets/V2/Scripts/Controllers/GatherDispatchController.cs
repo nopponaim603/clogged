@@ -30,6 +30,12 @@ public class GatherDispatchResult
 
     /// <summary>Core Item pieces found on this trip (0-2).</summary>
     public List<CoreItemKind> coreItemsObtained = new List<CoreItemKind>();
+
+    /// <summary>Risk spent by a successful trip (0 for Failure/Fumble).</summary>
+    public int riskReduced;
+
+    /// <summary>Whether the roll landed on the Jackpot (a natural 1 with SV 80 or more).</summary>
+    public bool jackpot;
 }
 
 /// <summary>
@@ -43,39 +49,28 @@ public class GatherDispatchController : MonoBehaviour
 
     public event Action<GatherDispatchResult> OnGatherResolved;
 
-    /// <summary>Success value added to a zone's Core Item chance when an Exploring talent is on the trip.</summary>
-    public const int ExploringCoreItemChanceBonus = 25;
+    /// <summary>A roll of exactly 1 with at least this success value also grabs the other Core Item piece.</summary>
+    public const int JackpotSuccessValue = 80;
 
-    // Consecutive Hard Success trips that dropped no Core Item, per pity zone.
-    private int pityNormal;
-    private int pityHard;
+    /// <summary>Natural roll that triggers the Jackpot.</summary>
+    public const int JackpotRoll = 1;
 
-    public int PityNormal => pityNormal;
-    public int PityHard => pityHard;
-
-    /// <summary>How many Hard Success trips in a row before the next one is guaranteed (0 = zone has no pity).</summary>
-    public int PityThreshold(GatherZone zone)
-    {
-        var config = GatherZoneDatabase.Instance != null ? GatherZoneDatabase.Instance.GetConfig(zone) : null;
-        return config != null ? config.coreItemPityTrips : 0;
-    }
-
-    /// <summary>Current pity progress for the zone, for the map card to display.</summary>
-    public int PityCounter(GatherZone zone)
+    /// <summary>
+    /// Which piece a cleared dungeon is guaranteed to hand over: the Key from
+    /// Normal, the Box from Hard. Easy has no Core Item.
+    /// </summary>
+    public static CoreItemKind? CoreItemForZone(GatherZone zone)
     {
         switch (zone)
         {
-            case GatherZone.Normal: return pityNormal;
-            case GatherZone.Hard: return pityHard;
-            default: return 0;
+            case GatherZone.Normal: return CoreItemKind.B; // the key
+            case GatherZone.Hard: return CoreItemKind.A;   // the box
+            default: return null;
         }
     }
 
-    public void RestorePity(int normal, int hard)
-    {
-        pityNormal = Mathf.Max(0, normal);
-        pityHard = Mathf.Max(0, hard);
-    }
+    /// <summary>The run's Risk, which every trip subtracts from its success value.</summary>
+    private static int CurrentRisk => RunResources.Instance != null ? RunResources.Instance.Risk : 0;
 
     private void Awake()
     {
@@ -202,11 +197,13 @@ public class GatherDispatchController : MonoBehaviour
                 GrantMainLoot(config.mainLoot, 1f, selectedUnits, result);
                 GrantBonusLoot(config, selectedUnits, result);
                 MaybeAwardTrait(selectedUnits, 0.5f, TraitPolarity.Positive, result);
-                TryRollCoreItems(config, selectedUnits, result);
+                GrantCoreItems(zone, rollOutcome, result);
+                ReduceRisk(zone, result);
                 break;
 
             case GatherResultTier.Regular:
                 GrantMainLoot(config.mainLoot, 1f, selectedUnits, result);
+                ReduceRisk(zone, result);
                 break;
 
             case GatherResultTier.Failure:
@@ -239,11 +236,6 @@ public class GatherDispatchController : MonoBehaviour
             if (unit.HasTalent(UnitTalent.Exploring)) return 2;
         }
         return 1;
-    }
-
-    private static bool HasExploringTalent(List<UnitCharacter> selectedUnits)
-    {
-        return LootMultiplier(selectedUnits) > 1;
     }
 
     private void GrantMainLoot(LootAmount mainLoot, float fraction, List<UnitCharacter> selectedUnits, GatherDispatchResult result)
@@ -305,73 +297,58 @@ public class GatherDispatchController : MonoBehaviour
     }
 
     /// <summary>
-    /// Rolls each Core Item piece the run is still missing against the zone's
-    /// drop chance. Pieces are rolled independently, so one trip can yield both.
-    /// Only reachable from Hard Success - Regular/Failure/Fumble never drop one.
-    ///
-    /// Pity: <see cref="GatherZoneConfig.coreItemPityTrips"/> Hard Success trips
-    /// in a row without a piece guarantee one on the following trip. A missing
-    /// piece is picked at random; obtaining anything resets that zone's counter.
-    /// An Exploring talent adds <see cref="ExploringCoreItemChanceBonus"/> to the chance.
+    /// Spends Risk down after a cleared dungeon: Easy 5, Normal 10, Hard 15,
+    /// floored at 0. Only a Regular or Hard Success counts as "cleared", so a
+    /// Failure leaves the fog exactly where it was.
     /// </summary>
-    private void TryRollCoreItems(GatherZoneConfig config, List<UnitCharacter> selectedUnits, GatherDispatchResult result)
+    private void ReduceRisk(GatherZone zone, GatherDispatchResult result)
     {
         if (RunResources.Instance == null) return;
 
-        int threshold = config.coreItemPityTrips;
-        int counter = PityCounter(config.zone);
-        bool pityReady = threshold > 0 && counter + 1 >= threshold;
+        int before = RunResources.Instance.Risk;
+        if (before <= 0) return;
 
-        int chance = Mathf.Clamp(config.coreItemChancePercent + (HasExploringTalent(selectedUnits) ? ExploringCoreItemChanceBonus : 0), 0, 100);
-
-        var missing = new List<CoreItemKind>();
-        foreach (CoreItemKind kind in new[] { CoreItemKind.A, CoreItemKind.B })
-        {
-            if (!RunResources.Instance.HasCoreItem(kind)) missing.Add(kind);
-        }
-
-        if (missing.Count > 0)
-        {
-            if (pityReady)
-            {
-                // Guarantee exactly one piece so one trip cannot also win off pity.
-                CoreItemKind pick = missing[UnityEngine.Random.Range(0, missing.Count)];
-                RunResources.Instance.ObtainCoreItem(pick);
-                result.coreItemsObtained.Add(pick);
-            }
-            else
-            {
-                foreach (CoreItemKind kind in missing)
-                {
-                    if (UnityEngine.Random.Range(0, 100) >= chance) continue;
-
-                    RunResources.Instance.ObtainCoreItem(kind);
-                    result.coreItemsObtained.Add(kind);
-                }
-            }
-        }
-
-        // Drop success clears the counter; a dry Hard Success nudges it up.
-        bool gotSomething = result.coreItemsObtained.Count > 0;
-        AddPity(config.zone, gotSomething ? -counter : 1);
-
-        // Win check once per trip, not once per piece - a trip can complete the set.
-        if (gotSomething)
-        {
-            DayManager.Instance?.CheckImmediateWin();
-        }
+        RunResources.Instance.AddRisk(-GatherResolver.RiskReduction(zone));
+        result.riskReduced = before - RunResources.Instance.Risk;
     }
 
-    private void AddPity(GatherZone zone, int delta)
+    /// <summary>
+    /// Core Items on a Hard Success, by cave rather than by dice:
+    ///   Normal -> the Key, Hard -> the Box, Easy -> nothing.
+    /// The drop is guaranteed, not rolled - no pity counter, no drop chance.
+    ///
+    /// Jackpot: a natural 1 with a success value of <see cref="JackpotSuccessValue"/>
+    /// or more completes the set from whatever is still missing. So a Normal
+    /// trip holding only the Key also takes the Box, a Hard trip holding only
+    /// the Box also takes the Key, and a trip that has neither gets both.
+    /// </summary>
+    private void GrantCoreItems(GatherZone zone, GatherOutcome rollOutcome, GatherDispatchResult result)
     {
-        switch (zone)
+        if (RunResources.Instance == null) return;
+
+        CoreItemKind? own = CoreItemForZone(zone);
+        if (own.HasValue) Give(result, own.Value);
+
+        bool jackpot = rollOutcome.successValue >= JackpotSuccessValue && rollOutcome.rollValue == JackpotRoll;
+        if (!jackpot) 
         {
-            case GatherZone.Normal:
-                pityNormal = Mathf.Max(0, pityNormal + delta);
-                break;
-            case GatherZone.Hard:
-                pityHard = Mathf.Max(0, pityHard + delta);
-                break;
+            if (result.coreItemsObtained.Count > 0) DayManager.Instance?.CheckImmediateWin();
+            return;
         }
+
+        result.jackpot = true;
+        foreach (CoreItemKind kind in new[] { CoreItemKind.A, CoreItemKind.B }) Give(result, kind);
+
+        // One win check per trip: a Jackpot already completes the set.
+        if (result.coreItemsObtained.Count > 0) DayManager.Instance?.CheckImmediateWin();
+    }
+
+    /// <summary>Grants a piece once and records it; a piece already in the bag is a no-op.</summary>
+    private static void Give(GatherDispatchResult result, CoreItemKind kind)
+    {
+        if (RunResources.Instance.HasCoreItem(kind)) return;
+
+        RunResources.Instance.ObtainCoreItem(kind);
+        result.coreItemsObtained.Add(kind);
     }
 }

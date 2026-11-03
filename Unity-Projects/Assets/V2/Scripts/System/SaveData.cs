@@ -11,7 +11,7 @@ using System.Collections.Generic;
 [Serializable]
 public class SaveData
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public int version = CurrentVersion;
     public string savedAtUtc = "";
@@ -30,9 +30,9 @@ public class SaveData
     public int variant;
     public int partySuccessBonus;
 
-    // GatherDispatchController pity counters (Hard Success trips without a Core Item)
-    public int pityNormal;
-    public int pityHard;
+    // RunResources risk (red fog). Version 2 added it; older saves default to
+    // full risk on load.
+    public int risk = RunResources.MaxRisk;
 
     // AudioDirector - which BGM track this run is looping, so Continue resumes
     // the same song instead of rolling a new one mid-run.

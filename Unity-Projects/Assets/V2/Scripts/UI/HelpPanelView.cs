@@ -527,7 +527,7 @@ public class HelpPanelView : MonoBehaviour
             .WithGlyph("H").WithIcon(craftIcon));
         units.entries.Add(new Entry("CIA", "NORMAL CAVE NATURAL. TALENT: COOKING - FOOD SHE COOKS IS DOUBLED.")
             .WithGlyph("N").WithIcon(cookIcon));
-        units.entries.Add(new Entry("DAN", "HARD CAVE NATURAL. TALENT: EXPLORING - TRIP LOOT IS DOUBLED (CORE ITEMS EXCLUDED) AND CORE ITEM CHANCE +25%.")
+        units.entries.Add(new Entry("DAN", "HARD CAVE NATURAL. TALENT: EXPLORING - TRIP LOOT IS DOUBLED, CORE ITEMS EXCLUDED.")
             .WithGlyph("H").WithIcon(cookingIcon));
         units.entries.Add(new Entry($"APTITUDE  (+{GatherResolver.AptitudeBonus})",
             $"THE BIG LETTER ON THE CARD IS THE CAVE TIER THIS UNIT IS A NATURAL AT. SENDING IT THERE ADDS +{GatherResolver.AptitudeBonus} SUCCESS VALUE ONCE PER TRIP.")
@@ -573,20 +573,20 @@ public class HelpPanelView : MonoBehaviour
             "THE FOOD RUN. CHEAPEST TRAVEL AND THE HIGHEST SUCCESS VALUE, SO THIS IS WHERE YOU FARM COOKING MATERIAL EARLY.", UiFactory.Success)
             .WithIcon(caveIcon));
         dungeons.entries.Add(new Entry(ZoneLine(zones, GatherZone.Normal),
-            "THE MEDKIT RUN, AND THE FIRST PLACE A CORE ITEM CAN DROP.", UiFactory.Accent)
+            "THE MEDKIT RUN, AND THE ONLY CAVE THAT GIVES UP THE KEY.", UiFactory.Accent)
             .WithIcon(caveIcon));
         dungeons.entries.Add(new Entry(ZoneLine(zones, GatherZone.Hard),
-            "THE MATERIAL RUN AND THE BEST CORE ITEM ODDS. ALSO THE CHEAPEST PLACE TO FUMBLE, SO SEND THE NATURALS.", UiFactory.Fail)
+            "THE MATERIAL RUN, AND THE ONLY CAVE THAT GIVES UP THE BOX. ALSO THE CHEAPEST PLACE TO FUMBLE, SO SEND THE NATURALS.", UiFactory.Fail)
             .WithIcon(caveIcon));
-        dungeons.entries.Add(new Entry("CORE ITEMS  (BOX + KEY)",
-            "BOTH PIECES ROLL ON HARD SUCCESS ONLY, ONE ROLL PER MISSING PIECE. THEY ARE NOT SPLIT BY CAVE - EITHER PIECE CAN COME FROM ANY CAVE, AND HARD SIMPLY HAS DOUBLE THE ODDS. REGULAR, FAILURE AND FUMBLE NEVER DROP ONE.")
+        dungeons.entries.Add(new Entry("CORE ITEMS  (KEY + BOX)",
+            "EACH PIECE IS BOUND TO ONE CAVE AND DROPS ON THAT CAVE'S HARD SUCCESS, GUARANTEED - NO DICE, NO CHANCE. NORMAL HANDS OVER THE KEY, HARD HANDS OVER THE BOX, EASY HANDS OVER NOTHING. REGULAR SUCCESS, FAILURE AND FUMBLE NEVER DROP ONE. A PIECE YOU ALREADY HOLD IS NOT ROLLED FOR.")
             .WithGlyph("B"));
-        dungeons.entries.Add(new Entry("PITY",
-            "A DRY STREAK IS CAPPED: 3 HARD SUCCESSES IN A ROW AT NORMAL OR 2 AT HARD MAKES THE NEXT HARD SUCCESS GUARANTEE ONE PIECE.")
-            .WithGlyph("P"));
-        dungeons.entries.Add(new Entry("ODDS PER PIECE",
-            "NORMAL 25% AND HARD 50% PER MISSING PIECE, PLUS 25% WHILE AN EXPLORING TALENT (DAN) IS ON THE TRIP.")
-            .WithGlyph("%"));
+        dungeons.entries.Add(new Entry("JACKPOT  (SV 80+)",
+            $"WHILE THE SUCCESS VALUE IS {GatherDispatchController.JackpotSuccessValue} OR MORE THE FOG IS THIN ENOUGH TO SEE BOTH CACHES: A NATURAL {GatherDispatchController.JackpotRoll} TAKES WHATEVER PIECE IS STILL MISSING, ON TOP OF THE CAVE'S OWN DROP.")
+            .WithGlyph("1"));
+        dungeons.entries.Add(new Entry("CLEARING THE FOG",
+            "A CLEARED TRIP BURNS RISK - 5 AT EASY, 10 AT NORMAL, 15 AT HARD - AND THINNER FOG RAISES EVERY SUCCESS VALUE. EASY AND NORMAL SHAKE THE FOG OFF COMPLETELY BEFORE HARD DOES, SO WORK YOUR WAY BACK OUT. TRADE TRIPS FOR AIR.")
+            .WithGlyph("-"));
 
         // 6 ------------------------------------------------------------ skills
         var skills = new Section { label = "6  SKILLS" };
@@ -612,7 +612,7 @@ public class HelpPanelView : MonoBehaviour
         // 7 ----------------------------------------------------- success value
         var sv = new Section { label = "7  SUCCESS VALUE" };
         sv.entries.Add(new Entry($"BASE VALUE PER CAVE  ({BaseValue(zones)})",
-            "EACH CAVE HAS ITS OWN CEILING BEFORE ANYONE JOINS. EASY IS FRIENDLY, HARD IS NOT.")
+            "EACH CAVE HAS ITS OWN CEILING BEFORE ANYONE JOINS. ROLL 1 TO 100 AND ROLL UNDER IT; EASY IS FRIENDLY, HARD IS NOT.")
             .WithIcon(caveIcon));
         sv.entries.Add(new Entry($"APTITUDE  (+{GatherResolver.AptitudeBonus} ONCE)", "ONE NATURAL AT THE ZONE'S TIER IS ENOUGH - SENDING TWO DOES NOT DOUBLE IT.")
             .WithGlyph("E"));
@@ -620,13 +620,20 @@ public class HelpPanelView : MonoBehaviour
             .WithGlyph("-"));
         sv.entries.Add(new Entry($"DUO  (+{GatherResolver.DuoBonus})", "SENDING TWO UNITS INSTEAD OF ONE. ALSO TWO CHANCES TO SURVIVE A FAILURE'S INJURY, SINCE IT PICKS ONE VICTIM.")
             .WithGlyph("2"));
+        sv.entries.Add(new Entry("RISK  (THE RED FOG)",
+            $"STARTS AT {RunResources.MaxRisk} AND IS SUBTRACTED FROM EVERY TRIP - BUT EACH CAVE SHRUGS OFF A HANDICAP FIRST: " +
+            $"EASY {GatherResolver.ZoneHandicap(GatherZone.Easy)}, NORMAL {GatherResolver.ZoneHandicap(GatherZone.Normal)}, " +
+            $"HARD {GatherResolver.ZoneHandicap(GatherZone.Hard)}. THE SUM IS -RISK + HANDICAP AND NEVER GOES BELOW 0, " +
+            "SO EASY STOPS FEELING THE FOG AT RISK 30 AND NORMAL AT 20 WHILE HARD PAYS UNTIL RISK IS 0. " +
+            "THE FOG AND THE GAUGE TO THE LEFT OF THE CAVES ARE THE SAME NUMBER.")
+            .WithGlyph("R"));
         sv.entries.Add(new Entry("TRAITS, BLESSED, POTIONS", $"+{GatherResolver.TraitBonus} GOOD TRAIT, -{GatherResolver.TraitBonus} BAD TRAIT (ONCE EACH PER TRIP), +{GatherResolver.BlessedBonus} PER BLESSED UNIT, PLUS THE PARTY POTION TOTAL.")
             .WithIcon(goodTraitIcon));
 
         // 8 ------------------------------------------------------------- roll
         var roll = new Section { label = "8  THE ROLL" };
         roll.entries.Add(new Entry("HOW IT WORKS",
-            "ROLL 1D100 AND TRY TO STAY UNDER THE SUCCESS VALUE. THE BAR IN THE DICE POPUP SHOWS THE FOUR BANDS BEFORE THE DICE LAND.",
+            "THE NUMBER ON THE CAVE CARD IS THE ONE TO BEAT. YOU ROLL 1 TO 100 AND HAVE TO ROLL UNDER IT - LOWER IS BETTER. THE BAR IN THE DICE POPUP SHOWS THE FOUR BANDS BEFORE THE DICE LAND.",
             UiFactory.TextColor).WithGlyph("D"));
         roll.entries.Add(new Entry("HARD SUCCESS  (TOP THIRD)",
             "ROLL AT OR UNDER SV / 3. FULL LOOT PLUS ONE BONUS PICK, A 50% CHANCE OF A GOOD TRAIT, AND THE ONLY TIER THAT CAN DROP A CORE ITEM.",
@@ -675,14 +682,14 @@ public class HelpPanelView : MonoBehaviour
         return config != null ? config.baseSuccessValue : 0;
     }
 
-    /// <summary>"EASY CAVE - 1 AP - SV 80 - LOOT COOKING MATERIAL X2" for one rail row.</summary>
+    /// <summary>"EASY CAVE - 1 AP - SV 80 - HANDICAP 30 - LOOT COOKING MATERIAL X2" for one rail row.</summary>
     private static string ZoneLine(GatherZoneDatabase zones, GatherZone zone)
     {
         var config = zones != null ? zones.GetConfig(zone) : null;
         if (config == null) return zone.ToString().ToUpperInvariant() + " CAVE";
 
         return $"{zone.ToString().ToUpperInvariant()} CAVE  -  {config.apCost} AP  -  SV {config.baseSuccessValue}  -  " +
-               $"{ItemName(config.mainLoot.type)} X{config.mainLoot.amount}";
+               $"HANDICAP {GatherResolver.ZoneHandicap(zone)}  -  {ItemName(config.mainLoot.type)} X{config.mainLoot.amount}";
     }
 
     private static string ItemName(InventoryItemType type)

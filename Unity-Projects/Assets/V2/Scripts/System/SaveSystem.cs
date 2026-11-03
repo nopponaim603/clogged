@@ -30,9 +30,19 @@ public static class SaveSystem
     /// <summary>True while a load is waiting for the game scene to come up.</summary>
     public static bool HasPendingLoad => pendingLoad != null;
 
+    /// <summary>
+    /// When true, <see cref="SaveNow"/> does nothing. The tutorial flips this so a
+    /// guided tour can never overwrite or leave behind a real run - the scene it
+    /// plays looks exactly like a run, so without the switch the tutorial's own
+    /// End Day would write a save of itself.
+    /// </summary>
+    public static bool Suspended { get; set; }
+
     /// <summary>Writes the current run to disk. Safe to call when a singleton is missing (writes what it has).</summary>
     public static bool SaveNow()
     {
+        if (Suspended) return false;
+
         var data = Capture();
         if (data == null) return false;
 
@@ -111,13 +121,7 @@ public static class SaveSystem
             data.coreItemB = res.HasCoreItemB;
             data.variant = (int)res.Variant;
             data.partySuccessBonus = res.PartySuccessBonus;
-        }
-
-        var gather = GatherDispatchController.Instance;
-        if (gather != null)
-        {
-            data.pityNormal = gather.PityNormal;
-            data.pityHard = gather.PityHard;
+            data.risk = res.Risk;
         }
 
         // -1 when direct-run fell back to no roll at all; Continue then re-rolls.

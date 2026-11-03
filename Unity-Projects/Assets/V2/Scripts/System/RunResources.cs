@@ -17,6 +17,13 @@ public class RunResources : MonoBehaviour
 {
     public static RunResources Instance { get; private set; }
 
+    /// <summary>
+    /// The run starts at full risk and full red fog; a successful trip thins it.
+    /// One number drives the mist, the gauge and the success-value penalty, so
+    /// they can never disagree.
+    /// </summary>
+    public const int MaxRisk = 80;
+
     /// <summary>Fired whenever any tracked value changes - use it instead of polling.</summary>
     public event System.Action OnChanged;
 
@@ -37,6 +44,34 @@ public class RunResources : MonoBehaviour
     [Tooltip("Permanent +success value from buff potions. Stacks and lasts for the rest of the run.")]
     [SerializeField] private int partySuccessBonus = 0;
     public int PartySuccessBonus => partySuccessBonus;
+
+    [Header("Risk (red fog)")]
+    [Tooltip("Starts at MaxRisk and is spent down by successful trips. Subtracted from every success value; at 0 the fog is gone entirely.")]
+    [Range(0, MaxRisk)]
+    [SerializeField] private int risk = MaxRisk;
+
+    /// <summary>Current risk, 0..<see cref="MaxRisk"/>. Subtracted from every trip's success value.</summary>
+    public int Risk => risk;
+
+    /// <summary>Risk as 0..1 - what the fog overlay and the gauge tube both paint.</summary>
+    public float RiskRatio => MaxRisk > 0 ? (float)risk / MaxRisk : 0f;
+
+    /// <summary>Spends risk down to a floor of 0. A negative delta is the normal case (a cleared dungeon).</summary>
+    public void AddRisk(int delta)
+    {
+        if (delta == 0) return;
+        SetRisk(risk + delta);
+    }
+
+    /// <summary>Overwrites risk, clamped to 0..<see cref="MaxRisk"/>.</summary>
+    public void SetRisk(int value)
+    {
+        int clamped = Mathf.Clamp(value, 0, MaxRisk);
+        if (risk == clamped) return;
+
+        risk = clamped;
+        OnChanged?.Invoke();
+    }
 
     /// <summary>Adds a buff-potion stack (+10 success value by default) for the whole team.</summary>
     public void AddPartySuccessBonus(int amount)
@@ -190,6 +225,11 @@ public class RunResources : MonoBehaviour
         medicine = Mathf.Max(0, data.medicine);
         materials = Mathf.Max(0, data.materials);
         partySuccessBonus = Mathf.Max(0, data.partySuccessBonus);
+
+        // A save written before Risk existed has no value for it; those runs
+        // start the fog at full rather than at zero.
+        risk = data.version >= 2 ? Mathf.Clamp(data.risk, 0, MaxRisk) : MaxRisk;
+
         coreItemA = data.coreItemA;
         coreItemB = data.coreItemB;
 

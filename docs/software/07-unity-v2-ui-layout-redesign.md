@@ -81,6 +81,7 @@
 - เหตุผลที่ hand เยื้อง +190: พื้นที่ว่างจริงคือระหว่าง Log (จบที่ x = 724) กับ Dispatch (เริ่มที่ x = 1596) → จุดกึ่งกลาง = 1148 = 960 + 188, ปัดเป็น +190 ให้เหลือขอบเท่ากันสองข้าง
 - ช่องไฟ: Log→การ์ด 24 px · การ์ด→Dispatch 48 px → ไม่มีอะไรทับกัน
 - **MAP AREA:** `GatherMapController` กัน node ไว้ด้วย margin L32 / R**300** / T**110** / B**330** และ maxCardHeight **700** → ไม่มีถ้ำไปอยู่ใต้ Log / มือการ์ด / คอลัมน์สกิล / DayFrame และการ์ดใช้พื้นที่แนวตั้งเต็ม (ค่าล่าสุดดู §8.6)
+  - 2026-11-03: เพิ่มหลอดหมอก (`fogGaugeWidth 26` + `fogGaugeGap 34`) ทางซ้ายสุด และลด `maxCardWidth` 480 → **430** → การ์ดแคบลง 50 px และเลื่อนขวา ~75 px (ดู §8.18 ข้อ 6)
 
 ### 3.4 ป้ายบนปุ่มสลับโหมด Heal
 
@@ -197,14 +198,16 @@
 
 | ปุ่ม | พฤติกรรม |
 |---|---|
-| **Cook** | คลิกซ้าย = queue +1 รอบ (1 AP); คลิกซ้ำ = เพิ่มจำนวน · **คลิกขวา = ล้างจำนวน** |
+| **Cook** | คลิกซ้าย = queue +1 รอบ (1 AP); คลิกซ้ำ = เพิ่มจำนวน · คลิกขวา = ยกเลิกทุกอย่าง (gesture เดียวทั้งจอ, §5) |
 | **Craft** | เหมือน Cook ทุกข้อ |
 | **Heal** | **ไม่มี queue** — คลิกซ้ายครั้งเดียว = เลือกสกิล Heal แล้วรอเลือกผู้ป่วย · **disabled ทั้งปุ่มถ้าไม่มีคนบาดเจ็บเลย** |
 
 | หัวข้อ | สเปก |
 |---|---|
 | ตำแหน่ง | คอลัมน์ขวา **แสดงตลอด** (ไม่ซ่อนตามบริบท) |
-| ตัวเลข queue | **แสดงบนปุ่ม Cook / Craft เท่านั้น** — ปุ่ม Heal ไม่มีตัวเลข (ไม่มีการนับรอบ) |
+| ตัวเลข queue | **อยู่นอกกรอบปุ่ม Cook / Craft ทางซ้าย** (2026-11-03) — เดิมอยู่ในการ์ดปุ่ม อ่านแล้วเหมือนเป็นส่วนของ label · ปุ่ม Heal ไม่มีตัวเลข (ไม่มีการนับรอบ) |
+| สล็อตของตัวเลข | **มีแผ่นสีพื้นหลังของตัวเอง** (`CountSlot`, สีเดียวกับหน้าปุ่ม) วางเป็น sibling ก่อน label (2026-11-03) → อ่านเป็น `[ 2 ] [ COOK + ]` ไม่ใช่เลขลอยบนแผนที่ · ต้องเป็น object แยก ไม่ใช่ `Image` บน object เดียวกับ TMP เพราะ graphic บน GameObject เดียววาดตามลำดับ enable แล้วแผ่นจะทับตัวเลข · ซ่อน/โชว์พร้อมตัวเลขใน `SetCount` |
+| เครื่องหมาย `+` | **อยู่ในกรอบปุ่ม ขวาสุด หลัง label** (2026-11-03) → อ่านเป็น `[ 2 ] [ COOK + ]` · เป็น label สี accent ไม่ใช่ปุ่มที่สอง (ทั้งปุ่มเพิ่มรอบอยู่แล้ว) จึงไม่มี hit area ซ้อนให้กดพลาด · ถ้า label จะชน `+` โค้ดจะเลื่อน label ซ้ายให้พอดี (วัดจาก `preferredWidth` ไม่ได้เดา) |
 | เพดานจำนวน | **จน AP ของตัวละครที่เลือกหมด** (ไม่ใช้ค่าคงที่รายรอบ) + หยุดเมื่อวัตถุดิบหมด |
 | วัตถุดิบไม่พอ | **หยุด queue** (ไม่เพิ่ม) + warning + log |
 | Heal — 2 โหมด | ปุ่มเล็กข้างปุ่ม Heal สลับ `ยา 1 + AP 1` ↔ `AP 2` (ปุ่มเดียว ไม่มี queue) |
@@ -224,9 +227,9 @@
 |---|---|---|---|---|
 | **คลิกซ้าย** | เลือก / ยกเลิกการเลือก | เพิ่มจำนวน +1 | เลือกโหมด Heal (ครั้งเดียว) | ยืนยันการกระทำ |
 | **คลิกซ้ายซ้ำ** | สลับ selected | เพิ่มจำนวนต่อ | — | — |
-| **คลิกขวา** | (ไม่กระทำ) | **ล้างจำนวน** | ยกเลิกโหมด Heal | (ไม่กระทำ) |
+| **คลิกขวา** | ยกเลิกทุกอย่าง | ยกเลิกทุกอย่าง | ยกเลิกทุกอย่าง | ยกเลิกทุกอย่าง |
 
-> คลิกขวา **ไม่** ล้างการ์ดที่เลือก — ล้างเฉพาะจำนวน (Cook/Craft) หรือยกเลิกโหมด Heal
+> **คลิกขวาที่ไหนก็ได้บนจอ** (2026-11-03) = ยกเลิกทุกอย่างที่ค้าง: สกิลที่ arm, ถ้ำที่เลือก, การ์ดที่ถือ — **ไม่มีข้อยกเว้นรายปุ่ม** · ตัวจัดการเดิม (`RightClickHandler` ที่ปุ่มสกิล) ถูกลบออกเพื่อไม่ให้ gesture เดียวมีสองความหมาย: เหลือ `RightClickCancel` ตัวเดียวบน `GameSystem` ที่อ่าน `Mouse.current` และเรียก `SkillFlowController.CancelActiveSkill()` + `GatherMapController.ClearSelection()` + `UnitRosterView.ClearSelection()` · `SkillFlowController.Disarm()` จึงเหลือทางเดียว (เคลียร์การเลือกเสมอ) ไม่มี variant "เก็บการ์ดไว้" ให้ประสานงานผิดพลาด
 
 ---
 
@@ -486,8 +489,8 @@ LogMessagePanel : MonoBehaviour   // (P2) subscribe RunLog.OnEntryAdded, render,
 
 | ไฟล์ | สิ่งที่ทำ |
 |---|---|
-| `Scripts/UI/SkillTriggerPanel.cs` | `SkillKind { None, Cook, Heal, Craft }` · event `CookClicked/CookCleared/CraftClicked/CraftCleared/HealClicked/HealCancelled/HealModeToggled/CraftModeToggled` · `SetCookCount()` / `SetCraftCount()` / `SetArmed()` (ไฮไลต์ปุ่มที่ active) / `SetHealAvailable()` / `SetHealMode()` / `SetCraftMode()` — ปุ่มโหมดของทั้ง Heal และ Craft ผูกมาจากพรีแฟบ (`HealRow` / `CraftRow`) ไม่สร้างตอน `Awake` |
-| `Scripts/UI/RightClickHandler.cs` **(ใหม่)** | `IPointerClickHandler` ที่ยิง event เฉพาะคลิกขวา (Unity `Button` มีแต่คลิกซ้าย) — ประกอบเข้าปุ่มอัตโนมัติใน `Awake` |
+| `Scripts/UI/SkillTriggerPanel.cs` | `SkillKind { None, Cook, Heal, Craft }` · event `CookClicked/CraftClicked/HealClicked/HealModeToggled/CraftModeToggled` (คลิกขวาไม่อยู่ใน panel แล้ว — ดู §8.18) · `SetCookCount()` / `SetCraftCount()` / `SetArmed()` (ไฮไลต์ปุ่มที่ active) / `SetHealAvailable()` / `SetHealMode()` / `SetCraftMode()` — ปุ่มโหมดของทั้ง Heal และ Craft ผูกมาจากพรีแฟบ (`HealRow` / `CraftRow`) ไม่สร้างตอน `Awake` · แถว `[Count] [Button +]` ประกอบใน `BuildCounters()` |
+| ~~`Scripts/UI/RightClickHandler.cs`~~ **(ลบออก 2026-11-03)** | เดิมยิง event เฉพาะคลิกขวาบนปุ่มสกิล — ถูกแทนด้วย `RightClickCancel` ที่ทำงานทั้งจอ (§4.7 / §5 / §8.18) · event `CookCleared` / `CraftCleared` / `HealCancelled` ถูกลบตาม |
 | `Scripts/UI/SkillFlowController.cs` **(ใหม่)** | เจ้าของ flow ทั้งหมด: counter ของ Cook/Craft, โหมด Heal, การเลือกผู้ป่วย, `IsSkillActive` + `StateChanged` ให้ gather flow รู้ว่าใครถือปุ่มอยู่ |
 | `Scripts/UI/GatherDispatchPanel.cs` | gate ด้วย `IsSkillActive()` ทั้งตอนกดและตอน `RefreshActionPanel()` + กลับมาใช้ปุ่มเองเมื่อ `StateChanged` |
 
@@ -1588,3 +1591,154 @@ label != null    → มีข้อความ  : icon anchor (0,0.5), pos (gu
 **`PlayWin()` ตัด SFX ที่ค้างก่อน** (`sfxSource.Stop()`) เพราะเสียงชนะมาหลังเสียงเก็บของเสมอ
 
 > **ยังค้าง:** `Select.mp3` มีอาการเดียวกัน (correlation **−0.20**) — ใช้ทุกครั้งที่เลือกการ์ด/กดยืนยัน ยังไม่แก้เพราะต้องให้เจ้าของโปรเจกต์ตัดสินใจว่าจะแยกช่องไหน
+
+### 8.18 Addendum รอบ 15 (2026-11-03) — คิว Cook/Craft, คลิกขวายกเลิกทั้งจอ, hover feedback, หมอกแดง
+
+รอบนี้เป็นงานขัด UI 5 ข้อจาก playtest — ไม่แตะกติกาเกมเลย
+
+| # | สิ่งที่ขอ | สิ่งที่ทำ |
+|---|---|---|
+| 1 | ปุ่ม `+` ให้เห็นว่ากดเพิ่มจำนวนได้ + ย้ายตัวเลขออกนอกกรอบมาข้างปุ่มด้านซ้าย | `SkillTriggerPanel.BuildCounters()` สร้างแถวใหม่ (**สร้างในโค้ด ไม่แก้ prefab**): `CookRow` = `[Count] [CookButton +]` และแทรก `[Count]` เข้า `CraftRow` เดิม (อยู่หน้าปุ่มสกิล) · `HorizontalLayoutGroup.childAlignment = MiddleRight` → ตัวเลขงอกไปทางซ้าย ปุ่มสกิลจึงยังอยู่คอลัมน์เดิม · `+` เป็น TMP label ในกรอบปุ่ม (ช่องขวา, สี accent) **ไม่ใช่ปุ่มที่สอง** — ทั้งปุ่มเพิ่มรอบอยู่แล้ว และ `MakeRoomForPlus()` วัด `preferredWidth` แล้วเลื่อน label ซ้ายถ้าจะชน (ปุ่ม Craft กว้าง 156 จึงชนง่าย) |
+| 2 | คลิกขวาที่ไหนก็ได้ = ยกเลิกสิ่งที่เลือกอยู่ | `RightClickCancel` (component บน `GameSystem`) อ่าน `Mouse.current.rightButton.wasPressedThisFrame` (โปรเจกต์เป็น Input System only — `Input.GetMouseButtonDown` ใช้ไม่ได้) แล้วเรียก `SkillFlowController.CancelActiveSkill()` + `GatherMapController.ClearSelection()` + `UnitRosterView.ClearSelection()` · **ไม่มีข้อยกเว้น**: `RightClickHandler` รายปุ่มถูกลบ, event `CookCleared` / `CraftCleared` / `HealCancelled` และ `ClearQueue()` ใน `SkillFlowController` ก็ถูกลบตาม |
+| 3 | บั๊ก: เลือกการ์ด → เลือกถ้ำ → เลือกสกิล → ยืนยัน แล้วขึ้น "Pick a cave on the map first." | ดูหัวข้อ "บั๊กปุ่มยืนยันถูกกด 2 handler" ด้านล่าง |
+| 4 | hover feedback + เสียง | `HoverHighlight` (mask สีอุ่น fade เข้า/ออก, ยิง `AudioDirector.PlayHover()`), `HoverFeedbackBootstrap` แปะให้ทุก `Button` ในซีน และ `UiFactory.CreateButton` แปะให้ปุ่มที่สร้างตอนรัน (options/help/result) · การ์ดตัวละคร (`UnitIconView`) และการ์ดดันเจี้ยน (`MapNodeView`) ทำ hover เองด้วยการไล่สีพื้น (mask จะไปอยู่ใต้ chrome ที่สร้างในโค้ด) · `DayFrame` ใช้ `HoverHighlight` โหมด `target` (ไล่ alpha 0.5 → 0.72) |
+| 5 | หมอกแดง ปรับความหนาได้ | `RedFogOverlay` (component บน `MapPanel`) สร้าง layer ของตัวเองเป็น sibling ของ `MapPanel` — **เหนือแผนที่/การ์ด ใต้ HUD** · noise แบบ value-fbm ที่ tile ได้จริง (wrap lattice ตาม period) 2 ชั้นไหลคนละทาง + vignette แดงเข้ม · `Density` 0–1 ปรับสด ๆ · ~~สไลเดอร์ `FOG` ในหน้า Options~~ → **ถอดออกในรอบ 17** เพราะความหนาหมอกมาจาก `Risk` ตัวเดียว (ดู §8.19) |
+| 6 | การ์ดดันเจี้ยน: แคบลง + เลื่อนขวา + หลอดหมอกซ้ายสุด | `GatherMapController` ตัด `maxCardWidth` 480 → **430** และแบ่ง margin ซ้ายเป็น `fogGaugeWidth (26) + fogGaugeGap (34)` ก่อนคิดความกว้างการ์ด → แถวการ์ดแคบลง 50 px และเลื่อนขวา ~75 px โดยอัตโนมัติ (จัดกลาง band ใหม่) · `FogGaugeView` คือหลอดแนวตั้งซ้ายสุด **สูงเท่าการ์ดเป๊ะ** (ส่งขนาดมาจาก controller), มีร่องตี 25/50/75% และคอลัมน์แดงที่ไล่ตาม `Density` (ตามด้วยความเร็ว `followSpeed`, tooltip บอก % ที่แท้จริง) · หลอดถูก parent ใต้ `RedFogOverlay.OverlayRoot` เพื่อให้อ่านค่าได้ชัดแม้หมอกหนา |
+
+**บั๊กปุ่มยืนยันถูกกด 2 handler (ข้อ 3)**
+
+`DispatchActionPanel.Clicked` มี subscriber สองตัว: `GatherDispatchPanel.OnDispatchClicked` (เดิม gate ด้วย `IsSkillActive()`) และ `SkillFlowController.HandleConfirm` · Unity เรียกตามลำดับที่ subscribe ถ้าฝั่งสกิลมาก่อน มันจะทำงานเสร็จและ `Disarm()` **ภายในคลิกเดียวกัน** → พอถึง handler ของ gather `IsSkillActive()` กลายเป็น false แล้ว, ถ้ำก็ถูก `EnterSkillMode()` ล้างไปตั้งแต่ตอน arm → เข้าเงื่อนไข "ยังไม่ได้เลือกถ้ำ" แล้วขึ้น warning ทั้งที่ผู้เล่นเพิ่งทำถูกทุกขั้น
+
+แก้ที่ต้นเหตุ: `DispatchActionPanel` เก็บ `Owner { None, Dispatch, Skill }` ตอน `ShowDispatch()` / `Show()` และเคลียร์เป็น `None` ใน `Hide()` · `GatherDispatchPanel` เช็ก `Owner == Dispatch` แทนการเดาจาก state ของอีกฝั่ง — ไม่ว่า handler ตัวไหนจะได้คิวก่อน ผลก็ถูกทั้งคู่
+
+**ตรวจสอบแล้ว (play mode, Core scene)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestPolish.cs` (ใหม่) — counter/+ , right-click, hover, fog, fog gauge, options | **31/31 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` — regression ทั้งหมด | **ALL PASS (211 checks)** |
+| Probe `ProbeSkillMode` (การ์ด → ถ้ำ → Cook → ยืนยัน) | ไม่มี warning ปลอมแล้ว (`warn="Warning"` ค่าเดิม ไม่ใช่ "Pick a cave...") |
+
+> **ข้อควรรู้:** `script run` ที่เรียก `Awake` ของ component ที่เพิ่งแก้จะไม่รันโค้ดใหม่ถ้า recompile แบบ method reload — ต้อง stop/start play mode ก่อน
+
+### 8.19 Addendum รอบ 16–17 (2026-11-03) — Risk ขับหมอกแทนสไลเดอร์, Risk รายถ้ำ, ไอคอน Core Item บนการ์ด, กรอบ GOAL
+
+รอบนี้รวมงานสองก้อน: ก้อนแรกคือระบบ **Risk** ที่เข้ามาแทนสไลเดอร์หมอกและผูกกับ Success Value / Core Item และก้อนที่สองคือการเก็บรายละเอียด UI ที่ตามมา
+
+**Risk (แทนค่า fog ที่เคยปรับมือ)**
+
+| หัวข้อ | สเปก |
+|---|---|
+| แหล่งเดียว | `RunResources.Risk` ค่าเริ่มต้น `MaxRisk = 80`, floor 0 (`AddRisk` / `SetRisk` clamp) · **หมอก (`RedFogOverlay.Density`), หลอดวัด (`FogGaugeView`) และโทษ SV อ่านจากค่านี้ตัวเดียว** |
+| สไลเดอร์ FOG | **ถูกลบทั้งแถว** ออกจาก `OptionsPanelView` (`FogSlider` / `FogValue` / `SaveIntensity` / `LoadIntensity` หายไปหมด) — การ์ด Options ย่อกลับเป็น 820×520 และ footer เลื่อนขึ้นเป็น y −204 · ทางเดียวที่ทำให้หมอกบางลงคือไปเคลียร์ถ้ำ |
+| Risk รายถ้ำ | ค่าเดียวคือ Risk ของ run (เริ่ม 80) · แต่ละถ้ำมี **Handicap** เป็นค่าลดหย่อน: **Easy 30 / Normal 20 / Hard 0** → `GatherResolver.RiskPenalty(zone, risk) = max(0, risk − handicap)` แล้ว `ComputeSuccessValue` หักค่านี้ |
+| ผลของ Handicap | เป็นค่าลดหย่อนคงที่ ไม่ใช่เพดาน → **Easy หลุดโทษที่ Risk 30, Normal ที่ Risk 20, Hard ต้องถึง 0** · `−Risk + Handicap` ไม่มีทางติดลบ SV จึงไม่ถูกดันเกิน base |
+| ผลตอนเริ่มเกม | Risk 80 → Easy `80−50 = 30%`, Normal `55−60 → 0%`, Hard `30−80 → 0%` · Risk 40 → `70 / 35 / 0` · Risk 30 → `80 / 45 / 0` (Easy เริ่มฟรี) · Risk 20 → `80 / 55 / 10` |
+| ลด Risk | เคลียร์ถ้ำสำเร็จ: Easy −5, Normal −10, Hard −15 (Failure/Fumble ไม่ลด) |
+| Core Item | ผูกกับถ้ำ: Normal Hard Success → **Key**, Hard → **Box**, Easy ไม่มี · **การันตี ไม่ทอย** (ระบบ pity กับ `coreItemChancePercent` ถูกลบ) · **Jackpot**: SV ≥ 80 และทอยได้ 1 → รับชิ้นที่ยังขาด (ได้ทั้งคู่ถ้ายังไม่มีสักชิ้น) |
+| Buff potion | `2 AP + 5 Materials` (เดิม 4) |
+
+**UI รอบนี้**
+
+| # | สิ่งที่ขอ | สิ่งที่ทำ |
+|---|---|---|
+| 1 | เอา FOG ออกจาก Options | ถอดฟิลด์/สไลเดอร์/callback ทั้งหมดใน `OptionsPanelView`, `RedFogOverlay.Danger()` เหลือ `RiskRatio` เพียว ๆ · `TestPolish` §4 เปลี่ยนไปเช็ก `Density` ตรง ๆ และเช็กว่าไม่มี knob อื่นเหลือ |
+| 2 | Risk ต่างกันรายถ้ำ (50/60/80) → **แก้เป็น Handicap** | เดิมใช้เพดาน Risk รายถ้ำ (`ZoneRisk` 50/60/80) แต่เปลี่ยนเป็น **ค่าลดหย่อน** ตามคำขอ: `ZoneHandicap` = Easy 30 / Normal 20 / Hard 0, โทษ = `max(0, risk − handicap)` → ถ้ำตื้นหลุดโทษก่อนถ้ำลึก (Easy ที่ Risk 30, Normal ที่ 20, Hard ที่ 0) · การ์ดที่ยังไม่ถูกเลือกก็คิดตามถ้ำของตัวเอง (`GatherMapController.RiskPenalty(zone)`) · Help/tooltip เปลี่ยนคำจาก "RISK n ต่อถ้ำ" เป็น "HANDICAP n" |
+| 3 | รูปกุญแจ/กล่องในช่องไอเทมที่ดรอปของการ์ด | `MapNodeView` เพิ่มไอคอน `CorePiece` ที่ **ปลายขวาของแถว Drops** (Normal = กุญแจ, Hard = กล่อง, Easy = ว่าง) · ช่อง loot 3 ช่องแบ่งความกว้างที่เหลือหลังกันที่ 50 px ให้ไอคอนนี้ จึงไม่มีของทับกัน · อาร์ตดึงจาก `StatusBarView.CoreKeySprite` / `CoreBoxSprite` เพื่อให้การ์ดกับการ์ด HUD เป็นภาพเดียวกัน (รองรับทั้งชุดส้ม/เหลืองตาม `RunResources.Variant`) |
+| 4 | กรอบช่อง Core Item + คำว่า GOAL แนวตั้ง | `StatusBarView.BuildGoalFrame()` สร้าง `GoalFrame` (plate + ขอบ 4 ด้านสีทอง) ครอบสองช่อง แล้วเขียน `G O A L` ลง rail ซ้าย · **สร้างตอนรันเหมือนชิ้นส่วนอื่น** ไม่แก้ซีน และ **ขยายไปทางซ้ายเท่านั้น** เพราะกลุ่มนี้ติดขอบขวาของจอ (ขวา +6 px ยังอยู่ในจอ) · คลิก/ hover ตัวกรอบได้ tooltip เดียวกับช่อง |
+| 5 | เขียนคำว่า RISK ที่หลอด | `FogGaugeView` เพิ่ม `RiskLabel` (TMP บรรทัดละตัวอักษร `R I S K`) วางในร่องซ้ายระหว่างขอบ plate กับหลอด · ขยาย `fogGaugeWidth` 54 → **66** ให้ร่องมีที่ · tooltip ของหลอดอัปเดตเป็น "แต่ละถ้ำจ่ายคนละส่วน" |
+
+**ตรวจสอบแล้ว (play mode, Core scene)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestPolish.cs` — เพิ่ม §9 goal markers, §4/§5 เขียนใหม่ตาม Risk + Handicap รายถ้ำ, §7 เช็กว่าไม่มี FOG slider | **61/61 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` — regression ทั้งหมด | **ALL PASS (211 checks)** |
+
+> **ข้อควรรู้:** ตอนถ่าย screenshot ถ้า Editor ไม่ได้ focus ให้ `unity command set_run_in_background --enable true` ก่อน ไม่งั้น player loop หยุด (`playerLoopTicking: false`) แล้ว `game_view` จะคืนเฟรมเก่า
+
+### 8.20 Addendum รอบ 18 (2026-11-03) — ซุ้มหิน + แบดจ์ระดับ, แถบทรัพยากรกลางจอ, การ์ด/สกิลเทาเมื่อยังเลือกไม่ได้, SV ไม่มี `%`
+
+| # | สิ่งที่ขอ | สิ่งที่ทำ |
+|---|---|---|
+| 1 | เปลี่ยนสไปรท์ดันเจี้ยนกลับไปเป็นซุ้มหินเดิม แล้วแปะไอคอนให้ทั้งสามแบบต่างกัน (Hard = กะโหลก) | `GatherMapController` ถือ `caveArt` + `easyBadge` / `normalBadge` / `hardBadge` แล้วส่งเข้า `MapNodeView.SetArt()` ก่อน `Initialize` · `caveArt` = สไปรท์ซุ้มหิน `tilemap_packed 1_1` (ชิ้นเดียวกับ `Dungeon Prefab` เดิมในซีน) · แบดจ์วางกลางปากถ้ำ (`TierBadge`, 26% ของความสูงภาพ) ย้อมสีตามระดับ: **Easy = structure_house, Normal = structure_tower, Hard = skull** จาก `board-game-icons` · ทั้งสามใช้ภาพเดียวกัน แบดจ์คือสิ่งที่ทำให้แยกออก |
+| 2 | แถบทรัพยากรมาอยู่กลางจอ และไอคอนกับข้อความให้ชิดกัน | `StatusBarView.BuildResourceRow()` สร้าง `ResourceRow` (HorizontalLayoutGroup + ContentSizeFitter) แล้วจับคู่ใหม่เป็น `Pair_Food` / `Pair_Cooking` / `Pair_Materials` / `Pair_Medicine` (ไอคอน + ข้อความ, `iconLabelGap = 6`) · เดิมไอคอนกับตัวเลขอยู่ห่างกันเพราะแต่ละช่องเป็น Rect ความกว้างคงที่ 240–320 px ทำให้ช่องว่างโผล่ท้ายข้อความ · ตอนนี้วัดจาก `preferredWidth` ของ TMP แล้วจัดกลางผ่าน layout group |
+| 3 | ไอคอนทรัพยากรใหม่ | Food = `resource_apple`, Cooking Material = `resource_wheat`, Materials = `resource_planks`, Medicine = `flip_half` (เม็ดยาจากชุดตัวอย่าง) — ทั้งหมดจาก `board-game-icons/PNG/Double (128px)` · ไอคอนสูง 28 px (`resourceIconSize`) |
+| 4 | การ์ดดันเจี้ยนเทา (กดไม่ได้) ถ้าตัวละครที่เลือกไม่มีดาบ | `MapNodeView.SetInteractable(bool)` + `IsLocked` · เมื่อ locked: `Button.interactable = false`, พาเลตต์ทั้งใบเปลี่ยนเป็นเทา (`LockedPanel` / `LockedInk` / `LockedFrame` / `LockedArt`), ปิด hover, และคลิกที่ถูกเรียกตรง ๆ ก็ถูกกันไว้ใน `HandleClick` · `GatherMapController.RefreshInteractable()` ปลดล็อกเมื่อมีคนที่ยังถือดาบ และเรียกซ้ำจาก `RefreshReadouts()` + `Update()` (signature: จำนวนที่เลือก + มีดาบหรือไม่) เพื่อจับกรณี "ดาบถูกใช้ไปแล้ว" ที่ไม่มี event ประกาศ |
+| 5 | ปุ่มสกิลเทา (กดไม่ได้) ถ้ายังไม่เลือกตัวละคร | `SkillTriggerPanel.SetLocked/RefreshLock` สมัคร `UnitRosterView.OnSelectionChanged` เอง · `ApplyButtonStates()` รวมสามสถานะไว้ที่เดียว: **locked > armed > idle** · สำคัญ: ปุ่มที่ `interactable = false` จะถูกทับด้วย `disabledColor` (alpha 0.45 ของโปรเจกต์) ทำให้เห็นพื้นแผนที่ทะลุขึ้นมาเป็นสีเขียวมะกอก จึงเซ็ต `disabledColor` เป็น `lockedTint` ทึบตอนล็อก และคืนค่าเดิมเมื่อปลดล็อก · ไอคอนสกิลหรี่เหลือ alpha 0.35 และ `+` เปลี่ยนเป็นสีเทา |
+| 6 | ตัวเลข SV บนการ์ดให้เป็นเลขล้วน + อธิบายใหม่ | `RefreshReadout` เปลี่ยนจาก `"{chance}%  --  {ap} AP"` เป็น `"{chance}  --  {ap} AP"` · tooltip การ์ด: "YOU ROLL 1 TO 100 AND HAVE TO ROLL UNDER {n}" · หน้า Help §7/§8 เขียนใหม่ให้ตรงกัน และ `BaseValue`/`ZoneLine` ยังคงเป็นตัวเลขล้วน |
+
+**ตรวจสอบแล้ว (play mode, Core scene)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestPolish.cs` — เพิ่ม §10 (ซุ้มหิน/แบดจ์/Hard = skull, readout ไม่มี `%`, แถบทรัพยากรอยู่กลาง ±40 px, ไอออน‑ข้อความห่าง ≤16 px) และปรับ §3 ให้วัด hover บนปุ่มที่ปลดล็อก + เช็กว่าปุ่มเทาไม่เรืองแสง | **69/69 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` — ปรับ `ReadChance` (ไม่มี `%`) และเพิ่มเช็ก "การ์ด/สกิลเทาจนกว่าจะเลือกตัวละคร", "ปลดล็อกเมื่อเลือก", "เทาอีกครั้งเมื่อเลิกเลือก" | **ALL PASS (216 checks)** |
+
+> **หมายเหตุ:** `MapPanel` ยังเป็น Image สีพื้น (`0.876, 1.0, 0.730`) ตามสภาพ placeholder เดิม — ที่ Risk 80 หมอกแดงกลบจนอ่านง่าย แต่ที่ Risk 0 พื้นจะสว่างมาก ถ้าจะให้ตัวหนังสือ HUD อ่านง่ายทุกสถานะ ควรใส่แผ่นรองหลังหรือภาพพื้นแผนที่จริงต่อไป
+
+---
+
+### 8.21 Addendum รอบ 19 (2026-11-03) — ระบบ Tutorial แยกซีน + ป๊อปอัป NEW GAME
+
+| # | สิ่งที่ขอ | สิ่งที่ทำ |
+|---|---|---|
+| 1 | กด NEW GAME แล้วให้มีป๊อปอัปเด้งตั้งแต่เริ่ม เขียนว่า "Find the crystal and win the game!!" พร้อมปุ่ม view the tutorial | `NewGamePromptView` (โมดัลบนหน้าเมนู) — พาดหัว `FIND THE CRYSTAL AND WIN THE GAME!!`, เนื้อความ 2 บรรทัด, ปุ่ม **START THE RUN** และ **VIEW THE TUTORIAL?**, คลิกฉากหลังเพื่อปิด · `MainMenuController.HandleStart()` เปลี่ยนจากเริ่มเกมตรง ๆ เป็นเปิดป๊อปอัป และป้ายปุ่มหลักเปลี่ยน START → **NEW GAME** |
+| 2 | คลิก tutorial แล้วเริ่มเกมในซีน `Tutorial` แยกจากเกมปกติ | `SceneFlow` แยก `BeginRun()` (รีเซ็ต stat + ลบเซฟ + สุ่มเพลง) ออกมาใช้ร่วมกัน แล้วเพิ่ม `TutorialScene = "Tutorial"` + `NewTutorial()` · สร้าง `Assets/V2/Scenes/Tutorial.unity` โดยคัดลอก `Core.unity` แล้วเติมออบเจกต์ `TutorialDirector` และเพิ่มใน EditorBuildSettings |
+| 3 | สคริปต์สอนแบบ click to continue 26 จังหวะตามข้อความที่กำหนด | `TutorialDirector` ถือสคริปต์ `List<Step>` 26 รายการ (`text`, `prompt`, `target`, `done`, `enter`, `catchTap`, `focus`) — ทุกก้าวเดินหน้าด้วยการคลิก และบางก้าวมี **gate** ที่ต้องทำสิ่งที่สอนก่อน (เลือก Ann, เลือก Easy, เปิด/ปิดเต๋า, คิว Cook, ยืนยัน Cook, จบวัน) · ลำดับ: เป้าหมายเกม → พื้นที่ดันเจี้ยน → กรอบ GOAL → การ์ดตัวละคร → ความถนัดหลัก/รอง (โฟกัสสองจุด) → เลือก Ann → เลือก Easy → AP → ดาบ/readiness → SV → drop → DISPATCH → ลูกเต๋า → แท่ง SV → CONTINUE → Risk → ทรัพยากร → สกิล → เลือก Ann → Cook → เลขคิว → Cook อีกครั้ง → คิวซ้ำได้ → ยืนยัน Cook → จบวัน → ปุ่ม help |
+| 4 | ไฮไลต์พื้นที่เป้าหมายแบบเจาะเป็นรู | `TutorialOverlay` (แคนวาสของตัวเอง `sortingOrder = 600` เหนือ `DiceRollView` 500) วาดแถบมืด 4 แถบ + กรอบเรืองแสง 4 เส้นรอบ "รู" — ไม่ใช้ shader/mask · รองรับหลายเป้าหมายพร้อมกัน (`focusRings` pool) สำหรับก้าวที่ไฮไลต์ความถนัดหลักและรองพร้อมกัน |
+| 5 | ทอยเต๋าให้ออก 10 (SV 55 = Hard Success) | `GatherResolver.ForcedRoll` — ถ้าตั้งไว้ `Roll()` จะคืนค่านั้นหนึ่งครั้งแล้วเคลียร์ตัวเองเป็น −1 · `HardSuccessThreshold` ถูก clamp ที่ 100 · ก้าว DISPATCH ตั้ง `ForcedRoll = TutorialDirector.ScriptedRoll` (10) |
+| 6 | จบแล้วขึ้นป๊อปอัป RETURN TO GAME กลับหน้าเกมหลัก | `TutorialOverlay.ShowFinale()` การ์ดปิดท้าย "THAT IS EVERYTHING YOU NEED TO SURVIVE OUT HERE. GOOD LUCK!" + ปุ่ม **RETURN TO GAME** → `TutorialDirector.Depart()` → `SceneFlow.NewGame()` (เริ่มรันใหม่ที่ Core) |
+
+**ไฟล์ที่เพิ่ม**
+
+| ไฟล์ | หน้าที่ |
+|---|---|
+| `Assets/V2/Scripts/UI/TutorialOverlay.cs` | เรนเดอร์โค้ชมาร์ก: แถบมืด + กรอบเรืองแสง + การ์ดข้อความ + ตัวรับคลิกเต็มจอ (`Catcher`, เปิดเฉพาะก้าวที่ต้อง tap) + การ์ดปิดท้าย · `ShowStep / Retarget / HideStep / ShowFinale / Tap / Hole / IsShowing / TapsSeen` |
+| `Assets/V2/Scripts/UI/TutorialDirector.cs` | สคริปต์ 26 ก้าว, ตัว resolve เป้าหมาย (`GuideCard` ใช้ Rect ของ `Lift`, `HandRow`/`DungeonRow` ใช้ `Union` รวมหลาย Rect, `GuideStats` คืนสอง Rect), gate ต่าง ๆ, `Advance / Pump / Tap / Update`, ระงับเซฟ |
+| `Assets/V2/Scripts/UI/NewGamePromptView.cs` | ป๊อปอัป NEW GAME |
+| `Assets/V2/Scenes/Tutorial.unity` | ซีน tutorial (สำเนา Core + `TutorialDirector`) |
+| `AgentScripts/TestTutorial.cs` | ชุดทดสอบ 20 เช็กที่เดินสคริปต์จนจบ |
+
+**จุดที่พลาดและวิธีแก้**
+
+| อาการ | สาเหตุ | วิธีแก้ |
+|---|---|---|
+| คลิกที่เปิดก้าวหนึ่ง ๆ แล้วก้าวนั้นข้ามไปเลย | คลิกเดียวกันถูกอ่านเป็น tap ของก้าวใหม่ในเฟรมเดียว | เก็บ `tapArmedAt` แล้วกัน tap ในช่วง 0.2 วินาทีแรก |
+| คลิกเมาส์ไม่ติดเลย | โปรเจกต์ใช้ Input System อย่างเดียว `Input.GetMouseButtonDown` ไม่ทำงาน | เปลี่ยนไปอ่าน `Mouse.current.leftButton/rightButton.wasPressedThisFrame` |
+| ชุดทดสอบค้างที่ก้าว CONTINUE ของเต๋า | ทั้งชุดรันในเฟรมเดียว animation ไม่จบ ปุ่มยังไม่โผล่ | เพิ่ม `DiceRollView.RevealImmediately()` ให้ผลออกก่อน แล้วทดสอบสั่ง `onClick` ของปุ่ม CONTINUE ตรง ๆ |
+| เซฟถูกเขียนทับระหว่างเล่น tutorial | `DayManager.EndDay()` เซฟเอง | `SaveSystem.Suspended` — `SaveNow()` คืน false ระหว่าง tutorial, `Depart()`/`OnDestroy()` คืนค่า |
+
+**ตรวจสอบแล้ว (play mode)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestTutorial.cs` (Tutorial scene) | **20/20 ผ่าน** |
+| `AgentScripts/TestPolish.cs` (Core scene) | **69/69 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` (Core scene) | **ALL PASS (216 checks)** |
+
+**ตรวจด้วยตา (game_view):** ป๊อปอัป NEW GAME บนหน้าเมนู, ก้าว 0–4, 6, 9, 10, 12 (เต๋าออก 10 = HARD SUCCESS ที่ SV 55), 13 (แท่ง SV), 14 (CONTINUE), 15 (Risk), 16 (ทรัพยากร), 17 (สกิล), 19 (Cook), 21–22 (เลขคิว 1 → 2 ทางซ้ายของปุ่ม), 23 (ยืนยัน Cook), 24 (จบวัน), การ์ด RETURN TO GAME และการกลับเข้า Core ด้วยรันใหม่ — การ์ดโค้ชไม่ทับคอนโทรลที่ไฮไลต์ในทุกก้าว
+
+> **หมายเหตุ:** `Tutorial.unity` เป็นสำเนาของ `Core.unity` ถ้าแก้ซีนหลักในอนาคตต้องแก้ทั้งสองที่ · ก้าวที่บังคับทอย 10 ตั้งอยู่บนสมมติฐาน Risk 80 (Easy SV 55) ถ้าเริ่มเกมด้วย Risk อื่นหรือแก้ base SV ต้องปรับ `TutorialDirector.ScriptedRoll` หรือข้อความในสคริปต์ตาม
+
+---
+
+### 8.22 Addendum รอบ 20 (2026-11-04) — การ์ดเป้าหมายในซีนเกม, ไฮไลต์ความถนัดแบบเจาะจุด, ข้อความกลางกล่อง, ไอคอนดรอปจาก HUD, โค้ชมาร์กรอทอยเต๋าจบ
+
+| # | สิ่งที่ขอ | สิ่งที่ทำ |
+|---|---|---|
+| 1 | ป๊อปอัปบอก goal ให้เด้งตอนโหลดซีน Core เสร็จ | **ย้ายจากหน้าเมนูมาเป็นในเกม** — `MainMenuController.HandleStart()` เรียก `SceneFlow.NewGame()` ตรง ๆ (ไม่มี prompt บนเมนูแล้ว) · `SceneFlow.NewGame()` ตั้ง `PendingGoalPrompt = true` และ `RunBootstrap.Awake()` (ฝั่ง fresh run) ยกการ์ดขึ้นมาทับแผนที่ที่โหลดเสร็จแล้ว · `NewGamePromptView` ย้ายไปสร้างบน **แคนวาสของตัวเอง `sortingOrder = 700`** (เหนือ tutorial 600 และ dice 500) จึงไม่แพ้ draw order ให้แคนวาสแผนที่ · API ใหม่ `NewGamePromptView.Show(onStart, onTutorial, onClose)` + `Close()`/`TakeDown()` (ปิดแล้ว `SetActive(false)` ก่อน `Destroy` เพื่อไม่ให้คลิกเดียวกันตกใส่การ์ดอีกรอบ) · `NewTutorial()` ล้างธงทิ้งเพราะ tour สอน goal ด้วยตัวเองอยู่แล้ว |
+| 2 | ไฮไลต์ความถนัดให้เป็นแบบเจาะที่ป้ายตัวอักษร | ก้าว "Each agent has their own aptitude" เปลี่ยนเป้าหลักจาก `GuideCard` เป็น `HandRow` (เปิดทั้งมือให้เทียบความถนัดข้ามคนได้) และเหลือ **วงเดียว** รอบ `AptitudeBadge` ของ Ann (`GuideAptitude()`) — ถอด `GuideStats()` ที่เคยรัดสองจุด (ความถนัด + talent) ออก |
+| 3 | ข้อความในกล่อง tutorial ให้จัดกึ่งกลาง | `TutorialOverlay` เปลี่ยน `message.alignment` จาก `TopLeft` เป็น `Top` (กึ่งกลางบน) — prompt ยังกึ่งกลางเหมือนเดิม |
+| 4 | ไอคอน item ในช่อง possible drop ให้ตรงกับ status bar | `StatusBarView.IconFor(InventoryItemType)` คืนสไปรท์ที่ HUD ใช้จริง (wheat / flip_half / planks) · `MapNodeView.SpriteForItem()` ถาม HUD ก่อนเสมอแล้วค่อยตกไปที่ field เดิม/placeholder · `MapNodeView.Config` + `DropIcons` เปิดให้เทสต์ตรวจได้ · กล่อง/กุญแจ (`CorePiece`) ไม่แตะ |
+| 5 | ให้ทอยเต๋าเล่นอนิเมชันจบก่อน แล้วค่อยโชว์ tutorial | `DiceRollView.Settled` (false ตอน `Show`, true ตอน `ApplyFinalState`) · `TutorialDirector.Step.wait` — ก้าวที่ไม่ต้องแสดงจนกว่าเงื่อนไขจะเป็นจริง: `Advance()` จะเรียก `overlay.HideStep()` แล้วปล่อยให้ `Pump()` แสดงการ์ดเองเมื่อ `wait` ผ่าน · ก้าว "Roll a die…" ผูกกับ `DiceSettled` |
+
+**ตรวจสอบแล้ว (play mode)**
+
+| ชุดทดสอบ | ผล |
+|---|---|
+| `AgentScripts/TestTutorial.cs` — เพิ่มเช็ก "การ์ดถูกพักไว้ระหว่างเต๋าหมุน", "การ์ดโผล่หลังเต๋าหยุด", "ก้าวความถนัดเปิดทั้งมือ (>900px)", "ก้าวความถนัดวงเฉพาะป้าย (4 แท่ง)", §6 การ์ดเป้าหมาย (สร้าง/พาดหัว/ปุ่ม/แคนวาส>600/ปิดได้) | **29/29 ผ่าน** |
+| `AgentScripts/TestPolish.cs` — เพิ่มเช็ก "แถว loot ใช้ไอคอนเดียวกับ HUD" (เทียบสไปรท์ทีละช่องกับ `StatusBarView.IconFor`) | **70/70 ผ่าน** |
+| `AgentScripts/TestUiRedesign.cs` | **ALL PASS (216 checks)** |
+
+**ตรวจด้วยตา (game_view):** ก้าวความถนัด (วงเดียวรอบป้าย E, ทั้งมือสว่าง, ข้อความกึ่งกลาง), ก้าวเต๋า (การ์ดมาหลังผลออก 10 = HARD SUCCESS), และ flow จริงจากเมนู: NEW GAME → Core โหลดเสร็จ → การ์ด FIND THE CRYSTAL ลอยเหนือแผนที่ → กด VIEW THE TUTORIAL? → เข้า `Tutorial` ที่ก้าว 0 ทันที

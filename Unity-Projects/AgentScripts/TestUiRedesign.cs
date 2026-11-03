@@ -136,9 +136,13 @@ public static class TestUiRedesign
         Check("cook queues a second round", PendingRounds(flow) == 2 && flow.PendingApCost == 2,
             $"rounds={PendingRounds(flow)} cost={flow.PendingApCost}");
 
-        RightClickButton(skill, "CookButton");
-        Check("right click clears the queue, disarms, keeps the card",
-            PendingRounds(flow) == 0 && flow.Armed == SkillKind.None && roster.SelectedUnit == chef);
+        Canceller().CancelPending();
+        Check("right click cancels the queue, the skill and the card",
+            PendingRounds(flow) == 0 && flow.Armed == SkillKind.None && roster.SelectedCount == 0,
+            $"rounds={PendingRounds(flow)} armed={flow.Armed} sel={roster.SelectedCount}");
+
+        // Cancelling is total now, so the flow needs its card back to continue.
+        ClickCard(roster, chef);
 
         ClickButton(skill, "CookButton");
         ClickButton(skill, "CookButton");
@@ -229,7 +233,7 @@ public static class TestUiRedesign
         CheckPatientComesBackResting();
         Check("confirm button hidden with nothing picked", !action.IsVisible);
 
-        // --- dungeon card readout: colour ramp, pity position, selection pop
+        // --- dungeon card readout: colour ramp, core-drop line, selection pop
         Section("dungeon readout");
         Check("the success value uses a red-to-green ramp",
             MapNodeView.ColorForChance(0).g < 0.4f && MapNodeView.ColorForChance(0).r > 0.8f &&
@@ -243,18 +247,40 @@ public static class TestUiRedesign
         MapNodeView easyCard = sorted[0];
         MapNodeView hardCard = sorted[sorted.Length - 1];
 
+        // A card is only clickable once somebody is holding a sword, so the row
+        // starts grey and the readout work below picks a unit first.
+        Check("dungeon cards are grey until a unit is picked",
+            easyCard.IsLocked && hardCard.IsLocked,
+            $"easy={easyCard.IsLocked} hard={hardCard.IsLocked}");
+        Check("skill buttons are grey until a unit is picked",
+            skill.IsLocked, $"locked={skill.IsLocked}");
+
+        UnitIconView readoutUnit = FirstSelectable(roster);
+        ClickCardView(readoutUnit);
+        Check("picking a unit unlocks the row and the skill column",
+            !easyCard.IsLocked && !hardCard.IsLocked && !skill.IsLocked,
+            $"cards={easyCard.IsLocked} skills={skill.IsLocked}");
+
+        // Risk is subtracted from every cave, so at full Risk all three read 0%
+        // and the colour ramp has nothing to work with. These checks are about
+        // the ramp, so they run on a clear map and put risk back afterwards.
+        var runResources = RunResources.Instance;
+        int riskBeforeRamp = runResources != null ? runResources.Risk : 0;
+        if (runResources != null) runResources.SetRisk(0);
+        GatherMapController.Instance.RefreshReadouts();
+
         Check("a lower success value reads redder than a higher one",
             hardCard.ChanceLabel.color.g < easyCard.ChanceLabel.color.g,
             $"easy={easyCard.ChanceLabel.color} hard={hardCard.ChanceLabel.color}");
 
         var titleRt = (RectTransform)easyCard.transform.Find("Title");
-        var pityRt = (RectTransform)easyCard.transform.Find("Pity");
+        var coreRt = (RectTransform)easyCard.transform.Find("CoreDrop");
         var caveRt = (RectTransform)easyCard.transform.Find("Cave");
-        Check("pity sits under the title, above the cave art",
-            titleRt != null && pityRt != null && caveRt != null &&
-            pityRt.anchoredPosition.y < titleRt.anchoredPosition.y &&
-            pityRt.anchoredPosition.y > caveRt.anchoredPosition.y,
-            $"title={titleRt?.anchoredPosition.y:0} pity={pityRt?.anchoredPosition.y:0} cave={caveRt?.anchoredPosition.y:0}");
+        Check("the core-drop line sits under the title, above the cave art",
+            titleRt != null && coreRt != null && caveRt != null &&
+            coreRt.anchoredPosition.y < titleRt.anchoredPosition.y &&
+            coreRt.anchoredPosition.y > caveRt.anchoredPosition.y,
+            $"title={titleRt?.anchoredPosition.y:0} core={coreRt?.anchoredPosition.y:0} cave={caveRt?.anchoredPosition.y:0}");
 
         float popBefore = hardCard.PopScale;
         ClickThroughRaycast((RectTransform)hardCard.transform);
@@ -279,7 +305,14 @@ public static class TestUiRedesign
         Color baseColour = hardCard.ChanceLabel.color;
         int baseValue = ReadChance(hardCard);
 
-        UnitIconView rampUnit = FirstSelectable(roster);
+        // A *second* unit, not the one already picked: clicking a selected card
+        // would toggle it off and grey the row instead of changing the value.
+        UnitIconView rampUnit = null;
+        foreach (var candidate in roster.Cards)
+        {
+            if (candidate.CanBeSelected && !candidate.IsSelected) { rampUnit = candidate; break; }
+        }
+
         if (rampUnit != null)
         {
             ClickCardView(rampUnit);
@@ -294,19 +327,40 @@ public static class TestUiRedesign
             roster.ClearSelection();
         }
 
+        // Dropping the crew greys the row again - the run cannot pay for a trip -
+        // so the row has to be unlocked before the dissolve click below.
+        Check("dropping the crew greys the row again",
+            hardCard.IsLocked && !hardCard.IsSelected,
+            $"locked={hardCard.IsLocked} selected={hardCard.IsSelected}");
+        if (roster.SelectedCount == 0) ClickCardView(FirstSelectable(roster));
+
         ClickThroughRaycast((RectTransform)hardCard.transform);
         SettlePop(hardCard);
+
+        // The ramp checks above needed a clear map; the rest of the run keeps
+        // whatever risk the save/scene started with.
+        if (runResources != null) runResources.SetRisk(riskBeforeRamp);
+        GatherMapController.Instance.RefreshReadouts();
+
+        // Dropping the crew at the end of the readout section left the row grey;
+        // that is the state the next section starts from.
+        if (roster.SelectedCount > 0) roster.ClearSelection();
 
         Section("dispatch");
         var node = Object.FindAnyObjectByType<MapNodeView>();
         Check("a cave node exists", node != null);
+        Check("the row is grey while nobody is picked", node != null && node.IsLocked);
         if (node != null) node.GetComponent<Button>().onClick.Invoke();
-        Check("still hidden with only a cave selected", !action.IsVisible);
+        Check("still hidden with only a cave selected",
+            !action.IsVisible && GatherMapController.Instance.SelectedNode == null);
 
         UnitIconView first = FirstSelectable(roster);
         Check("a selectable card exists", first != null);
         ClickCardView(first);
         Check("picking a card offers DISPATCH", action.IsVisible && action.CurrentLabel == "DISPATCH");
+
+        // The cost line describes a whole trip, so the cave has to be picked too.
+        if (node != null) ClickThroughRaycast((RectTransform)node.transform);
 
         // The cost line must quote the sword, not just the AP: a trip spends both.
         Check("the dispatch cost line quotes AP plus one sword",
@@ -326,8 +380,16 @@ public static class TestUiRedesign
             action.CurrentIcon != null && action.CurrentIcon == skill.CookIcon,
             action.CurrentIcon != null ? action.CurrentIcon.name : "none");
 
-        RightClickButton(skill, "CookButton");
-        Check("clearing the skill gives the button back", action.CurrentLabel == "DISPATCH");
+        Canceller().CancelPending();
+        Check("right click clears the whole plan and hides the button",
+            !action.IsVisible && roster.SelectedCount == 0 && flow.Armed == SkillKind.None,
+            $"visible={action.IsVisible} sel={roster.SelectedCount} armed={flow.Armed}");
+
+        // Cancelling dropped the card as well, so the trip is re-planned from the
+        // cards: pick one again, then the cave.
+        UnitIconView tripCard = first != null && first.CanBeSelected ? first : FirstSelectable(roster);
+        if (tripCard != null) ClickCardView(tripCard);
+        Check("picking a card again offers DISPATCH", action.IsVisible && action.CurrentLabel == "DISPATCH");
         Check("the sword comes back when the skill is cleared",
             action.CurrentIcon != null && action.CurrentIcon.name == "state_sword",
             action.CurrentIcon != null ? action.CurrentIcon.name : "none");
@@ -340,6 +402,14 @@ public static class TestUiRedesign
         int dispatchAp = roster.SelectedUnit.currentActionPoints;
         int dispatchSwords = roster.SelectedUnit.currentSwords;
         UnitCharacter sent = roster.SelectedUnit;
+
+        // The dice bar is painted from the trip's real success value, and Risk is
+        // taken off every trip. At full Risk all three caves read 0%, so clear it
+        // for this leg - the bands under test are the resolver's, not the fog's.
+        var tripResources = RunResources.Instance;
+        int riskBeforeTrip = tripResources != null ? tripResources.Risk : 0;
+        if (tripResources != null) tripResources.SetRisk(0);
+
         Confirm(action);
         Check("trip resolves instantly, spends AP, clears and logs",
             sent.HasGatheredToday && sent.currentActionPoints < dispatchAp &&
@@ -382,6 +452,8 @@ public static class TestUiRedesign
 
         // The roll can wound or lose the squad, so revive before testing the
         // pick rule itself. HasGatheredToday must survive the revive.
+        if (tripResources != null) tripResources.SetRisk(riskBeforeTrip);
+
         foreach (var unit in UnitManager.Instance.Units) Revive(unit);
         roster.RefreshAvailability();
         Check("a unit that already gathered stays pickable for base work",
@@ -950,7 +1022,7 @@ public static class TestUiRedesign
 
         Check("dungeon card readouts each explain themselves",
             DungeonHintsPresent(),
-            "title / success value / pity / drops are missing a popup");
+            "title / success value / core drop / drops are missing a popup");
 
         var chanceTip = PreviewOfChild(Object.FindObjectsByType<MapNodeView>()[0], "Chance");
         Check("success-value popup quotes the hard-success threshold",
@@ -979,7 +1051,7 @@ public static class TestUiRedesign
                 action.IsVisible && action.CurrentApCost == expected && CostLabelText(action) == $"{expected} AP",
                 $"visible={action.IsVisible} cost={action.CurrentApCost} text='{CostLabelText(action)}' expected={expected}");
 
-            RightClickButton(skill, "CookButton");
+            Canceller()?.CancelPending();
             roster.ClearSelection();
             roster.RefreshAvailability();
         }
@@ -1018,7 +1090,7 @@ public static class TestUiRedesign
         {
             if (!HasChildHint(node, "Title")) return false;
             if (!HasChildHint(node, "Chance")) return false;
-            if (!HasChildHint(node, "Pity")) return false;
+            if (!HasChildHint(node, "CoreDrop")) return false;
             if (!HasChildHint(node, "Drops/Drop0")) return false;
             if (!HasChildHint(node, "Drops/DropLabel0")) return false;
         }
@@ -1161,8 +1233,9 @@ public static class TestUiRedesign
 
         var counter = overlay != null ? overlay.Find("HelpPanel/Card/SectionCounter") : null;
         var counterText = counter != null ? counter.GetComponent<TMPro.TextMeshProUGUI>() : null;
-        Check("the help page numbers its sections",
-            counterText != null && counterText.text.Contains("1 /"), counterText != null ? counterText.text : "none");
+                Check("the help page numbers its sections",
+            counterText != null && System.Text.RegularExpressions.Regex.IsMatch(counterText.text, @"^\d+ / \d+$"),
+            counterText != null ? counterText.text : "none");
 
         // The rail switches the pane; pick the Skills section and read the copy.
         if (rail != null)
@@ -1208,17 +1281,20 @@ public static class TestUiRedesign
         return value.Length > 90 ? value.Substring(0, 90) : value;
     }
 
-    /// <summary>Hard guarantees on the 2nd Hard Success, Normal on the 3rd.</summary>
+    /// <summary>Core items are zone-bound: Normal hands over the key, Hard the box, on a Hard Success.</summary>
     static void CheckPity()
     {
         var gather = GatherDispatchController.Instance;
-        Check("pity thresholds are Hard 2 / Normal 3",
-            gather.PityThreshold(GatherZone.Hard) == 2 && gather.PityThreshold(GatherZone.Normal) == 3);
+        Check("core items are bound to a cave, not rolled",
+            GatherDispatchController.CoreItemForZone(GatherZone.Normal) == CoreItemKind.B &&
+            GatherDispatchController.CoreItemForZone(GatherZone.Hard) == CoreItemKind.A &&
+            GatherDispatchController.CoreItemForZone(GatherZone.Easy) == null,
+            "Normal=Key Hard=Box Easy=none");
 
-        gather.RestorePity(2, 1);
-        Check("pity counters restore from a save",
-            gather.PityCounter(GatherZone.Normal) == 2 && gather.PityCounter(GatherZone.Hard) == 1);
-        gather.RestorePity(0, 0);
+        Check("the pity fields are gone",
+            typeof(GatherZoneConfig).GetField("coreItemPityTrips") == null &&
+            typeof(GatherDispatchController).GetMethod("PityCounter") == null,
+            "removed");
     }
 
     /// <summary>Talent effects: doubled output and the Heal blessing.</summary>
@@ -1239,9 +1315,9 @@ public static class TestUiRedesign
         Check("a unit without the talent cooks the base amount",
             baseWork.CookFoodPerRound(ByName("Ann")) == 1);
 
-        Check("buff potion costs 2 AP + 4 materials",
+        Check("buff potion costs 2 AP + 5 materials",
             baseWork.WorkshopBaseApCost(WorkshopMode.BuffPotion) == 2 &&
-            baseWork.WorkshopBaseMaterialCost(WorkshopMode.BuffPotion) == 4);
+            baseWork.WorkshopBaseMaterialCost(WorkshopMode.BuffPotion) == 5);
 
         int before = RunResources.Instance.PartySuccessBonus;
         RunResources.Instance.AddPartySuccessBonus(baseWork.BuffPotionBonusPerRound);
@@ -1268,7 +1344,11 @@ public static class TestUiRedesign
         Check("arming a skill clears the dungeon selection", map.SelectedNode == null);
         Check("confirm goes back to the skill", action.CurrentLabel == "COOK");
 
-        RightClickButton(skill, "CookButton");
+        Canceller()?.CancelPending();
+
+        // Cancelling drops the crew too, so the row is grey until somebody is
+        // picked again - the cave click below needs that.
+        ClickCard(roster, ByName("Cia"));
         ClickThroughRaycast((RectTransform)node.transform);
         Check("clicking a dungeon drops the armed skill", map.SelectedNode == node && !flow.IsSkillActive);
 
@@ -1486,7 +1566,7 @@ public static class TestUiRedesign
             var hidden = new List<string>();
             foreach (var node in dungeonNodes)
             {
-                foreach (string child in new[] { "Title", "Pity", "Chance", "Drops" })
+                foreach (string child in new[] { "Title", "CoreDrop", "Chance", "Drops" })
                 {
                     var label = ((RectTransform)node.transform).Find(child) as RectTransform;
                     if (label == null) continue;
@@ -2139,11 +2219,17 @@ public static class TestUiRedesign
 
         var result = Object.FindAnyObjectByType<RunResultView>(FindObjectsInactive.Include);
         var group = result != null ? result.GetComponent<CanvasGroup>() : null;
-        if (group == null) return;
+        if (group != null)
+        {
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+        }
 
-        group.alpha = 0f;
-        group.blocksRaycasts = false;
-        group.interactable = false;
+        // A win also stops the music (PlayWin cuts it and stops the loop), and
+        // the later audio checks would then hear silence that has nothing to do
+        // with the thing under test.
+        AudioDirector.Instance?.BeginRun(AudioDirector.PendingRunTrack);
     }
 
     static void ResetUnits(UnitRosterView roster)
@@ -2293,29 +2379,21 @@ public static class TestUiRedesign
         if (button != null) button.onClick.Invoke();
     }
 
-    static void RightClickButton(SkillTriggerPanel panel, string childName)
-    {
-        var button = ButtonFor(panel, childName);
-        if (button == null) return;
-
-        ExecuteEvents.Execute(button.gameObject,
-            new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Right },
-            ExecuteEvents.pointerClickHandler);
-    }
-
+    /// <summary>The run-wide right click: one gesture that drops every pending pick.</summary>
+    static RightClickCancel Canceller() => Object.FindAnyObjectByType<RightClickCancel>();
     static void Confirm(DispatchActionPanel panel)
     {
         var button = panel.GetComponent<Button>();
         if (button != null) button.onClick.Invoke();
     }
 
-    /// <summary>Parses the leading number out of a dungeon card's "NN%  --  N AP" readout.</summary>
+    /// <summary>Parses the leading number out of a dungeon card's "NN  --  N AP" readout.</summary>
     static int ReadChance(MapNodeView node)
     {
         if (node == null || node.ChanceLabel == null) return -1;
 
         string text = node.ChanceLabel.text ?? "";
-        int end = text.IndexOf('%');
+        int end = text.IndexOf(' ');
         if (end <= 0) return -1;
 
         return int.TryParse(text.Substring(0, end), out int value) ? value : -1;

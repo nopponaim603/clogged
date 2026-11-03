@@ -32,7 +32,7 @@ public class BaseWorkController : MonoBehaviour
     [Header("Workshop — Buff Potion")]
     [Tooltip("Brews a potion that gives the whole party a permanent success-value bonus (stacks).")]
     [SerializeField] private int buffPotionApCost = 2;
-    [SerializeField] private int buffPotionMaterialsCost = 4;
+    [SerializeField] private int buffPotionMaterialsCost = 5;
     [SerializeField] private int buffPotionSuccessBonus = 10;
 
     private void Awake()

@@ -10,22 +10,55 @@ public static class SceneFlow
 {
     public const string MainMenuScene = "MainMenu";
     public const string GameScene = "Core";
+    public const string TutorialScene = "Tutorial";
+
+    /// <summary>
+    /// Set by <see cref="NewGame"/>: the game scene raises the goal card once it
+    /// has loaded, over the map the run actually starts on. The menu does not
+    /// show it any more - a card that appears before the scene is loaded is read
+    /// as a menu, not as a goal.
+    /// </summary>
+    public static bool PendingGoalPrompt { get; set; }
 
     /// <summary>Fresh run: drop the save and every static tally, then load the game.</summary>
     public static void NewGame()
     {
+        BeginRun();
+        PendingGoalPrompt = true;
+
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(GameScene);
+    }
+
+    /// <summary>
+    /// The tour: the same fresh-run reset, loaded into its own scene. It is a
+    /// separate scene so nothing in it can touch a real save, and so the tutorial
+    /// can be opened straight from the editor without playing the menu first.
+    /// </summary>
+    public static void NewTutorial()
+    {
+        BeginRun();
+
+        // The tour teaches the goal itself, one card at a time.
+        PendingGoalPrompt = false;
+
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(TutorialScene);
+    }
+
+    /// <summary>The reset every "start playing" path shares.</summary>
+    private static void BeginRun()
+    {
         RunStats.Reset();
         RunLog.Clear();
         SaveSystem.Delete();
+        SaveSystem.ClearPendingLoad();
 
         // The run track is rolled here, once, and never changed again until the
         // run ends - the director survives the scene load so the music starts
         // without a restart.
         AudioDirector.PendingRunTrack = AudioDirector.RollRunTrack();
         AudioDirector.EnsureExists().BeginRun(AudioDirector.PendingRunTrack);
-
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(GameScene);
     }
 
     /// <summary>

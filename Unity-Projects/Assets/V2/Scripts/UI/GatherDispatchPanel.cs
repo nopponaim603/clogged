@@ -88,8 +88,15 @@ public class GatherDispatchPanel : MonoBehaviour
 
     private void OnDispatchClicked()
     {
-        // A pending Cook / Heal / Craft owns the button; this flow stays quiet.
-        if (IsSkillActive()) return;
+        // The button belongs to whoever painted it. A pending Cook / Heal / Craft
+        // stamps itself as the owner, and so does this flow when it paints a trip -
+        // so the two handlers can never both act on one click. Reading
+        // IsSkillActive() here is not enough: the skill handler runs first and
+        // has already disarmed itself by the time this handler is invoked.
+        bool ownedByDispatch = actionPanel != null
+            ? actionPanel.Owner == DispatchActionPanel.ConfirmOwner.Dispatch
+            : !IsSkillActive();
+        if (!ownedByDispatch) return;
 
         var map = GatherMapController.Instance;
         if (map == null || map.SelectedNode == null)

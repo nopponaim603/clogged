@@ -14,6 +14,20 @@ using UnityEngine.UI;
 /// </summary>
 public class DispatchActionPanel : MonoBehaviour
 {
+    /// <summary>
+    /// Whose plan the visible button belongs to. The gather flow and the skill
+    /// flow both listen to <see cref="Clicked"/>, and the skill handler clears
+    /// its state inside that same click - so "is a skill active?" is already
+    /// false by the time the gather handler runs. The owner is stamped when the
+    /// button is painted and is the only thing a handler may act on.
+    /// </summary>
+    public enum ConfirmOwner
+    {
+        None,
+        Dispatch,
+        Skill
+    }
+
     [Header("Refs")]
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button actionButton;
@@ -34,6 +48,9 @@ public class DispatchActionPanel : MonoBehaviour
 
     public bool IsVisible => panelRoot != null && panelRoot.activeSelf;
     public string CurrentLabel { get; private set; } = "";
+
+    /// <summary>Which flow painted the current action. <see cref="ConfirmOwner.None"/> while hidden.</summary>
+    public ConfirmOwner Owner { get; private set; } = ConfirmOwner.None;
 
     /// <summary>AP the pending action will spend, as painted on the cost line.</summary>
     public int CurrentApCost { get; private set; }
@@ -91,15 +108,16 @@ public class DispatchActionPanel : MonoBehaviour
 
     /// <summary>Shows the panel for a gather trip.</summary>
     public void ShowDispatch(bool interactable = true, int apCost = 0, string tooltip = null, string costText = null) =>
-        Show(dispatchLabel, dispatchIcon, interactable, apCost, tooltip, costText);
+        Show(dispatchLabel, dispatchIcon, interactable, apCost, tooltip, costText, ConfirmOwner.Dispatch);
 
     /// <summary>Shows the panel with an action-specific label, its skill icon and the AP it will spend.</summary>
     public void Show(string label, Sprite icon, bool interactable = true, int apCost = 0, string tooltip = null,
-        string costText = null)
+        string costText = null, ConfirmOwner owner = ConfirmOwner.Skill)
     {
         CurrentLabel = label;
         CurrentTooltip = tooltip ?? "";
         CurrentApCost = Mathf.Max(0, apCost);
+        Owner = owner;
 
         if (actionLabel != null) actionLabel.text = label;
         if (actionIcon != null)
@@ -131,6 +149,7 @@ public class DispatchActionPanel : MonoBehaviour
         CurrentLabel = "";
         CurrentTooltip = "";
         CurrentApCost = 0;
+        Owner = ConfirmOwner.None;
         SetCostText(0);
 
         if (hideWhenIdle && panelRoot != null) panelRoot.SetActive(false);

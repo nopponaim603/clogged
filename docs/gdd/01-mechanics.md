@@ -113,16 +113,16 @@
 กฎ:
 - **ทุกคนที่ไปจ่าย AP เต็มจำนวน** ของถ้ำ (ไปคู่ไม่หารกัน)
 - ยูนิตออกสำรวจได้ **1 ครั้ง/วัน** เพราะมี **Sword 1 เล่ม/วัน** (ใช้แล้วจางลง รีเฟรชพร้อม AP) — AP ที่เหลือใช้ทำงานในฐานได้
-- การ์ดถ้ำแสดง **โอกาส realtime** (SV จริงของทีมเมื่อเลือกถ้ำ + ยูนิตแล้ว) **เป็นตัวเลขพร้อมสี** (เขียว = โอกาสสูง → แดง = โอกาสต่ำ), ของที่ดรอป และ **pity** ของ Core Item (อยู่ใต้ชื่อถ้ำ)
+- การ์ดถ้ำแสดง **โอกาส realtime** (SV จริงของทีมเมื่อเลือกถ้ำ + ยูนิตแล้ว) **เป็นตัวเลขล้วน ไม่มี `%`** (เช่น `65  --  1 AP`) พร้อมสี เขียว = โอกาสสูง → แดง = โอกาสต่ำ · ผู้เล่น **ทอย 1–100 แล้วต้องทอยให้ได้ต่ำกว่าค่านี้** · ของที่ดรอป และ **ชิ้น Core Item ที่ถ้ำนั้นให้** (ไอคอนกุญแจ/กล่องปลายแถวของที่ดรอป — ดู §7)
 - เลือกถ้ำกับเลือกสกิลเป็นแผนที่ตัดกัน — เปิดสกิลจะยกเลิกถ้ำที่เลือก และคลิกถ้ำจะยกเลิกสกิล
 
 ### 4.2 ระดับถ้ำ
 
-| ระดับ | สีบนแมป | AP ต่อคน | โอกาสพื้นฐาน | ของหลัก | Bonus (Hard Success สุ่ม 1 อย่าง) |
-|---|---|---|---|---|---|
-| **Easy** | เขียว | 1 | 80 | Cooking Material ×2 | Cooking Material ×2 / Medicine ×1 |
-| **Normal** | เหลือง | 2 | 55 | Medicine ×1 | Medicine ×1 / Cooking Material ×1 |
-| **Hard** | แดง | 3 | 30 | Materials ×2 | Materials ×2 / Medicine ×1 |
+| ระดับ | สีบนแมป | AP ต่อคน | โอกาสพื้นฐาน | **Handicap** | ของหลัก | Bonus (Hard Success สุ่ม 1 อย่าง) |
+|---|---|---|---|---|---|---|
+| **Easy** | เขียว | 1 | 80 | 30 | Cooking Material ×2 | Cooking Material ×2 / Medicine ×1 |
+| **Normal** | เหลือง | 2 | 55 | 20 | Medicine ×1 | Medicine ×1 / Cooking Material ×1 |
+| **Hard** | แดง | 3 | 30 | 0 | Materials ×2 | Materials ×2 / Medicine ×1 |
 
 > ถ้ำ Hard ใช้ 3 AP = AP ทั้งวันของยูนิตที่ไม่หิว — ยูนิตที่หิวแม้แต่ 1 stack ไป Hard ไม่ได้
 
@@ -140,12 +140,24 @@ Success Value = โอกาสพื้นฐานของถ้ำ
               − 10  ถ้ามีคนในทีมมี trait เสีย                (นับครั้งเดียว)
               + 10  ต่อคนที่มีบัพ Blessed
               + 10 × จำนวน stack ของ Buff Potion (ทั้งทีม)
+              − Risk  +  Handicap ของถ้ำนั้น        (ผลรวมไม่ต่ำกว่า 0)
 ```
 
 - **ไม่มีโทษ "ถ้ำ Hard คนเดียว" แล้ว** (ตัด −20 ออก)
 - ค่าลบคิด **ต่อคน** ไม่ใช่ครั้งเดียว
 - Blessed มาจาก talent `Heal`ของ Ann และหมดหลังลงดันครั้งถัดไป
 - Buff Potion เป็นบัพถาวรของทั้ง run สะสมได้ (ไม่รีเซ็ตข้ามวัน)
+
+#### Risk (หมอกแดง)
+
+| หัวข้อ | สเปก |
+|---|---|
+| ค่าเริ่มต้น | **80** (`RunResources.MaxRisk`) ตอนเริ่ม run ใหม่, floor 0 |
+| Handicap รายถ้ำ | Easy **30** / Normal **20** / Hard **0** (`GatherResolver.ZoneHandicap`) |
+| โทษที่เกิดขึ้น | `−Risk + Handicap` ไม่ต่ำกว่า 0 → Easy/Normal จะหลุดโทษก่อน Hard · เป็นค่าลดหย่อนคงที่ ไม่ใช่เพดาน จึงไม่มีทางดัน SV เกินค่าพื้นฐานของถ้ำ |
+| ผล | หักจาก SV ของทริปนั้นตรง ๆ และเป็นความหนาของหมอกบนแผนที่ + ระดับในหลอด RISK ข้างถ้ำ (ค่าเดียวกันหมด ไม่มีสไลเดอร์แยก) |
+| ลดได้อย่างไร | เคลียร์ถ้ำสำเร็จเท่านั้น: Easy **−5**, Normal **−10**, Hard **−15** (Failure/Fumble ไม่ลด) |
+| ตัวอย่าง SV | Risk 80 → Easy 30 / Normal −5 (แสดง 0%) / Hard −50 (0%) · Risk 40 → **70 / 35 / 0** · Risk 30 → **80** / 45 / 0 (Easy ฟรี) · Risk 20 → 80 / **55** / 10 · Risk 0 → 80 / 55 / 30 |
 
 #### ตารางยูนิต
 
@@ -154,7 +166,7 @@ Success Value = โอกาสพื้นฐานของถ้ำ
 | **Ann** | Easy | **Heal** | คนที่ถูก Ann รักษาได้ **Blessed** (+10 SV ครั้งถัดไป) |
 | **Boon** | Hard | **Crafting** | ยาที่ craft ได้ **×2** |
 | **Cia** | Normal | **Cooking** | อาหารที่ได้ **×2** |
-| **Dan** | Hard | **Exploring** | ไอเทมจากดันเจี้ยน **×2** (ยกเว้น Core Item) + Core Item chance **+25%** |
+| **Dan** | Hard | **Exploring** | ไอเทมจากดันเจี้ยน **×2** (ยกเว้น Core Item) |
 
 
 ### 4.4 การทอย 1D100 (roll-under) และระดับผล
@@ -206,7 +218,7 @@ Hard Success = ⌊SV ÷ 3⌋ · Regular = SV − Hard Success · Fumble ทอ�
 | **Cook** ทำอาหาร | 1 AP + 1 Cooking Material | +1 Food (**+2** ถ้ามี talent Cooking) | เลือกหลายรอบได้ |
 | **Heal** รักษา | 1 AP + 1 Medicine **หรือ** **3 AP** ถ้าไม่มียา | ผู้ป่วย Hurt → Ready (**+ Blessed** ถ้าผู้รักษามี talent Heal) | ใช้ยาอัตโนมัติถ้ามีในคลัง; รักษาตัวเองไม่ได้; **ถ้าผู้ป่วย AP เหลือ 0 จะกลับเป็น Resting ไม่ใช่ Ready** |
 | **Craft** — โหมด Medicine | 1 AP + 2 Materials | +1 Medicine (**×2** ถ้ามี talent Crafting) | เลือกหลายรอบได้ |
-| **Craft** — โหมด Buff Potion | 2 AP + 4 Materials | +10 Success Value ให้ทั้งทีมถาวร (สะสมได้) | สลับโหมดด้วยปุ่มข้างปุ่ม CRAFT |
+| **Craft** — โหมด Buff Potion | 2 AP + 5 Materials | +10 Success Value ให้ทั้งทีมถาวร (สะสมได้) | สลับโหมดด้วยปุ่มข้างปุ่ม CRAFT |
 
 > ทุกต้นทุน AP บวก Starvation stack ของผู้ทำด้วย (เช่น คนหิว 1 stack ทำอาหารรอบละ 2 AP)
 
@@ -230,8 +242,10 @@ Hard Success = ⌊SV ÷ 3⌋ · Regular = SV − Hard Success · Fumble ทอ�
 
 ```mermaid
 flowchart LR
-    L[Missing A / B] -->|Hard Success + roll| D[ชิ้นที่ขาด 1 ชิ้น]
-    D -->|ได้ครบ A + B| C[Obtained → ชนะทันที]
+    L[Normal Hard Success] -->|การันตี| K[KEY]
+    L2[Hard Hard Success] -->|การันตี| B[BOX]
+    K -->|ได้ครบ KEY + BOX| C[Obtained → ชนะทันที]
+    B --> C
 ```
 
 | สถานะ | ข้อความบน HUD |
@@ -239,18 +253,19 @@ flowchart LR
 | Locked | `BOX` / `KEY` (ยังไม่ได้ชิ้นนั้น) |
 | Obtained | ได้ชิ้นนั้นแล้ว (ไอคอนเปลี่ยนทันที) |
 
-**อัตราดรอป** (`coreItemChancePercent`) — ทอยเฉพาะ Hard Success, ทอยแยกต่อชิ้นที่ยังขาด
+**การดรอป: ผูกกับถ้ำ ไม่ใช่ทอย** (`GatherDispatchController.CoreItemForZone`) — Hard Success ของถ้ำไหนให้ชิ้นของถ้ำนั้น การันตี 100% ไม่มีตัวนับ pity และไม่มีอัตราต่อชิ้นแล้ว
 
-| ระดับ | โอกาส/ชิ้น | Pity (Hard Success ติดกันที่ไม่ดรอป) |
-|---|---|---|
-| Easy | 0% | — |
-| Normal | 25% | ครบ **3** ครั้ง → ครั้งถัดไปการันตี |
-| Hard | 50% | ครบ **2** ครั้ง → ครั้งถัดไปการันตี |
+| ระดับ | ชิ้นที่ได้จาก Hard Success |
+|---|---|
+| Easy | — (ไม่มี) |
+| Normal | **KEY** |
+| Hard | **BOX** |
 
-- Pity การันตี = สุ่ม **1 ชิ้นจากชิ้นที่ยังขาด** (กันไม่ได้ทั้งสองชิ้นในครั้งเดียว)
-- ดรอปสำเร็จ (ทั้ง RNG ปกติและการันตี) → **รีเซ็ตตัวนับของโซนนั้นเป็น 0**
-- Talent `Exploring` (Dan) อยู่ในทีม → **+25%** ต่อโอกาสของโซนนั้น (Normal 50% · Hard 75%)
-- Core Item **ไม่ถูกคูณ ×2** จาก Exploring (ไอเทมปกติเท่านั้นที่คูณ)
+- Regular Success / Failure / Fumble **ไม่ดรอป** Core Item
+- ถ้ำที่ชิ้นนั้นถูกเก็บไปแล้ว = ไม่มีอะไรดรอปเพิ่มจากถ้ำนั้น
+- **Jackpot** — ถ้า SV ของทริป **≥ 80** และทอยได้ **1** พอดี: รับ **ชิ้นที่ยังขาด** เพิ่มอีกชิ้นจากที่ถ้ำให้ (ถ้ายังขาดทั้งคู่ = ได้ทั้ง KEY และ BOX ในครั้งเดียว) · ที่ SV ต่ำกว่า 80 ไม่มี jackpot
+- Talent `Exploring` (Dan) ไม่มีผลกับ Core Item แล้ว (คูณ ×2 เฉพาะไอเทมปกติ)
+- Core Item **ไม่ถูกคูณ ×2** จาก Exploring
 
 ---
 
@@ -288,6 +303,8 @@ flowchart LR
 | ต้นทุนให้อาหาร | 1 Food | `StarvationController.foodCostPerFeed` |
 | จำนวนถ้ำต่อระดับ | 1 (หน้าดันเจี้ยนตายตัว Easy/Normal/Hard) | `GatherMapController` (layout 3 คอลัมน์) |
 | config ถ้ำ (AP, โอกาส, loot) | ตาม §4.2 | `GatherZoneDatabase.zones` (ว่าง = ใช้ค่า default ในโค้ด) |
+| Risk ของ run | เริ่ม 80 · floor 0 | `RunResources.risk` / `MaxRisk` |
+| Handicap รายถ้ำ (30/20/0) และส่วน Risk ที่ลดเมื่อเคลียร์ (−5/−10/−15) | ตาม §4.3 | **hard-coded** ใน `GatherResolver.ZoneHandicap` / `RiskReduction` |
 | roster / AP สูงสุด / aptitude | ตาม §2.1 | `UnitManager.units` (ว่าง = ใช้ค่า default ในโค้ด) |
 | ค่าโบนัสในสูตร SV (+25 ถนัด / +25 ส่งคู่ / −10 ต่อระดับที่ห่าง / ±10 trait / +10 Blessed), ช่วง Fumble, โอกาสได้ trait, starvation สูงสุด 3 | ตาม §4 / §6 | **hard-coded** ใน `GatherResolver`, `GatherDispatchController`, `UnitCharacter` |
 
@@ -308,7 +325,7 @@ flowchart LR
 
 | รายงาน | สิ่งที่ทดสอบ | ผลสรุป |
 |---|---|---|
-| [gather-balance-simulation.md](../../Unity-Projects/Assets/V2/test/gather-balance-simulation.md) | HS 1/2·1/3 × Core 25/50·5/15 (baseSV 80/55/30) | HS divisor เป็นคันเร่งที่แรงกว่า core chance |
+| [gather-balance-simulation.md](../../Unity-Projects/Assets/V2/test/gather-balance-simulation.md) | HS 1/2·1/3 × Core 25/50·5/15 (baseSV 80/55/30) — *แบบจำลองก่อนเปลี่ยนเป็น Core Item ผูกถ้ำ* | HS divisor เป็นคันเร่งที่แรงกว่า core chance |
 | [gather-balance-basedsv-matrix.md](../../Unity-Projects/Assets/V2/test/gather-balance-basedsv-matrix.md) | **+ มิติ baseSV 4 ชุด** (80/55/30, 70/45/25, 65/40/20, 50/30/10) · 16 กติกา × 10 ซ้ำ × 3 policy × 10,000 เกม = 4.8 ล้านเกม | **คง 80/55/30 ไว้** หรือขยับลงไม่เกิน `70/45/25` |
 
 **เส้นตายสองเส้นที่ต้องจำ** (พิสูจน์ด้วยการจำลอง 4.8 ล้านเกม)
@@ -321,6 +338,17 @@ flowchart LR
 ถ้าจะปรับความยาวเกม ให้ปรับ **HS divisor หรือ Core chance** (§4.4 / §7) ก่อนเสมอ — HS divisor ให้ผลสม่ำเสมอ ~17–20 pp
 ไม่ว่า base จะเป็นเท่าไร ส่วนการลด base ลามไปถึงเศรษฐกิจอาหาร: Easy คือถ้ำอาหาร ถ้า `base_Easy` ต่ำกว่า 65
 ทริปหาอาหารของ Boon/Dan จะเหลือ SV 45 (fail 50%) → cooks/run พุ่ง 2.83 → 4.60–8.24 → AP หายจากถ้ำจริง
+
+## 11. Onboarding — NEW GAME prompt + Tutorial
+
+| ส่วน | รายละเอียด |
+|---|---|
+| จุดเข้า | ปุ่ม **NEW GAME** บนหน้าเมนูเริ่มรันใหม่ทันที การ์ดเป้าหมาย *FIND THE CRYSTAL AND WIN THE GAME!!* จะลอยขึ้นมาเอง **เมื่อโหลดซีนเกมเสร็จ** มีสองทาง: **START THE RUN** (ปิดการ์ดแล้วเล่นต่อ) และ **VIEW THE TUTORIAL?** (เข้าโหมดสอน) |
+| ซีน | tutorial อยู่ในซีน `Tutorial` แยกจาก `Core` แต่รันกติกาเกมจริงทั้งหมด — ไม่มีกฎพิเศษ ไม่มีของแถม |
+| รูปแบบ | click to continue 26 จังหวะ · พื้นที่เป้าหมายถูกเจาะเป็นรูพร้อมกรอบเรืองแสง ผู้เล่นต้องทำสิ่งที่สอนก่อนจึงไปต่อได้ในบางจังหวะ (เลือกตัวละคร/ถ้ำ/สกิล/ยืนยัน/จบวัน) · จังหวะทอยเต๋าจะ **รออนิเมชันทอยจบก่อน** แล้วการ์ดจึงขึ้นมาอธิบายผล |
+| เนื้อหา | เป้าหมายเกม → ที่อยู่ของคริสตัล (KEY + BOX) → การเลือกตัวแทนและเพดาน 2 คน → ความถนัดหลัก/รองและโทษของการจับผิดงาน → เลือก Ann → เลือก Easy → AP → ดาบ/readiness → SV → drop → DISPATCH → ทอยเต๋า (บังคับออก 10 = Hard Success ที่ Easy SV 55) → Risk และวิธีลด → ทรัพยากร/ความหิว → สกิล Cook และการคิวหลายรอบ → จบวัน → ปุ่ม help |
+| บทสรุป | การ์ด *RETURN TO GAME* โหลดผู้เล่นกลับเข้า `Core` แบบเริ่มรันใหม่ |
+| เซฟ | ระหว่าง tutorial ระบบเซฟถูกระงับ (`SaveSystem.Suspended`) และ `Depart()` ล้างเซฟเดิมก่อนเริ่มรันใหม่ |
 
 ## Related Documents
 - [Game Concept](00-concept.md)

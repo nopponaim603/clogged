@@ -21,6 +21,9 @@ public class OptionsPanelView : MonoBehaviour
     private const string ResolutionKey = "clogged.resolution";
     private const string FullscreenKey = "clogged.fullscreen";
 
+    /// <summary>Row the resolution field sits on; the dropdown hangs off its bottom edge.</summary>
+    private const float ResolutionRowY = 130f;
+
     private readonly List<Vector2Int> resolutions = new List<Vector2Int>();
     private readonly List<Button> resolutionRows = new List<Button>();
     private readonly List<AudioFader> faders = new List<AudioFader>();
@@ -83,22 +86,23 @@ public class OptionsPanelView : MonoBehaviour
         outline.useGraphicAlpha = false;
 
         var heading = UiFactory.CreateText("Heading", card.transform, "OPTIONS", 44f, UiFactory.Accent);
-        UiFactory.Center(heading.rectTransform, new Vector2(0f, 190f), new Vector2(700f, 60f));
+        UiFactory.Center(heading.rectTransform, new Vector2(0f, 200f), new Vector2(700f, 60f));
 
-        BuildRowLabel(card.transform, "RESOLUTION", 118f);
-        BuildResolutionField(card.transform, 118f);
+        BuildRowLabel(card.transform, "RESOLUTION", ResolutionRowY);
+        BuildResolutionField(card.transform, ResolutionRowY);
 
-        BuildRowLabel(card.transform, "DISPLAY", 48f);
-        windowedButton = BuildChoiceButton(card.transform, "WindowedButton", "WINDOW", -10f, 48f, 160f,
+        BuildRowLabel(card.transform, "DISPLAY", 66f);
+        windowedButton = BuildChoiceButton(card.transform, "WindowedButton", "WINDOW", -10f, 66f, 160f,
             () => SetFullscreen(false));
-        fullscreenButton = BuildChoiceButton(card.transform, "FullscreenButton", "FULLSCREEN", 185f, 48f, 200f,
+        fullscreenButton = BuildChoiceButton(card.transform, "FullscreenButton", "FULLSCREEN", 185f, 66f, 200f,
             () => SetFullscreen(true));
 
         // Three faders, one per mixer group. Kept on their own rows so the value
-        // readout of one never sits under the slider of another.
-        BuildFader(card.transform, "Master", AudioDirector.MasterVolumeKey, -24f);
-        BuildFader(card.transform, "Music", AudioDirector.MusicVolumeKey, -84f);
-        BuildFader(card.transform, "Sfx", AudioDirector.SfxVolumeKey, -144f);
+        // readout of one never sits under the slider of another. That is the whole
+        // page now: the red fog has no control, because Risk drives it.
+        BuildFader(card.transform, "Master", AudioDirector.MasterVolumeKey, 4f);
+        BuildFader(card.transform, "Music", AudioDirector.MusicVolumeKey, -50f);
+        BuildFader(card.transform, "Sfx", AudioDirector.SfxVolumeKey, -104f);
 
         BuildFooter(card.transform, primaryLabel, primaryAction, secondaryLabel, secondaryAction);
 
@@ -110,7 +114,7 @@ public class OptionsPanelView : MonoBehaviour
     private static void BuildFooter(Transform card, string primaryLabel, Action primaryAction,
         string secondaryLabel, Action secondaryAction)
     {
-        const float y = -206f;
+        const float y = -204f;
         var size = new Vector2(300f, 56f);
 
         if (string.IsNullOrEmpty(secondaryLabel))
@@ -206,8 +210,8 @@ public class OptionsPanelView : MonoBehaviour
         resolutionCatcher = catcher.gameObject;
 
         var list = UiFactory.CreateImage("ResolutionList", card, UiFactory.Panel);
-        UiFactory.Center((RectTransform)list.transform, new Vector2(110f, 94f - listHeight * 0.5f),
-            new Vector2(listWidth, listHeight));
+        UiFactory.Center((RectTransform)list.transform,
+            new Vector2(110f, ResolutionRowY - 24f - listHeight * 0.5f), new Vector2(listWidth, listHeight));
         var listOutline = list.gameObject.AddComponent<Outline>();
         listOutline.effectColor = UiFactory.Border;
         listOutline.effectDistance = new Vector2(2f, -2f);

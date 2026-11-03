@@ -28,7 +28,19 @@ public class AudioDirector : MonoBehaviour
     /// <summary>Shortest gap between two refused-click stings.</summary>
     private const float ErrorRepeatGuard = 0.2f;
 
+    /// <summary>
+    /// Hover ticks fire as the pointer crosses a row of controls, so they are
+    /// both quieter than a click and guarded: without the floor, sweeping the
+    /// mouse over the skill column turns into a rattle.
+    /// </summary>
+    private const float HoverVolume = 0.28f;
+    private const float HoverRepeatGuard = 0.05f;
+
     private float lastErrorTime = -10f;
+    private float lastHoverTime = -10f;
+
+    /// <summary>How many hover ticks have played, so tests can see the cue wired without hearing it.</summary>
+    public int HoverCount { get; private set; }
 
     public static AudioDirector Instance { get; private set; }
 
@@ -216,6 +228,23 @@ public class AudioDirector : MonoBehaviour
     public void ResetErrorThrottle() => lastErrorTime = -10f;
 
     /// <summary>
+    /// The pointer just entered something clickable. Quiet and throttled on
+    /// purpose: it is a "yes, this one" tick, not a press.
+    /// </summary>
+    public void PlayHover()
+    {
+        if (library == null) return;
+        if (Time.unscaledTime - lastHoverTime < HoverRepeatGuard) return;
+
+        lastHoverTime = Time.unscaledTime;
+        HoverCount++;
+        PlaySfx(library.Hover, HoverVolume);
+    }
+
+    /// <summary>Clears the hover throttle. Only a test that fires two hovers in one frame needs this.</summary>
+    public void ResetHoverThrottle() => lastHoverTime = -10f;
+
+    /// <summary>
     /// UI click. Every control names its own sound, so the player can hear what
     /// they are about to do: a bright tick for chrome, a chime for cook, the
     /// heal sting, a metallic craft, a warm select for cards and confirm.
@@ -253,13 +282,13 @@ public class AudioDirector : MonoBehaviour
         PlaySfx(library.GameOver);
     }
 
-    private void PlaySfx(AudioClip clip)
+    private void PlaySfx(AudioClip clip, float volume = 1f)
     {
         if (clip == null || sfxSource == null) return;
 
         LastSfx = clip;
         SfxCount++;
-        sfxSource.PlayOneShot(clip);
+        sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
     }
 
     // ----------------------------------------------------------------- volumes
