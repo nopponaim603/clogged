@@ -51,6 +51,10 @@ public class LogMessagePanel : MonoBehaviour
         RunLog.OnCleared += Render;
         if (minMaxButton != null) minMaxButton.onClick.AddListener(ToggleExpanded);
 
+        HudTooltipTrigger.Attach(minMaxButton, () => new HudTooltipContent("LOG", expanded
+            ? "EVERY ACTION IS RECORDED HERE. CLICK THE HEADER TO COLLAPSE."
+            : "EVERY ACTION IS RECORDED HERE. CLICK THE HEADER TO EXPAND."));
+
         Render();
         ApplyExpanded();
     }

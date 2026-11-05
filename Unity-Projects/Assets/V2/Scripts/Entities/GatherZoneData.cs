@@ -20,22 +20,25 @@ public class GatherZoneConfig
 {
     public GatherZone zone;
     public int apCost;
+    /// <summary>
+    /// Base success value before any team modifier. Keep Easy ≥ 65, Normal ≥ 45 and Hard ≥ 15:
+    /// below 15 a solo specialist can no longer clear the party's risk floor, so Hard stops
+    /// being chosen at all (simulated: Hard trips fell 55% → 1%). Hard below 25 also drops the
+    /// solo specialist under SV 50, which doubles-and-a-half the fumble band (1% → 5%).
+    /// See Assets/V2/test/gather-balance-basedsv-matrix.md.
+    /// </summary>
     public int baseSuccessValue;
     public LootAmount mainLoot;
 
     [Tooltip("On Hard Success, one of these is picked at random and added on top of the main loot.")]
     public List<LootAmount> hardSuccessBonusPool = new List<LootAmount>();
 
-    [Range(0, 100)]
-    [Tooltip("Chance (%) to find one Core Item when a trip ends in Hard Success. Rolled per missing piece; Regular/Failure/Fumble never drop one.")]
-    public int coreItemChancePercent;
-
-    /// <summary>Matches this zone against a unit's AptitudeTag lists (AptitudeTag.Easy/Normal/Hard mirror GatherZone).</summary>
-    public AptitudeTag ZoneTag => zone switch
+    /// <summary>Which unit specialty matches this zone (ZoneAptitude mirrors GatherZone 1:1).</summary>
+    public ZoneAptitude RequiredAptitude => zone switch
     {
-        GatherZone.Easy => AptitudeTag.Easy,
-        GatherZone.Normal => AptitudeTag.Normal,
-        GatherZone.Hard => AptitudeTag.Hard,
-        _ => AptitudeTag.Easy
+        GatherZone.Easy => ZoneAptitude.Easy,
+        GatherZone.Normal => ZoneAptitude.Normal,
+        GatherZone.Hard => ZoneAptitude.Hard,
+        _ => ZoneAptitude.Easy
     };
 }

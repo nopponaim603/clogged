@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,7 +7,10 @@ public enum RunOutcome
     InProgress,
     Win,
     LoseDeadline,
-    LoseAllUnitsLost
+    LoseAllUnitsLost,
+
+    /// <summary>Every unit is Hurt (or dead): nobody is left to heal anyone, so the run can never recover.</summary>
+    LoseAllUnitsHurt
 }
 
 /// <summary>What the day rollover did: who ate, who went hungry, and how the day moved.</summary>
@@ -17,13 +20,13 @@ public class DayEndReport
     public int dayAfter;
     public readonly List<UnitCharacter> fed = new List<UnitCharacter>();
     public readonly List<UnitCharacter> starved = new List<UnitCharacter>();
-    /// <summary>Units that hit max starvation this rollover and went Missing.</summary>
-    public readonly List<UnitCharacter> lostSignal = new List<UnitCharacter>();
+    /// <summary>Units that hit max starvation this rollover and died.</summary>
+    public readonly List<UnitCharacter> died = new List<UnitCharacter>();
 }
 
 /// <summary>
 /// Drives the End Day button: feeds eligible units in roster order (left to
-/// right, skipping Away/Missing), applies starvation to anyone food ran out
+/// right, skipping Away/Death), applies starvation to anyone food ran out
 /// on, advances the day counter, checks win/lose, then refreshes AP for the
 /// next day.
 /// </summary>
@@ -77,6 +80,12 @@ public class DayManager : MonoBehaviour
             return;
         }
 
+        if (UnitManager.Instance != null && UnitManager.Instance.AllUnitsIncapacitated())
+        {
+            DeclareOutcome(RunOutcome.LoseAllUnitsHurt);
+            return;
+        }
+
         bool hasBothCoreItems = RunResources.Instance != null && RunResources.Instance.HasBothCoreItems;
         if (currentDay > deadlineDay && !hasBothCoreItems)
         {
@@ -114,7 +123,7 @@ public class DayManager : MonoBehaviour
 
         foreach (var unit in UnitManager.Instance.Units)
         {
-            if (unit.state == UnitState.Away || unit.state == UnitState.Missing) continue;
+            if (unit.state == UnitState.Away || unit.state == UnitState.Death) continue;
 
             if (foodLeft > 0)
             {
@@ -126,7 +135,7 @@ public class DayManager : MonoBehaviour
                 report.starved.Add(unit);
                 if (unit.starvationStacks + 1 >= UnitCharacter.MaxStarvationStacks)
                 {
-                    report.lostSignal.Add(unit);
+                    report.died.Add(unit);
                 }
             }
         }
@@ -135,7 +144,7 @@ public class DayManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Feeds units not in Away or Missing, in roster order, until food runs
+    /// Feeds units not in Away or Death, in roster order, until food runs
     /// out. Anyone eligible who doesn't get fed takes a starvation stack.
     /// </summary>
     private void FeedEligibleUnitsInOrder()
@@ -145,14 +154,14 @@ public class DayManager : MonoBehaviour
 
         foreach (var unit in UnitManager.Instance.Units)
         {
-            if (unit.state == UnitState.Away || unit.state == UnitState.Missing) continue;
+            if (unit.state == UnitState.Away || unit.state == UnitState.Death) continue;
 
             bool fed = RunResources.Instance != null && RunResources.Instance.TryConsumeFood();
             if (!fed)
             {
                 unit.ApplyStarvationStack();
                 report.starved.Add(unit);
-                if (unit.state == UnitState.Missing) report.lostSignal.Add(unit);
+                if (unit.state == UnitState.Death) report.died.Add(unit);
             }
             else
             {
@@ -171,7 +180,7 @@ public class DayManager : MonoBehaviour
 
         foreach (var unit in UnitManager.Instance.Units)
         {
-            if (unit.state == UnitState.Missing || unit.state == UnitState.Away) continue;
+            if (unit.state == UnitState.Death || unit.state == UnitState.Away) continue;
             unit.RefreshForNewDay();
         }
     }
@@ -183,6 +192,20 @@ public class DayManager : MonoBehaviour
         if (RunResources.Instance != null && RunResources.Instance.HasBothCoreItems && currentDay <= deadlineDay)
         {
             DeclareOutcome(RunOutcome.Win);
+        }
+    }
+
+    /// <summary>
+    /// Ends the run the moment the last able unit goes down. Healing needs a
+    /// Ready healer, so once every unit is Hurt there is no way back - the day
+    /// rollover would otherwise keep feeding a crew that can never act again.
+    /// </summary>
+    public void CheckImmediateLoss()
+    {
+        if (Outcome != RunOutcome.InProgress) return;
+        if (UnitManager.Instance != null && UnitManager.Instance.AllUnitsIncapacitated())
+        {
+            DeclareOutcome(RunOutcome.LoseAllUnitsHurt);
         }
     }
 

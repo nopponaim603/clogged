@@ -109,3 +109,14 @@ pnpm-debug.log*
 
 # Raw third-party asset downloads (sources for what is curated into Unity-Projects/Assets)
 asset-sources/
+
+# =====================
+# Extracted third-party art packs
+# =====================
+# Unity imports every PNG here (~1,900 files / ~4.6 MB). The curated icons that
+# the game actually uses are copied into Assets/V2/Sprites/Icons and tracked.
+# Re-extract from the .zip files kept in asset-sources/ when needed.
+# No trailing slash so this also catches the folder itself on every platform;
+# Packs.meta is listed separately because it is a sibling file, not a child.
+Unity-Projects/Assets/V2/Sprites/Packs
+Unity-Projects/Assets/V2/Sprites/Packs.meta

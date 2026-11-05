@@ -13,13 +13,53 @@ using UnityEngine;
 [DefaultExecutionOrder(1000)]
 public class RunBootstrap : MonoBehaviour
 {
+    [Header("HUD icons")]
+    [Tooltip("Cog shown in the OPTIONS button. Assigned in the scene because the top bar is built in code.")]
+    [SerializeField] private Sprite optionsIcon;
+    [Tooltip("Question mark shown in the HELP button.")]
+    [SerializeField] private Sprite helpIcon;
+
     private void Awake()
     {
+        HudTopBar.EnsureExists(optionsIcon, helpIcon);
+        DiceRollView.EnsureExists();
+
+        var director = AudioDirector.EnsureExists();
         var data = SaveSystem.ConsumePendingLoad();
-        if (data == null) return;
+        if (data == null)
+        {
+            // Fresh run: NewGame already rolled the track, so this only has to
+            // start it. A scene opened directly (never through the menu) falls
+            // back to a roll of its own.
+            if (AudioDirector.PendingRunTrack < 0) AudioDirector.PendingRunTrack = AudioDirector.RollRunTrack();
+            director.BeginRun(AudioDirector.PendingRunTrack);
+
+            ShowGoalCard();
+            return;
+        }
 
         Apply(data);
         RunLog.Add(LogKind.System, $"Run resumed on day {data.currentDay}.");
+
+        // Resuming must not restart the music mid-run, so the save names the
+        // track. A save written before the track existed re-rolls once and from
+        // then on keeps that choice.
+        AudioDirector.PendingRunTrack = data.musicTrack >= 0 ? data.musicTrack : AudioDirector.RollRunTrack();
+        director.BeginRun(AudioDirector.PendingRunTrack);
+    }
+
+    /// <summary>
+    /// States the goal over the board the run just started on - but only for a
+    /// run that came from the title screen's NEW GAME. Coming back from the tour
+    /// or retrying after a loss lands straight on the board.
+    /// </summary>
+    private static void ShowGoalCard()
+    {
+        if (!SceneFlow.ConsumeGoalPrompt()) return;
+
+        NewGamePromptView.Show(
+            onStart: null,
+            onTutorial: () => SceneFlow.NewTutorial());
     }
 
     /// <summary>Restores a save onto the live scene. Public so tests and tools can replay one.</summary>

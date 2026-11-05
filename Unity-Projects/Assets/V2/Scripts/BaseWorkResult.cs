@@ -13,7 +13,11 @@ public class BaseWorkResult
     // Healing
     public UnitCharacter healedUnit;
     public bool usedMedicine;
+    public bool blessedApplied;
 
     // Workshop
+    public WorkshopMode workshopMode;
     public int medicineProduced;
+    public int buffPotionsProduced;
+    public int successBonusGranted;
 }

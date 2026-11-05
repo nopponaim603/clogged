@@ -1,29 +1,33 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The hover popup shared by the skill triggers.
+/// The hover popup shared by every HUD element that wants one - the skill
+/// column, the resource strip, dungeon cards, unit cards, the log and the
+/// corner buttons all feed it through <see cref="HudTooltipTrigger"/>.
 ///
 /// Built once in code under the root canvas and reused, so the popup cannot
 /// drift out of sync with an extra prefab that nobody remembers to update. It
 /// is layout-only: it never receives raycasts (the pointer must stay on the
-/// button that opened it) and it fades out on the frame after the pointer
+/// element that opened it) and it fades out on the frame after the pointer
 /// leaves.
 ///
 /// Text is written in capitals because the whole HUD runs on the baked pixel
 /// font, which only carries A-Z, 0-9 and the punctuation drawn procedurally.
 /// </summary>
 [RequireComponent(typeof(RectTransform))]
-public class SkillTooltip : MonoBehaviour
+public class HudTooltip : MonoBehaviour
 {
-    private const float Width = 250f;
-    private const float Padding = 10f;
-    private const float Spacing = 6f;
-    private const float IconSize = 16f;
-    private const float IconGap = 6f;
-    private const float ScreenMargin = 4f;
-    private const float AnchorGap = 8f;
+    // Sized for reading, not for hiding: the popup carries a title plus several
+    // lines of explanation, so it gets a wide column and a 19px body.
+    private const float Width = 360f;
+    private const float Padding = 14f;
+    private const float Spacing = 9f;
+    private const float IconSize = 20f;
+    private const float IconGap = 8f;
+    private const float ScreenMargin = 8f;
+    private const float AnchorGap = 10f;
 
     private static readonly Color Backdrop = new Color(0.043f, 0.067f, 0.098f, 0.96f);
     private static readonly Color Border = new Color(0.26f, 0.29f, 0.37f, 1f);
@@ -31,7 +35,7 @@ public class SkillTooltip : MonoBehaviour
     private static readonly Color BodyColor = new Color(0.78f, 0.82f, 0.88f, 1f);
     private static readonly Color HintColor = new Color(0.60f, 0.63f, 0.68f, 1f);
 
-    private static SkillTooltip instance;
+    private static HudTooltip instance;
 
     private Canvas canvas;
     private RectTransform root;
@@ -45,14 +49,12 @@ public class SkillTooltip : MonoBehaviour
     private TMP_Text leftLabel;
     private TMP_Text rightLabel;
 
-    public static void ShowNow(Canvas hostCanvas, RectTransform anchor,
-        Sprite leftClick, Sprite rightClick,
-        string title, string body, string leftHint, string rightHint)
+    public static void ShowNow(Canvas hostCanvas, RectTransform anchor, HudTooltipContent content)
     {
-        if (hostCanvas == null || anchor == null) return;
+        if (hostCanvas == null || anchor == null || content == null) return;
 
         Ensure(hostCanvas.rootCanvas != null ? hostCanvas.rootCanvas : hostCanvas);
-        instance.Present(anchor, leftClick, rightClick, title, body, leftHint, rightHint);
+        instance.Present(anchor, content);
     }
 
     public static void Hide()
@@ -73,16 +75,16 @@ public class SkillTooltip : MonoBehaviour
 
         // A domain reload clears the static while the old popup can survive in a
         // running play session, so adopt nothing and remove any orphans first.
-        foreach (var orphan in hostCanvas.GetComponentsInChildren<SkillTooltip>(true))
+        foreach (var orphan in hostCanvas.GetComponentsInChildren<HudTooltip>(true))
         {
             Destroy(orphan.gameObject);
         }
 
-        var host = new GameObject("SkillTooltip", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Outline));
+        var host = new GameObject("HudTooltip", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Outline));
         host.transform.SetParent(hostCanvas.transform, false);
         host.transform.SetAsLastSibling();
 
-        instance = host.AddComponent<SkillTooltip>();
+        instance = host.AddComponent<HudTooltip>();
         instance.canvas = hostCanvas;
         instance.Build(host);
     }
@@ -108,8 +110,8 @@ public class SkillTooltip : MonoBehaviour
         group.blocksRaycasts = false;
         group.interactable = false;
 
-        titleLabel = CreateLabel("Title", 16, TitleColor);
-        bodyLabel = CreateLabel("Body", 15, BodyColor);
+        titleLabel = CreateLabel("Title", 21, TitleColor);
+        bodyLabel = CreateLabel("Body", 19, BodyColor);
 
         leftRow = CreateRow("LeftClickRow", out leftIcon, out leftLabel);
         rightRow = CreateRow("RightClickRow", out rightIcon, out rightLabel);
@@ -167,7 +169,7 @@ public class SkillTooltip : MonoBehaviour
         labelRect.sizeDelta = new Vector2(Width - Padding * 2f - IconSize - IconGap, 0f);
 
         label = labelGo.AddComponent<TextMeshProUGUI>();
-        label.fontSize = 14;
+        label.fontSize = 16;
         label.color = HintColor;
         label.raycastTarget = false;
         label.textWrappingMode = TextWrappingModes.Normal;
@@ -177,13 +179,12 @@ public class SkillTooltip : MonoBehaviour
         return rect;
     }
 
-    private void Present(RectTransform anchor, Sprite leftClick, Sprite rightClick,
-        string title, string body, string leftHint, string rightHint)
+    private void Present(RectTransform anchor, HudTooltipContent content)
     {
-        titleLabel.text = Wrap(title);
-        bodyLabel.text = Wrap(body);
+        titleLabel.text = Wrap(content.title);
+        bodyLabel.text = Wrap(content.body);
 
-        LayoutContent(anchor, leftClick, leftHint, rightClick, rightHint);
+        LayoutContent(anchor, content.leftIcon, content.leftHint, content.rightIcon, content.rightHint);
 
         group.alpha = 1f;
         transform.SetAsLastSibling();
@@ -294,4 +295,29 @@ public class SkillTooltip : MonoBehaviour
     }
 
     private static string Wrap(string value) => string.IsNullOrEmpty(value) ? string.Empty : value.ToUpperInvariant();
+}
+
+/// <summary>
+/// One popup's worth of content. Plain data so a trigger can rebuild it on
+/// every hover - that is how live numbers (AP cost, stock, success value) stay
+/// correct without any cache to invalidate.
+/// </summary>
+public class HudTooltipContent
+{
+    public string title;
+    public string body;
+
+    /// <summary>Optional click hints. A row is hidden unless both its sprite and text are set.</summary>
+    public string leftHint;
+    public string rightHint;
+    public Sprite leftIcon;
+    public Sprite rightIcon;
+
+    public HudTooltipContent() { }
+
+    public HudTooltipContent(string heading, string text)
+    {
+        title = heading;
+        body = text;
+    }
 }

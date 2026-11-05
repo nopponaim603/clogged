@@ -52,18 +52,24 @@ public static class TmpOutlineUtil
     /// <summary>Convenience: create a TMP label under <paramref name="parent"/> with sensible UI defaults.</summary>
     public static TextMeshProUGUI CreateLabel(Transform parent, string objectName, float width, float height)
     {
-        var go = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        var go = new GameObject(objectName, typeof(RectTransform));
+        // Built inactive so TMP's Awake sees the font instead of warning first.
+        go.SetActive(false);
+
         var rect = (RectTransform)go.transform;
         rect.SetParent(parent, false);
         rect.sizeDelta = new Vector2(width, height);
 
-        var label = go.GetComponent<TextMeshProUGUI>();
+        var label = go.AddComponent<TextMeshProUGUI>();
         label.alignment = TextAlignmentOptions.Center;
         label.enableAutoSizing = true;
         label.fontSizeMin = 10f;
         label.fontSizeMax = 22f;
         label.color = Color.white;
         label.raycastTarget = false;
+        TmpFont.Apply(label);
+
+        go.SetActive(true);
         return label;
     }
 }

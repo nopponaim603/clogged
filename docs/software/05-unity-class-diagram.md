@@ -1,8 +1,14 @@
 # clogged (Unity V2) — Class Diagram
 
+<<<<<<< HEAD
 **Version:** 3.1 | **Last Updated:** 2026-10-29
 > สร้างจากโค้ดจริงใน `Unity-Projects/Assets/V2/Scripts/` — ภาพรวมระบบและ flow ดูที่ [Unity V2 System Design](04-unity-system-design.md)
 > **v3.1:** เพิ่ม flow ของ `MainMenuController`, `SceneFlow`, save/restore, `RunResultView` และ `CrystalRevealView`; แก้ model Core Item ให้เป็นกล่อง/กุญแจที่ดรอปแยกกัน
+=======
+**Version:** 4.0 | **Last Updated:** 2026-10-30
+> สร้างจากโค้ดจริงใน `Unity-Projects/Assets/V2/Scripts/` — ภาพรวมระบบและ flow ดูที่ [Unity V2 System Design](04-unity-system-design.md)
+> **v3.0:** อัปเดตหลัง UI redesign P0–P5 — `BaseWorkPanel`/`ScoutWalkerView` ถูกลบแล้ว, เพิ่ม `SkillTriggerPanel`/`SkillFlowController`/`CharacterHandPanel`/`DispatchActionPanel`/`LogMessagePanel`/`RunLogNarrator`/`EndDayTrigger`/`RunLog`
+>>>>>>> origin/Kagerou
 
 ## 1. Layer Overview
 
@@ -10,9 +16,12 @@
 flowchart TD
     subgraph UI["UI/ — แสดงผล + input"]
         SBV[StatusBarView]
+<<<<<<< HEAD
         MMC[MainMenuController]
         RRV[RunResultView]
         CRV[CrystalRevealView]
+=======
+>>>>>>> origin/Kagerou
         EDT[EndDayTrigger]
         URV[UnitRosterView] --> UIV[UnitIconView]
         CHP[CharacterHandPanel]
@@ -38,11 +47,14 @@ flowchart TD
         UM[UnitManager]
         RR[RunResources]
         GZD[GatherZoneDatabase]
+<<<<<<< HEAD
         SS["SaveSystem «static»"]
         SD[SaveData]
         RB[RunBootstrap]
         SF["SceneFlow «static»"]
         RS["RunStats «static»"]
+=======
+>>>>>>> origin/Kagerou
         LOG["RunLog «static»"]
         GR["GatherResolver «static»"]
         TL["TraitLibrary «static»"]
@@ -508,8 +520,16 @@ classDiagram
         <<MonoBehaviour>>
         -TMP_Text dayText, foodText, cookingMaterialText
         -TMP_Text medicineText, materialsText, coreItemStatusText
+<<<<<<< HEAD
         -Image coreItemIcon, coreItemBIcon
         -CoreItemArt orangePair / yellowPair
+=======
+        -Image coreItemIcon, foodIcon, cookingMaterialIcon
+        -Image medicineIcon, materialsIcon
+        -Sprite coreItemSprite, foodSprite, cookingMaterialSprite
+        -Sprite medicineSprite, materialsSprite
+        -bool hideResourceLabelWhenIconSet = true
+>>>>>>> origin/Kagerou
         -RefreshIcons() void
         -Update() poll DayManager + RunResources
     }
@@ -590,11 +610,20 @@ classDiagram
     class MapNodeView {
         <<MonoBehaviour>>
         +MapNodeData Data
+<<<<<<< HEAD
         -TMP_Text zoneLabel
         +static event OnAnyNodeClicked(MapNodeView)
         +Initialize(data) void
         +SetSelected(bool) void
         -BuildZoneLabel() void
+=======
+        +static event OnAnyNodeClicked(MapNodeView)
+        +Initialize(data) void
+        +RefreshReadout(chance, pity, threshold, config) void
+        +SetSelected(bool) void
+        -BuildCard() void
+        -BuildDrops(config) void
+>>>>>>> origin/Kagerou
     }
 
     class TmpOutlineUtil {
@@ -649,11 +678,28 @@ classDiagram
     class DispatchActionPanel {
         <<MonoBehaviour>>
         +string CurrentLabel
+        +int CurrentApCost
+        +string CurrentTooltip
         +bool IsVisible
-        +Show(label, interactable) void
-        +ShowDispatch(interactable) void
+        +Show(label, icon, interactable, apCost, tooltip) void
+        +ShowDispatch(interactable, apCost, tooltip) void
         +Hide() void
         +event Clicked
+    }
+
+    class HudTooltip {
+        <<MonoBehaviour>>
+        +ShowNow(canvas, anchor, content) void$
+        +Hide() void
+        -Present(anchor, content) void
+    }
+
+    class HudTooltipTrigger {
+        <<MonoBehaviour>>
+        +Configure(provider) void
+        +Preview() HudTooltipContent
+        +Attach(target, provider) HudTooltipTrigger$
+        -showDelay = 0.35s
     }
 
     class SkillTriggerPanel {
@@ -664,14 +710,17 @@ classDiagram
         +SetArmed(kind) void
         +SetHealAvailable(ok) void
         +SetHealMode(useMedicine, hasMedicine) void
+        +SetCraftMode(mode) void
         +event CookClicked / CraftClicked / HealClicked
-        +event CookCleared / CraftCleared / HealCancelled / HealModeToggled
+        +event CookCleared / CraftCleared / HealCancelled / HealModeToggled / CraftModeToggled
     }
 
     class SkillFlowController {
         <<MonoBehaviour>>
         +SkillKind Armed
         +bool IsSkillActive
+        +int PendingApCost
+        +int PendingActualApCost
         -int pendingRounds
         -bool healUseMedicine
         -QueueRound(kind) void
@@ -708,6 +757,7 @@ classDiagram
         +Add(kind, message) void
         +Clear() void
         +event OnEntryAdded / OnCleared
+<<<<<<< HEAD
     }
 
     class RunStatsSnapshot {
@@ -715,10 +765,39 @@ classDiagram
         +int daysPlayed / heals / cookRounds / foodCooked
         +int craftRounds / medicineCrafted / foodConsumed
         +int starvationTicks / gatherTrips / unitsLost
+=======
+>>>>>>> origin/Kagerou
     }
 
     class DiceRollView {
-        <<stub>>
+        <<MonoBehaviour>>
+        +EnsureExists() DiceRollView$
+        +Show(GatherDispatchResult, Action) void
+        +RevealImmediately() void
+        +IsShowing bool
+        +Instance DiceRollView$
+    }
+
+    class HudTopBar {
+        <<MonoBehaviour>>
+        +EnsureExists() void$
+        +RelocateCoreItemGroup() void
+    }
+
+    class HelpPanelView {
+        <<MonoBehaviour — how-to-play page>>
+        +Create(parent, onClose) HelpPanelView$
+        -BuildSections() void
+        -ShowSection(index) void
+        -BuildRow(entry) GameObject
+    }
+
+    class PlaceholderIcons {
+        <<static — generated pixel art>>
+    }
+
+    class TmpFont {
+        <<static — font resolve for code-built labels>>
     }
 
     UnitRosterView "1" *-- "*" UnitIconView : spawns
@@ -742,12 +821,33 @@ classDiagram
     GatherDispatchPanel ..> UnitRosterView : selection
     GatherDispatchPanel ..> DispatchActionPanel : confirm button
     GatherDispatchPanel ..> SkillFlowController : stands down while armed
+    GatherDispatchPanel ..> DiceRollView : reveals the roll
+    RunBootstrap ..> DiceRollView : EnsureExists()
+    RunBootstrap ..> HudTopBar : EnsureExists()
+    RunBootstrap ..> AudioDirector : EnsureExists / BeginRun()
+    MainMenuController ..> AudioDirector : PlayTitleMusic()
+    SceneFlow ..> AudioDirector : RollRunTrack / BeginRun / PlayTitleMusic
+    AudioDirector ..> GameAudioLibrary : Resources.Load
+    UiFactory ..> UiClickSound : plain click on every button
+    UiClickSound ..> AudioDirector : PlayClick(kind)
+    DiceRollView ..> AudioDirector : PlaySuccess / PlayFail
+    RunResultView ..> AudioDirector : PlayWin / PlayGameOver
+    BaseWorkController ..> AudioDirector : PlaySuccess
+    HudTopBar ..> OptionsPanelView : builds the options page
+    HudTopBar ..> HelpPanelView : builds the how-to-play page
     SkillTriggerPanel ..> SkillFlowController : raises input
     SkillFlowController ..> BaseWorkController : Cook / Heal / UseWorkshop
     SkillFlowController ..> UnitRosterView : mode + selection
     SkillFlowController ..> DispatchActionPanel : confirm button
     SkillFlowController ..> WarningView : warns
     RightClickHandler ..> SkillTriggerPanel : right-click events
+    HudTooltipTrigger ..> HudTooltip : shows content
+    HudTooltipTrigger ..> HudTooltipContent : provider builds it
+    SkillTriggerPanel ..> HudTooltipTrigger : Attach() per button
+    StatusBarView ..> HudTooltipTrigger : Attach() per readout
+    MapNodeView ..> HudTooltipTrigger : Attach() on the card
+    UnitIconView ..> HudTooltipTrigger : Attach() on the card
+    EndDayTrigger ..> HudTooltipTrigger : Attach() on the frame
     LogMessagePanel ..> RunLog
     RunLogNarrator ..> RunLog : Add()
     RunLogNarrator ..> BaseWorkController : OnBaseWorkCompleted

@@ -22,6 +22,9 @@ public class GatherDispatchPanel : MonoBehaviour
     // Trait counts of the sent units at dispatch time, so we can tell who gained a trait afterwards.
     private readonly Dictionary<UnitCharacter, int> traitsBefore = new Dictionary<UnitCharacter, int>();
 
+    // Set by HandleTripResolved so OnDispatchClicked can hand the roll to the popup.
+    private GatherDispatchResult pendingRoll;
+
     private void Start()
     {
         if (actionPanel != null) actionPanel.Clicked += OnDispatchClicked;
@@ -85,8 +88,15 @@ public class GatherDispatchPanel : MonoBehaviour
 
     private void OnDispatchClicked()
     {
-        // A pending Cook / Heal / Craft owns the button; this flow stays quiet.
-        if (IsSkillActive()) return;
+        // The button belongs to whoever painted it. A pending Cook / Heal / Craft
+        // stamps itself as the owner, and so does this flow when it paints a trip -
+        // so the two handlers can never both act on one click. Reading
+        // IsSkillActive() here is not enough: the skill handler runs first and
+        // has already disarmed itself by the time this handler is invoked.
+        bool ownedByDispatch = actionPanel != null
+            ? actionPanel.Owner == DispatchActionPanel.ConfirmOwner.Dispatch
+            : !IsSkillActive();
+        if (!ownedByDispatch) return;
 
         var map = GatherMapController.Instance;
         if (map == null || map.SelectedNode == null)
@@ -117,12 +127,23 @@ public class GatherDispatchPanel : MonoBehaviour
 
         RunLog.Add(LogKind.Action, $"Sent {JoinNames(selected)} to the {map.SelectedNode.Data.zone} cave.");
 
-        // Resolves synchronously and raises OnTripResolved inside this call.
+        // Resolves synchronously and raises OnTripResolved inside this call, so
+        // the roll to reveal is captured before the call returns.
+        pendingRoll = null;
         map.ConfirmTrip(selected);
+
+        if (pendingRoll != null)
+        {
+            var view = DiceRollView.Instance != null ? DiceRollView.Instance : DiceRollView.EnsureExists();
+            if (view != null) view.Show(pendingRoll, null);
+        }
+        pendingRoll = null;
     }
 
     private void HandleTripResolved(GatherDispatchResult result)
     {
+        pendingRoll = result;
+
         if (rosterView != null)
         {
             rosterView.ClearSelection();
@@ -217,15 +238,30 @@ public class GatherDispatchPanel : MonoBehaviour
         // Grey the button out rather than blocking the card click: a unit that
         // already gathered today can still do base work.
         bool ready = false;
+        int apCost = 0;
+        string tooltip = null;
+        string costText = null;
 
         if (hasCave)
         {
             var dispatcher = GatherDispatchController.Instance;
+            var node = map.SelectedNode;
             ready = dispatcher != null &&
-                    dispatcher.CanDispatch(map.SelectedNode.Data.zone, rosterView.GetSelectedUnits(), out _);
+                    dispatcher.CanDispatch(node.Data.zone, rosterView.GetSelectedUnits(), out _);
+
+            var config = GatherZoneDatabase.Instance != null
+                ? GatherZoneDatabase.Instance.GetConfig(node.Data.zone)
+                : null;
+            if (config != null)
+            {
+                apCost = config.apCost;
+                string sword = picked == 1 ? "1 READINESS" : $"{picked} READINESS";
+                costText = $"{apCost} AP + {sword}";
+                tooltip = $"Send {picked} unit(s) to {node.Data.zone}. Each unit pays {apCost} AP and 1 readiness.";
+            }
         }
 
-        actionPanel.ShowDispatch(interactable: ready);
+        actionPanel.ShowDispatch(interactable: ready, apCost: apCost, tooltip: tooltip, costText: costText);
     }
 
     private static bool IsSkillActive()

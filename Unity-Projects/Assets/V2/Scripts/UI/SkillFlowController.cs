@@ -30,6 +30,12 @@ public class SkillFlowController : MonoBehaviour
     public SkillKind Armed => armed;
     public bool IsSkillActive => armed != SkillKind.None;
 
+    /// <summary>The unit the queued skill will spend AP from (null when nothing is armed).</summary>
+    public UnitCharacter Worker => armed == SkillKind.None ? null : worker;
+
+    /// <summary>How many rounds are queued for the armed Cook/Craft (0 when nothing is queued).</summary>
+    public int PendingRounds => armed == SkillKind.None ? 0 : pendingRounds;
+
     /// <summary>
     /// Base AP the queued skill will spend on the worker - the number the cards
     /// paint as "about to be used". 0 when no skill is armed.
@@ -43,14 +49,39 @@ public class SkillFlowController : MonoBehaviour
 
             if (armed == SkillKind.Heal) return controller.HealBaseApCost(healUseMedicine);
 
-            int perRound = armed == SkillKind.Cook ? controller.CookBaseApCost : controller.WorkshopBaseApCost;
+            int perRound = armed == SkillKind.Cook
+                ? controller.CookBaseApCost
+                : controller.WorkshopBaseApCost(workshopMode);
             return perRound * Mathf.Max(1, pendingRounds);
+        }
+    }
+
+    /// <summary>
+    /// What the pending skill will really spend, starvation surcharge included.
+    /// This is the number the confirm button paints, so it must match what the
+    /// controller will deduct.
+    /// </summary>
+    public int PendingActualApCost
+    {
+        get
+        {
+            var controller = BaseWorkController.Instance;
+            if (controller == null || armed == SkillKind.None || worker == null) return PendingApCost;
+
+            if (armed == SkillKind.Heal)
+                return worker.GetActualApCost(controller.HealBaseApCost(healUseMedicine));
+
+            int perRound = armed == SkillKind.Cook
+                ? controller.CookBaseApCost
+                : controller.WorkshopBaseApCost(workshopMode);
+            return worker.GetActualApCost(perRound) * Mathf.Max(1, pendingRounds);
         }
     }
 
     private SkillKind armed = SkillKind.None;
     private int pendingRounds;
     private bool healUseMedicine;
+    private WorkshopMode workshopMode = WorkshopMode.Medicine;
     private UnitCharacter worker;
     private UnitCharacter patient;
 
@@ -66,11 +97,9 @@ public class SkillFlowController : MonoBehaviour
         if (skillPanel != null)
         {
             skillPanel.CookClicked -= HandleCookClicked;
-            skillPanel.CookCleared -= HandleCookCleared;
             skillPanel.CraftClicked -= HandleCraftClicked;
-            skillPanel.CraftCleared -= HandleCraftCleared;
+            skillPanel.CraftModeToggled -= HandleCraftModeToggled;
             skillPanel.HealClicked -= HandleHealClicked;
-            skillPanel.HealCancelled -= HandleHealCancelled;
             skillPanel.HealModeToggled -= HandleHealModeToggled;
         }
         if (actionPanel != null) actionPanel.Clicked -= HandleConfirm;
@@ -87,11 +116,9 @@ public class SkillFlowController : MonoBehaviour
         if (skillPanel != null)
         {
             skillPanel.CookClicked += HandleCookClicked;
-            skillPanel.CookCleared += HandleCookCleared;
             skillPanel.CraftClicked += HandleCraftClicked;
-            skillPanel.CraftCleared += HandleCraftCleared;
+            skillPanel.CraftModeToggled += HandleCraftModeToggled;
             skillPanel.HealClicked += HandleHealClicked;
-            skillPanel.HealCancelled += HandleHealCancelled;
             skillPanel.HealModeToggled += HandleHealModeToggled;
         }
         if (actionPanel != null) actionPanel.Clicked += HandleConfirm;
@@ -151,12 +178,16 @@ public class SkillFlowController : MonoBehaviour
 
     // ------------------------------------------------------------------ input
 
+    private void HandleCraftModeToggled()
+    {
+        workshopMode = workshopMode == WorkshopMode.Medicine ? WorkshopMode.BuffPotion : WorkshopMode.Medicine;
+        skillPanel.SetCraftMode(workshopMode);
+        RaiseStateChanged();
+    }
+
     private void HandleCookClicked() => QueueRound(SkillKind.Cook);
     private void HandleCraftClicked() => QueueRound(SkillKind.Craft);
-    private void HandleCookCleared() => ClearQueue(SkillKind.Cook);
-    private void HandleCraftCleared() => ClearQueue(SkillKind.Craft);
     private void HandleHealClicked() => ArmHeal();
-    private void HandleHealCancelled() => Cancel();
 
     private void HandleHealModeToggled()
     {
@@ -191,7 +222,7 @@ public class SkillFlowController : MonoBehaviour
                 if (pendingRounds > 0) controller.Cook(worker, pendingRounds);
                 break;
             case SkillKind.Craft:
-                if (pendingRounds > 0) controller.UseWorkshop(worker, pendingRounds);
+                if (pendingRounds > 0) controller.UseWorkshop(worker, pendingRounds, workshopMode);
                 break;
             case SkillKind.Heal:
                 if (worker != null && patient != null) controller.Heal(worker, patient, healUseMedicine);
@@ -216,7 +247,7 @@ public class SkillFlowController : MonoBehaviour
         }
 
         bool isCook = kind == SkillKind.Cook;
-        if (isCook ? !controller.CanCook(unit) : !controller.CanUseWorkshop(unit))
+        if (isCook ? !controller.CanCook(unit) : !controller.CanUseWorkshop(unit, workshopMode))
         {
             Warn(isCook
                 ? $"{unit.unitName} cannot cook right now (needs AP and cooking material)."
@@ -235,7 +266,7 @@ public class SkillFlowController : MonoBehaviour
             RaiseStateChanged();
         }
 
-        int max = isCook ? controller.GetMaxCookRounds(worker) : controller.GetMaxWorkshopRounds(worker);
+        int max = isCook ? controller.GetMaxCookRounds(worker) : controller.GetMaxWorkshopRounds(worker, workshopMode);
         if (pendingRounds >= max)
         {
             Warn(isCook
@@ -249,15 +280,6 @@ public class SkillFlowController : MonoBehaviour
         pendingRounds++;
         RefreshPanel();
         RefreshConfirm();
-    }
-
-    private void ClearQueue(SkillKind kind)
-    {
-        if (armed != kind) return;
-
-        // Right click only drops the queued rounds - the card stays selected.
-        pendingRounds = 0;
-        Disarm(clearSelection: false);
     }
 
     private void ArmHeal()
@@ -304,13 +326,18 @@ public class SkillFlowController : MonoBehaviour
     private void Cancel()
     {
         if (!IsSkillActive) return;
-        Disarm(clearSelection: true);
+        Disarm();
     }
 
     /// <summary>Tears the pending skill down and hands the confirm button back to the gather flow.</summary>
-    private void Reset() => Disarm(clearSelection: true);
+    private void Reset() => Disarm();
 
-    private void Disarm(bool clearSelection)
+    /// <summary>
+    /// Ends the skill plan outright: no queue, no worker, no patient, and no
+    /// cards left held. Cancelling is meant to be total, so there is no
+    /// "leave the card selected" variant to keep in sync.
+    /// </summary>
+    private void Disarm()
     {
         armed = SkillKind.None;
         pendingRounds = 0;
@@ -319,7 +346,7 @@ public class SkillFlowController : MonoBehaviour
 
         if (rosterView != null)
         {
-            if (clearSelection) rosterView.ClearSelection();
+            rosterView.ClearSelection();
             rosterView.SetMode(CharacterHandPanel.SelectionMode.Dispatch);
             rosterView.RefreshAvailability();
         }
@@ -332,6 +359,16 @@ public class SkillFlowController : MonoBehaviour
     private void EnterSkillMode()
     {
         rosterView?.SetMode(CharacterHandPanel.SelectionMode.Skill);
+
+        // A dungeon and a skill are mutually exclusive plans: starting the skill
+        // drops the cave the player had picked instead of leaving it armed.
+        GatherMapController.Instance?.ClearSelection();
+    }
+
+    /// <summary>Drops whatever skill is queued. Called when the player picks a dungeon instead.</summary>
+    public void CancelActiveSkill()
+    {
+        Cancel();
     }
 
     private void RaiseStateChanged() => StateChanged?.Invoke();
@@ -347,6 +384,7 @@ public class SkillFlowController : MonoBehaviour
         skillPanel.SetArmed(armed);
         skillPanel.SetHealAvailable(AnyHurtUnit());
         skillPanel.SetHealMode(healUseMedicine, HasMedicine());
+        skillPanel.SetCraftMode(workshopMode);
     }
 
     /// <summary>The confirm button only exists while a skill has something to confirm.</summary>
@@ -359,13 +397,20 @@ public class SkillFlowController : MonoBehaviour
             case SkillKind.Cook:
             case SkillKind.Craft:
                 if (pendingRounds <= 0) actionPanel.Hide();
-                else actionPanel.Show(armed == SkillKind.Cook ? "COOK" : "CRAFT", true);
+                else if (armed == SkillKind.Cook)
+                    actionPanel.Show("COOK", skillPanel.CookIcon, true, PendingActualApCost,
+                        $"{Rounds} for {WorkerName}.");
+                else
+                    actionPanel.Show("CRAFT", skillPanel.CraftIcon, true, PendingActualApCost,
+                        $"{Rounds} at the workshop ({RecipeName}).");
                 break;
 
             case SkillKind.Heal:
                 if (patient == null) actionPanel.Hide();
-                else actionPanel.Show("HEAL", BaseWorkController.Instance != null &&
-                                             BaseWorkController.Instance.CanHeal(worker, patient, healUseMedicine));
+                else actionPanel.Show("HEAL", skillPanel.HealIcon, BaseWorkController.Instance != null &&
+                                             BaseWorkController.Instance.CanHeal(worker, patient, healUseMedicine),
+                        PendingActualApCost,
+                        $"Heal {patient.unitName} using {WorkerName}.");
                 break;
 
             default:
@@ -373,6 +418,10 @@ public class SkillFlowController : MonoBehaviour
                 break;
         }
     }
+
+    private string WorkerName => worker != null ? worker.unitName : "the crew";
+    private string Rounds => pendingRounds == 1 ? "1 round" : $"{pendingRounds} rounds";
+    private string RecipeName => workshopMode == WorkshopMode.BuffPotion ? "buff potion" : "medicine";
 
     // ---------------------------------------------------------------- helpers
 
@@ -388,7 +437,7 @@ public class SkillFlowController : MonoBehaviour
 
         int max = armed == SkillKind.Cook
             ? controller.GetMaxCookRounds(worker)
-            : controller.GetMaxWorkshopRounds(worker);
+            : controller.GetMaxWorkshopRounds(worker, workshopMode);
         pendingRounds = Mathf.Clamp(pendingRounds, 0, Mathf.Max(0, max));
     }
 

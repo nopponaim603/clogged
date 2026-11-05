@@ -7,6 +7,7 @@
 
 | ส่วน | สภาพปัจจุบัน |
 |---|---|
+<<<<<<< HEAD
 | Presentation | Unity UGUI บน Canvas แบบ Screen Space - Overlay; map, hand, log, controls และ HUD อยู่ใน `Core.unity` |
 | Main menu | `MainMenu.unity`; `MainMenuController` สร้าง Start, Continue, Options และ Exit runtime |
 | Map / cave | พื้นที่แผนที่เป็น UI; cave prefab แสดง zone และ AP cost พร้อมสีและ selected highlight |
@@ -16,6 +17,16 @@
 | Typography | มี TMP font asset `Fonts/PixelTileset.asset` จาก tileset; ใช้กับ V2 UI ตามสถานะปัจจุบันของงาน redesign |
 | Feedback | `LogPanel` เก็บประวัติ 16 รายการ, `Warning` ใช้ palette ร่วมกับ log; Run Result แสดงผลและสถิติ |
 | Animation | ไม่มีเดินทางระหว่างฐานกับถ้ำหรือ dice-roll animation; dispatch คำนวณผลทันที มี crystal reveal แบบ fade |
+=======
+| ระบบภาพ | Unity UGUI ล้วน บน Canvas (Screen Space - Overlay) — ไม่มี world sprite / tilemap ใน scene |
+| แมป | `MapPanel` เป็น Image สีพื้นเต็มจอ ไม่มีภาพพื้นหลัง |
+| ถ้ำ | การ์ดดันเจี้ยนทั้งสามใช้ **ซุ้มหินเดียวกัน** (`tilemap_packed 1_1` จาก `Assets/Day/Sprites`) + **แบดจ์ประจำระดับ** กลางปากถ้ำ (Easy = บ้าน, Normal = หอคอย, Hard = กะโหลก) — ย้อมสีตามระดับเช่นเดิม · การ์ดที่ยังกดไม่ได้จะเป็นสีเทาทั้งใบ |
+| Scout / การ์ดยูนิต | `ScoutIcon.prefab` — ไอคอนจาก tileset + ข้อความชื่อ/สถานะ |
+| ไอคอนทรัพยากร | `board-game-icons` (Double 128px) — Food = แอปเปิล, Cooking Material = รวงข้าว, Materials = แผ่นไม้, Medicine = เม็ดยา (`flip_half`) · ไอคอน+ตัวเลขจับกลุ่มกันด้วย layout group |
+| Tileset | `Assets/Day/Sprites/tilemap_packed*.png` (pixel art 16 px สไตล์ Kenney, ยืมจากระบบ Day เดิม) |
+| ปุ่ม / dropdown / toggle | UI default ของ Unity (TMP Dropdown, Toggle ใช้ `Text` แบบ legacy) |
+| Animation | มีแค่ Scout เลื่อนตำแหน่งแบบ linear 0.6 วินาที ไม่มี animation ทอยเต๋า |
+>>>>>>> origin/Kagerou
 
 ## 2. Color Language (ใช้ในโค้ดตอนนี้)
 

@@ -1,7 +1,12 @@
-# clogged (Unity V2) — Core Scene Hierarchy
+﻿# clogged (Unity V2) — Core Scene Hierarchy
 
+<<<<<<< HEAD
 **Version:** 3.2 | **Last Updated:** 2026-10-29
 > อธิบายโครงสร้าง `Unity-Projects/Assets/V2/Scenes/Core.unity` และ `MainMenu.unity`; Unity CLI hierarchy query ไม่พร้อมใช้งานในรอบนี้ จึงอ้างอิง serialized scene, prefab และ scripts
+=======
+**Version:** 4.0 | **Last Updated:** 2026-10-30
+> อธิบาย Hierarchy ทั้งหมดของ `Unity-Projects/Assets/V2/Scenes/Core.unity` — ตรวจจาก `unity command scene.get_hierarchy` ของ scene จริง
+>>>>>>> origin/Kagerou
 > ตรรกะของแต่ละระบบดู [Unity V2 System Design](04-unity-system-design.md) · class ดู [Unity V2 Class Diagram](05-unity-class-diagram.md) · layout/UI ล่าสุดดู [UI Layout Redesign](07-unity-v2-ui-layout-redesign.md)
 
 ## 1. ภาพรวม
@@ -12,7 +17,11 @@ Root object 6 ตัว แบ่งเป็น 3 กลุ่ม:
 |---|---|---|
 | `Main Camera` | Rendering | กล้อง URP + AudioListener |
 | `Directional Light` | Rendering | แสง URP (UI ล้วน จึงแทบไม่มีผล) |
+<<<<<<< HEAD
 | `GameSystem` | **Logic** | manager/controller, `RunLogNarrator`, `SkillFlowController`; child `RunBootstrap` restores saves |
+=======
+| `GameSystem` | **Logic** | ที่รวม manager/controller ทั้งหมด (ไม่มีภาพ) + `RunLogNarrator` + `SkillFlowController` |
+>>>>>>> origin/Kagerou
 | `Canvas` | **UI** | ทุกอย่างที่ผู้เล่นเห็นและกด |
 | `EventSystem` | Input | ส่ง click ให้ UI (ใช้ **Input System package** — `InputSystemUIInputModule`) |
 | `GatherUI` | Logic ↔ UI | ถือ `GatherDispatchPanel` (UI controller ของการส่งสำรวจ) |
@@ -22,7 +31,11 @@ flowchart TD
     Scene["Core.unity"]
     Scene --> Cam["Main Camera"]
     Scene --> Light["Directional Light"]
+<<<<<<< HEAD
     Scene --> GS["GameSystem<br/>systems + narrator + skill flow<br/>child: RunBootstrap"]
+=======
+    Scene --> GS["GameSystem<br/>8 managers + narrator + skill flow"]
+>>>>>>> origin/Kagerou
     Scene --> Canvas["Canvas<br/>1920x1080 Scale With Screen Size"]
     Scene --> ES["EventSystem"]
     Scene --> GUI["GatherUI<br/>GatherDispatchPanel"]
@@ -33,9 +46,14 @@ flowchart TD
     Canvas --> Hand["CharacterHandPanel<br/>มือไพ่ล่างกลาง"]
     Canvas --> Act["DispatchActionPanel<br/>ปุ่มยืนยันล่างขวา"]
     Canvas --> Log["LogPanel<br/>ประวัติล่างซ้าย"]
+<<<<<<< HEAD
     Canvas --> Skill["SkillTriggerPanel<br/>Cook / Heal / Craft"]
     Canvas --> Reveal["CrystalReveal<br/>box/key completed reveal"]
     Canvas --> Result["RunResult<br/>win/lose + statistics"]
+=======
+    Canvas --> Skill["SkillTriggerPanel<br/>Cook / Heal / Craft + mode toggles"]
+    Canvas --> HTB["HudTopBar (สร้างตอนรัน)<br/>OPTIONS + HELP<br/>Options overlay = OptionsPanelView (ใช้ร่วมกับ MainMenu)<br/>Help overlay = HelpPanelView (rail 8 หมวด + pane เลื่อนได้) + ย้าย CoreItemGroup"]
+>>>>>>> origin/Kagerou
 ```
 
 ## 2. Hierarchy เต็ม
@@ -110,22 +128,38 @@ Core.unity
 │       │   │   └── Count            TextMeshProUGUI (ไม่ถูกใช้)
 │       │   └── HealModeButton       Button → "MED" / "AP"
 │       │       └── Label            TextMeshProUGUI
+<<<<<<< HEAD
 │       └── CraftButton              Button, LayoutElement
 │           ├── Label                TextMeshProUGUI "Craft"
 │           └── Count                TextMeshProUGUI
 │   ├── CrystalReveal                **CrystalRevealView** (สร้าง backdrop/crystal/caption เมื่อได้ครบคู่)
 │   └── RunResult                    **RunResultView** (สร้างผลจบ run และสถิติเมื่อ run จบ)
+=======
+│       └── CraftRow                 HorizontalLayoutGroup
+│           ├── CraftButton          Button, LayoutElement
+│           │   ├── Label            TextMeshProUGUI "Craft"
+│           │   └── Count            TextMeshProUGUI (จำนวนรอบที่ queue)
+│           └── CraftModeButton      Button → "MED" / "BUFF"
+│               └── Label            TextMeshProUGUI
+>>>>>>> origin/Kagerou
 ├── EventSystem                      EventSystem, InputSystemUIInputModule
 └── GatherUI                         **GatherDispatchPanel**
 ```
 
+<<<<<<< HEAD
 `MainMenu.unity` เป็น scene แยก มี `Main Camera`, `Canvas` และ `EventSystem`; `MainMenuController` สร้างเมนูและ Options panel ตอน runtime แทนการ serialize ปุ่มทั้งหมดไว้ใน scene.
 
+=======
+>>>>>>> origin/Kagerou
 ## 3. รายละเอียดแต่ละส่วน
 
 ### 3.1 `GameSystem` — Logic layer
 
+<<<<<<< HEAD
 Logic components อยู่บน GameSystem และ child objects:
+=======
+GameObject ลูกแต่ละตัวถือ singleton 1 ตัว ไม่มีภาพ ไม่มีลูก:
+>>>>>>> origin/Kagerou
 
 | GameObject | Component | ค่าใน Inspector | อ้างถึง |
 |---|---|---|---|

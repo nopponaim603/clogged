@@ -1,8 +1,13 @@
 # 🎮 clogged — Project Index
 
 **Project:** clogged
+<<<<<<< HEAD
 **Status:** Active | **Current Sprint:** [Sprint 02a — Production Sprint 1](./agile/sprint-backlogs/sprint-02a.md)
 **Last Updated:** 2026-10-29 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+=======
+**Status:** Active | **Current Sprint:** [Sprint 01 — Prototype](./agile/sprint-backlogs/sprint-01.md)
+**Last Updated:** 2026-10-28 | **Knowledge Hub:** [Project Wiki](./wiki/wiki.md)
+>>>>>>> origin/Kagerou
 
 > ⚠️ GDD อัปเดตเป็น **v2.1 (Unity V2)** — อ้างอิงระบบจริงใน `Unity-Projects/Assets/V2/` ดู [Design Evolution](./gdd/00-concept.md#5-design-evolution) · GDD v1.0 ของ Web Prototype ย้ายไป [archive](./wiki/archive/gdd-v1-prototype/README.md)
 
@@ -18,6 +23,7 @@
 ---
 
 ## 💻 Software Design
+<<<<<<< HEAD
 - **Unity V2 (ระบบหลักปัจจุบัน — `Unity-Projects/Assets/V2`)**
   - [Unity V2 System Design — โครงสร้าง, Scene Flow, save และระบบหลัก](./software/04-unity-system-design.md)
   - [Unity V2 Class Diagram](./software/05-unity-class-diagram.md) — model และความสัมพันธ์จาก scripts ปัจจุบัน
@@ -27,6 +33,15 @@
   - [Class Diagram](./software/02-class-diagram.md)
   - [Class Design (Comprehensive)](./software/03-class-design.md)
 - [Unity V2 UI Layout Redesign](./software/07-unity-v2-ui-layout-redesign.md) — สเปกและ implementation snapshot ของ UI ปัจจุบัน; P0–P5 และรายการปรับปรุงต่อเนื่อง
+=======
+- [System Design](./software/01-system-design.md) — Web Prototype (Phaser)
+- [Class Diagram](./software/02-class-diagram.md) — Web Prototype (Phaser)
+- [Class Design (Comprehensive)](./software/03-class-design.md) — Web Prototype (Phaser)
+- [Unity V2 System Design](./software/04-unity-system-design.md)
+- [Unity V2 Class Diagram](./software/05-unity-class-diagram.md)
+- [Unity V2 Core Scene Hierarchy](./software/06-unity-core-scene-hierarchy.md)
+- [Unity V2 UI Layout Redesign](./software/07-unity-v2-ui-layout-redesign.md) — สเปก v0.19 · **P0–P5 เสร็จครบ** + แก้ bug DayFrame click (§7.11) · ชุดทดสอบเหลือไฟล์เดียว (§7.12) · ไฮไลต์คนไข้ (§7.13) · ฟอนต์ pixel จาก tileset (§7.14) · TMP ทั้ง V2 UI ใช้ฟอนต์ใหม่ (§7.15) · จัดกลุ่ม `Warning` ให้ตรงกัน (§7.16) · สี Warning = สี log (§7.17) · รอ final review
+>>>>>>> origin/Kagerou
 
 ---
 

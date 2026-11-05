@@ -98,7 +98,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
   m_AnchoredPosition: {x: 190, y: 20}
-  m_SizeDelta: {x: 830, y: 300}
+  m_SizeDelta: {x: 936, y: 300}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1913367770341626857
 MonoBehaviour:
@@ -115,8 +115,8 @@ MonoBehaviour:
   handRoot: {fileID: 6010584636699872507}
   cardsContainer: {fileID: 1024951857394990589}
   cardSpacing: 12
-  cardWidth: 195
-  cardHeight: 265
+  cardWidth: 218
+  cardHeight: 300
   maxDispatchSelection: 2
   maxSkillSelection: 1
 --- !u!114 &8167777199186289821
