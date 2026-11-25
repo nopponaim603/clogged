@@ -1,7 +1,8 @@
 ﻿# clogged — Game Concept
 
-**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14 | **Owner:** ทีม clogged
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-11-25 | **Owner:** ทีม clogged
 > อ้างอิงจากระบบที่ทำงานจริงใน `Unity-Projects/Assets/V2/` (scene `Core.unity`) — GDD v1.0 ของ Web Prototype (Phaser) เก็บไว้ที่ [wiki/archive/gdd-v1-prototype](../wiki/archive/gdd-v1-prototype/README.md)
+> เทียบกับ [Clogged A 0.2 — ส่งคนออกไปเอาของ](https://docs.google.com/document/d/1z6H3xitTDUesRVlCyjFwV62AE3N4m4qLlttx6DatbRc/edit?usp=sharing) เมื่อ 2026-11-25 — ดู [รายการตรงกันและความขัดแย้ง](05-source-alignment.md)
 
 ## 1. Introduction
 
@@ -101,7 +102,7 @@ flowchart LR
 | **Send-to-Gather** | ส่ง 1–2 คนไปถ้ำ 3 ระดับ ทอย D100 ตัดสินผล | [Mechanics §4](01-mechanics.md#4-send-to-gather--การออกสำรวจ) |
 | **Base Work** | ทำอาหาร / รักษา / Workshop ทำซ้ำได้ไม่จำกัด | [Mechanics §5](01-mechanics.md#5-base-work--งานในฐาน) |
 | **Starvation** | ไม่ได้กิน = +1 stack (+1 AP ทุกการกระทำ), 3 stack = Death | [Mechanics §6](01-mechanics.md#6-starvation--ความหิว) |
-| **Core Item** | Hard Success ที่ Normal → ปลดล็อก, Hard Success ที่ Hard → ได้ของ | [Mechanics §7](01-mechanics.md#7-core-item--เงื่อนไขชนะ) |
+| **Core Item** | Hard Success ที่ Normal → KEY, Hard Success ที่ Hard → BOX; ได้ครบทั้งสองชนะ | [Mechanics §7](01-mechanics.md#7-core-item--เงื่อนไขชนะ) |
 
 ---
 
@@ -110,6 +111,7 @@ flowchart LR
 | Version | Concept | สถานะ | Source |
 |---|---|---|---|
 | **v2.0 Unity V2** | Turn-based AP + D100 expedition, 4 ยูนิตคงที่, หา Core Item ใน 7 วัน, ไม่มีช่วงกลางคืน | **ปัจจุบัน** | `Unity-Projects/Assets/V2/` |
+| A 0.2 Google Doc | ส่ง 1–2 ยูนิตออกไปหา Core Item, งานในฐาน, AP, ความหิว และ D100 | ต้องทบทวนบางกฎกับ V2 | [Clogged A 0.2](https://docs.google.com/document/d/1z6H3xitTDUesRVlCyjFwV62AE3N4m4qLlttx6DatbRc/edit?usp=sharing) · [Source Alignment](05-source-alignment.md) |
 | v1.5 Unity Day/Night | Ship Navigator + Day scene (crew mission, real-time clock) ↔ Night scene (tower defense) | เลิกใช้ (legacy) | `Unity-Projects/Assets/Day/`, `Assets/Night/` |
 | v1.0 Web Prototype | Real-time mission chain + night monster attack, รอด 30 วัน | เลิกใช้ (ระยะที่ 1) | `prototype_resource_game/`, [GDD archive](../wiki/archive/gdd-v1-prototype/00-concept.md) |
 | v0.3 Concept | Turn-based Strategy + Tower Defense — Ship → Day → Night + Node Map Roguelike | แนวคิด | [Clogged_GDD_v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
@@ -126,9 +128,9 @@ flowchart LR
 
 ## 6. Open Questions
 
-- หน้าจอจบเกม (Win/Lose) ยังไม่มี — ต้องออกแบบสิ่งที่แสดงหลังจบ run
+- หน้าจอจบเกมมีแล้ว แต่ยังต้องยืนยันข้อความและภาพรวมให้ตรงกับ Core Item KEY/BOX และชื่อสถานะถาวร
 - ปุ่ม "ให้อาหารลด Starvation" มีระบบแล้วแต่ยังไม่มี UI
-- Aptitude `Speed`, `Endurance`, `Gathering`, `Combat` ยังไม่มีผล — จะผูกกับกลไกอะไร
+- Talent ของ 4 ยูนิตยังต้องทวนสมดุล โดยเฉพาะผลของ Exploring ต่อ Core Item
 - Trait ทุกตัวให้ ±10 เท่ากัน — จะให้ trait แต่ละชื่อมีผลเฉพาะหรือไม่
 - Lore ของโลก, ฐาน และ Core Item ยังไม่กำหนด (ดู [Narrative](02-narrative.md))
 
@@ -137,5 +139,6 @@ flowchart LR
 ## Related Documents
 - [Core Mechanics](01-mechanics.md)
 - [Narrative & World](02-narrative.md) · [Art Direction](03-art-direction.md) · [Audio Direction](04-audio-direction.md)
+- [Google Doc Source Alignment](05-source-alignment.md)
 - [Unity V2 System Design](../software/04-unity-system-design.md)
 - [Product Backlog](../agile/01-product-backlog.md)

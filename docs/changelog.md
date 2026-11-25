@@ -1,5 +1,13 @@
 # Documentation Changelog — clogged
 
+## 2026-11-25
+
+- **เชื่อม GDD กับ Google Doc “Clogged A 0.2 — ส่งคนออกไปเอาของ”**
+  - เพิ่ม [docs/gdd/05-source-alignment.md](./gdd/05-source-alignment.md) แยกรายการที่ตรงกัน ระบบที่ V2 เพิ่ม และ 10 จุดขัดแย้งที่ต้องทบทวน
+  - ยืนยันค่ากฎที่ไม่ขัดกัน เช่น 4 ยูนิต, AP 3, ต้นทุน Cook/Heal/Craft, ความหิวสูงสุด 3 stack, base SV 80/55/30 และช่วง Fumble
+  - คงพฤติกรรม Unity V2 เป็น source of truth ชั่วคราวสำหรับกฎที่ขัดกัน โดยเฉพาะ Hard Success = `SV / 3`, KEY/BOX อิสระกัน, Fumble ทำให้คนในทริป Hurt และส่งคู่ +25
+  - เพิ่มลิงก์แหล่ง A 0.2 และรายงาน alignment ใน `gdd/00-concept.md`, `gdd/01-mechanics.md`, `docs/index.md` และ `wiki/google-drive-index.md`
+
 ## 2026-11-03 (รอบ 24)
 
 - **v0.47 (แก้บั๊ก: heal แล้วยูนิตที่ AP หมดกลับมากดได้)** —

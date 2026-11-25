@@ -1,6 +1,6 @@
 # Google Drive Resource Index — clogged
 
-**Created:** 2026-07-24 | **Last Updated:** 2026-07-24
+**Created:** 2026-07-24 | **Last Updated:** 2026-11-25
 
 > เอกสารนี้รวมทุก link และ reference ของ Google Drive ที่ใช้ในโปรเจกต์
 
@@ -28,6 +28,7 @@
 | เวอร์ชัน | หัวข้อ | Link |
 |---------|--------|------|
 | GDD v0.3 | Game Design Document (Day Phase Clarified) | [เชื่อมโยง](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
+| A 0.2 | Clogged A 0.2 — ส่งคนออกไปเอาของ | [เชื่อมโยง](https://docs.google.com/document/d/1z6H3xitTDUesRVlCyjFwV62AE3N4m4qLlttx6DatbRc/edit?usp=sharing) |
 
 ### Core Design
 
@@ -44,6 +45,7 @@ Google Docs ที่อ้างอึงจาก repo:
 | เอกสารใน repo | Google Doc ที่เกี่ยวข้อง |
 |---------------|----------------------|
 | [GDD 00-concept.md](../gdd/00-concept.md) — Design Evolution table | [GDD v0.3](https://docs.google.com/document/d/1SGxMLKs7FlRq_E-0OHyskQbingBxaU5L/edit) |
+| [GDD 05-source-alignment.md](../gdd/05-source-alignment.md) | [Clogged A 0.2](https://docs.google.com/document/d/1z6H3xitTDUesRVlCyjFwV62AE3N4m4qLlttx6DatbRc/edit?usp=sharing) |
 | [Idea & Design Draft](./archive/idea-design-draft.md) | [Draft Idea รอบแรก](https://docs.google.com/document/d/1DsY8xL9NP352hGOJQLa34yqB0i5e_wV070OqmHaDYiM/edit) |
 
 ---

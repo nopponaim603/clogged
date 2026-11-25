@@ -1,8 +1,9 @@
 ﻿# clogged — Core Mechanics
 
-**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-11-25
 > ตัวเลขทั้งหมดตรงกับค่าในโค้ด/Inspector ของ `Unity-Projects/Assets/V2/` ณ วันที่อัปเดต — ปรับได้ใน Inspector (ดู [§9](#9-tunable-values--ตัวเลขที่ปรับได้)) ถ้าเปลี่ยนค่าใน scene ให้อัปเดตเอกสารนี้ด้วย
 > กลไกของ Web Prototype (mission chain, night defense, 30 วัน) ดูที่ [archive](../wiki/archive/gdd-v1-prototype/01-mechanics.md)
+> เทียบกับ Google Doc A 0.2 แล้วเมื่อ 2026-11-25; กฎที่ต่างกันและรายการตัดสินใจอยู่ใน [Google Doc Source Alignment](05-source-alignment.md)
 
 ## 1. Core Loop
 
@@ -315,9 +316,9 @@ flowchart LR
 
 ## 10. ส่วนที่ยังต้องตัดสินใจ / ยังไม่ทำ
 
-- **หน้าจอจบเกม** — ระบบรู้ผล Win/Lose แล้วแต่ยังไม่แสดงให้ผู้เล่นเห็น
+- **หน้าจอจบเกม** — มีผลและหน้าจอแสดงผลแล้ว แต่ข้อความกับคำเรียกสถานะยังต้องอ้างอิงจากบทสรุปเดียวกัน
 - **ปุ่มให้อาหาร** — ระบบพร้อม รอ UI
-- **Aptitude ที่ยังไม่มีผล** (Speed, Endurance, Gathering, Combat)
+- **Talent balance** — โดยเฉพาะ Exploring ของ Dan ที่ยังขัดกับข้อความ A 0.2 เรื่องโอกาสดรอป Core Item
 - **Trait เฉพาะตัว** — ตอนนี้ทุก trait = ±10 เท่ากัน
 - **Fumble ที่ Easy/Normal** — **แก้แล้ว 2026-11-02:** Fumble ทำให้ยูนิตทุกคนที่ไป Hurt + ได้ trait เสียคนละ 1 ทุกถ้ำ (เดิม Easy/Normal ไม่มีผลกับยูนิต)
 - **ทริปข้ามวัน** — สถานะ Away มีในระบบแล้ว แต่ปัจจุบันทุกทริปจบในวันเดียว
@@ -355,4 +356,5 @@ flowchart LR
 
 ## Related Documents
 - [Game Concept](00-concept.md)
+- [Google Doc Source Alignment](05-source-alignment.md)
 - [Unity V2 System Design](../software/04-unity-system-design.md)
