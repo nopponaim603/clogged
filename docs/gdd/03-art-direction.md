@@ -1,6 +1,6 @@
 # clogged — Art Direction & Visual Style
 
-**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-11-25
 > อธิบายสภาพภาพปัจจุบันของ `V2/Scenes/Core.unity` (placeholder) และทิศทางที่วางไว้ — สไตล์ของ Web Prototype ดูที่ [archive](../wiki/archive/gdd-v1-prototype/03-art-direction.md)
 
 ## 1. Current State: PROTOTYPE (placeholder)
@@ -41,7 +41,7 @@
 |---|---|
 | Ready (Idle) | 100% |
 | Resting / Hurt / Away | 50% |
-| Missing (Lost Signal) | 20% |
+| Death (`Missing` เดิม / `Lost Signal` เชิงเนื้อเรื่อง) | 20% |
 
 ## 3. Typography
 
@@ -74,7 +74,7 @@
 
 1. **Pixel art 16×16** ต่อยอดจาก tileset ที่ใช้อยู่ — ฐาน, ปากถ้ำ 3 แบบตามระดับ, ไอคอนทรัพยากร
 2. **ภาพพื้นหลังแมป** (tilemap หรือภาพวาด) แทนพื้นสีเรียบ
-3. **Portrait ตัวละคร 4 คน** สำหรับการ์ดยูนิต — แสดงสถานะ Hurt / Hungry / Lost Signal ด้วยภาพ ไม่ใช่แค่ข้อความ
+3. **Portrait ตัวละคร 4 คน** สำหรับการ์ดยูนิต — แสดงสถานะ Hurt / Hungry / Death ด้วยภาพ โดยยังพิจารณาคำ `Lost Signal` สำหรับการเล่าเรื่อง
 4. **Animation ทอยเต๋า D100** (`DiceRollView`) — แสดงเลขที่ทอยเทียบเส้น Hard Success / Success / Fumble ให้ผู้เล่นเห็นความเสี่ยง
 5. **Scout เดินแบบ sprite sheet** แทนการเลื่อนตำแหน่ง
 6. **หน้าจอจบเกม** Win / Lose

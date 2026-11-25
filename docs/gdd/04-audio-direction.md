@@ -1,6 +1,6 @@
 # clogged — Audio Direction
 
-**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-10-14
+**Version:** 2.0 (Unity V2) | **Last Updated:** 2026-11-25
 > แผนเสียงสำหรับระบบ V2 — แผนเดิมของ Web Prototype (เสียงกลางคืน/monster) ดูที่ [archive](../wiki/archive/gdd-v1-prototype/04-audio-direction.md)
 
 ## 1. Current State: NO AUDIO
@@ -31,7 +31,7 @@
 | Hard Success | chime สว่าง | `result.tier` |
 | Regular | tone บวกสั้นๆ | |
 | Failure + ยูนิตบาดเจ็บ | กระแทก / ร้องเจ็บ | `result.hurtUnit` |
-| Fumble / **Lost Signal** | สัญญาณวิทยุขาดหาย (static → เงียบ) | `result.missingUnit`, starvation ครบ 3 |
+| **Death** | สัญญาณวิทยุขาดหาย (static → เงียบ) | `UnitCharacter.ApplyStarvationStack`; Death เกิดจาก starvation 3 stack เท่านั้น |
 | ได้ Trait | ดี: sparkle · เสีย: เสียงต่ำ | `result.traitAwarded` |
 | ปลดล็อก / ได้ Core Item | stinger พิเศษ | `result.unlockedCoreItemMaterial` / `obtainedCoreItem` |
 | Cook / Heal / Craft | กระทะ / ผ้าพันแผล / ค้อน | `BaseWorkPanel.OnConfirm` |
@@ -62,7 +62,7 @@
 | Priority | Audio | เหตุผล |
 |---|---|---|
 | **P0** | เสียงทอยเต๋า + ผล 4 ระดับ | ช่วงเวลาที่ลุ้นที่สุดของเกม |
-| **P0** | Lost Signal | การเสียยูนิตถาวรต้องรู้สึกหนัก |
+| **P0** | Death / คำเชิงเนื้อเรื่อง “Lost Signal” | การเสียยูนิตถาวรต้องรู้สึกหนัก |
 | **P1** | UI click / error | feedback พื้นฐาน |
 | **P1** | Core Item stinger + เพลงชนะ/แพ้ | ปิด run ให้มีความหมาย |
 | **P2** | เพลงวางแผน (loop) | บรรยากาศ |

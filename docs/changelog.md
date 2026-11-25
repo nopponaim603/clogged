@@ -1,11 +1,19 @@
 # Documentation Changelog — clogged
 
+## 2026-11-25 (ยืนยันกฎจากการทบทวน A 0.2)
+
+- ยืนยันใช้ **KEY/BOX แยกกัน**, Fumble ทำให้ทุกคนในทริป Hurt, โบนัสส่ง 2 คน +25 และ Hard Success = `⌊SV / 2⌋`
+- ปรับตารางโอกาสตัวอย่างใน [01-mechanics.md](./gdd/01-mechanics.md) ตามสูตร `/2` และบันทึกว่า Unity implementation ยังใช้ `SV / 3`
+- อธิบาย `Death / Missing / Lost Signal` ว่าเป็นชื่อ 3 ระดับของสถานะเสียยูนิตถาวรเดียวกัน: สถานะปัจจุบัน ชื่อเดิม และคำเชิงเนื้อเรื่อง
+- อธิบาย Talent `Exploring` ของ Dan ว่าคูณ loot ปกติและ bonus loot ×2 แต่ไม่คูณหรือเพิ่มโอกาส KEY/BOX
+- ปรับคำใน Narrative, Art Direction และ Audio Direction ให้สื่อระบบเดียวกัน โดยยังไม่เปลี่ยนชื่อ UI ที่เกี่ยวข้อง
+
 ## 2026-11-25
 
 - **เชื่อม GDD กับ Google Doc “Clogged A 0.2 — ส่งคนออกไปเอาของ”**
   - เพิ่ม [docs/gdd/05-source-alignment.md](./gdd/05-source-alignment.md) แยกรายการที่ตรงกัน ระบบที่ V2 เพิ่ม และ 10 จุดขัดแย้งที่ต้องทบทวน
   - ยืนยันค่ากฎที่ไม่ขัดกัน เช่น 4 ยูนิต, AP 3, ต้นทุน Cook/Heal/Craft, ความหิวสูงสุด 3 stack, base SV 80/55/30 และช่วง Fumble
-  - คงพฤติกรรม Unity V2 เป็น source of truth ชั่วคราวสำหรับกฎที่ขัดกัน โดยเฉพาะ Hard Success = `SV / 3`, KEY/BOX อิสระกัน, Fumble ทำให้คนในทริป Hurt และส่งคู่ +25
+  - บันทึกสถานะช่วงแรกของการเทียบเอกสาร: KEY/BOX อิสระกัน, Fumble ทำให้คนในทริป Hurt และส่งคู่ +25; Hard Success `/2` กับ `/3` ถูกแยกไว้รอคำยืนยัน
   - เพิ่มลิงก์แหล่ง A 0.2 และรายงาน alignment ใน `gdd/00-concept.md`, `gdd/01-mechanics.md`, `docs/index.md` และ `wiki/google-drive-index.md`
 
 ## 2026-11-03 (รอบ 24)
